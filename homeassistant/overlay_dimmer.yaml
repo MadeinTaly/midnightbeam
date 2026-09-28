@@ -1,0 +1,133 @@
+# Home Assistant package example for overlay-dimmer.
+# Put it in <config>/packages/ (with `homeassistant: packages: !include_dir_named packages`),
+# and replace media_player.my_tv with your Android TV / ADB entity (integration "Android Debug Bridge").
+# The status script path must match where you copied homeassistant/status.sh on the device.
+
+input_number:
+  dimmer_red:
+    name: Warm filter
+    min: 0
+    max: 100
+    step: 5
+    unit_of_measurement: "%"
+    icon: mdi:weather-sunset
+    mode: slider
+  dimmer_brightness:
+    name: Brightness
+    min: 5
+    max: 100
+    step: 5
+    unit_of_measurement: "%"
+    icon: mdi:brightness-6
+    mode: slider
+  dimmer_temperature:
+    name: Filter colour temperature
+    min: 1000
+    max: 4000
+    step: 100
+    unit_of_measurement: K
+    icon: mdi:thermometer
+    mode: slider
+
+script:
+  dimmer_apply:
+    alias: Overlay dimmer - apply
+    mode: restart
+    sequence:
+      - delay: "00:00:01" # debounce while dragging a slider
+      - condition: template
+        value_template: "{{ states('media_player.my_tv') not in ['off', 'unavailable', 'unknown'] }}"
+      - action: androidtv.adb_command
+        target:
+          entity_id: media_player.my_tv
+        data:
+          command: >-
+            am start-foreground-service -n dev.overlaydimmer/.DimService
+            --ei red {{ states('input_number.dimmer_red') | int(0) }}
+            --ei bright {{ states('input_number.dimmer_brightness') | int(100) }}
+            --ei temp {{ states('input_number.dimmer_temperature') | int(1100) }} >/dev/null;
+            sleep 1; sh /data/local/tmp/overlay-dimmer-status.sh
+
+  dimmer_off:
+    alias: Overlay dimmer - off
+    sequence:
+      - action: androidtv.adb_command
+        target:
+          entity_id: media_player.my_tv
+        data:
+          command: >-
+            am start-foreground-service -n dev.overlaydimmer/.DimService --ez off true >/dev/null;
+            sleep 1; sh /data/local/tmp/overlay-dimmer-status.sh
+
+  dimmer_preset_evening:
+    alias: Overlay dimmer - evening
+    icon: mdi:weather-sunset-down
+    sequence:
+      - action: input_number.set_value
+        target: { entity_id: input_number.dimmer_red }
+        data: { value: 50 }
+      - action: input_number.set_value
+        target: { entity_id: input_number.dimmer_brightness }
+        data: { value: 80 }
+
+  dimmer_preset_night:
+    alias: Overlay dimmer - night
+    icon: mdi:weather-night
+    sequence:
+      - action: input_number.set_value
+        target: { entity_id: input_number.dimmer_red }
+        data: { value: 80 }
+      - action: input_number.set_value
+        target: { entity_id: input_number.dimmer_brightness }
+        data: { value: 40 }
+
+automation:
+  - id: overlay_dimmer_sliders
+    alias: Overlay dimmer - slider changed
+    mode: restart
+    triggers:
+      - trigger: state
+        entity_id:
+          - input_number.dimmer_red
+          - input_number.dimmer_brightness
+          - input_number.dimmer_temperature
+    actions:
+      - action: script.dimmer_apply
+
+  - id: overlay_dimmer_poll
+    alias: Overlay dimmer - poll state
+    mode: single
+    triggers:
+      - trigger: time_pattern
+        minutes: "/5"
+    conditions:
+      - condition: template
+        value_template: "{{ states('media_player.my_tv') not in ['off', 'unavailable', 'unknown'] }}"
+    actions:
+      - action: androidtv.adb_command
+        target:
+          entity_id: media_player.my_tv
+        data:
+          command: sh /data/local/tmp/overlay-dimmer-status.sh
+
+template:
+  - triggers:
+      - trigger: state
+        entity_id: media_player.my_tv
+        attribute: adb_response
+    conditions:
+      - condition: template
+        value_template: "{{ (trigger.to_state.attributes.adb_response or '') is string and (trigger.to_state.attributes.adb_response or '').startswith('{\"dimmer_red\"') }}"
+    sensor:
+      - name: Dimmer warm filter
+        unique_id: overlay_dimmer_red
+        unit_of_measurement: "%"
+        state: "{{ (trigger.to_state.attributes.adb_response | from_json).dimmer_red }}"
+      - name: Dimmer brightness
+        unique_id: overlay_dimmer_brightness
+        unit_of_measurement: "%"
+        state: "{{ (trigger.to_state.attributes.adb_response | from_json).dimmer_bright }}"
+    binary_sensor:
+      - name: Dimmer active
+        unique_id: overlay_dimmer_active
+        state: "{{ (trigger.to_state.attributes.adb_response | from_json).dimmer_on }}"

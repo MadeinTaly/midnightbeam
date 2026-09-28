@@ -1,0 +1,55 @@
+# Example dashboard (YAML mode) for the overlay_dimmer.yaml package.
+title: TV dimmer
+views:
+  - title: Dimmer
+    path: dimmer
+    icon: mdi:weather-night
+    type: sections
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: Screen filter
+            icon: mdi:weather-night
+          - type: media-control
+            entity: media_player.my_tv
+            grid_options: { columns: full }
+          - type: tile
+            entity: input_number.dimmer_red
+            name: Warm filter
+            features:
+              - type: numeric-input
+                style: slider
+            grid_options: { columns: full }
+          - type: tile
+            entity: input_number.dimmer_brightness
+            name: Brightness
+            features:
+              - type: numeric-input
+                style: slider
+            grid_options: { columns: full }
+          - type: tile
+            entity: input_number.dimmer_temperature
+            name: Colour (lower = redder)
+            features:
+              - type: numeric-input
+                style: slider
+            grid_options: { columns: full }
+          - type: button
+            name: Evening
+            icon: mdi:weather-sunset-down
+            tap_action: { action: perform-action, perform_action: script.dimmer_preset_evening }
+            grid_options: { columns: 4, rows: 2 }
+          - type: button
+            name: Night
+            icon: mdi:weather-night
+            tap_action: { action: perform-action, perform_action: script.dimmer_preset_night }
+            grid_options: { columns: 4, rows: 2 }
+          - type: button
+            name: Off
+            icon: mdi:power
+            tap_action: { action: perform-action, perform_action: script.dimmer_off }
+            grid_options: { columns: 4, rows: 2 }
+          - type: tile
+            entity: binary_sensor.dimmer_active
+            name: Active
