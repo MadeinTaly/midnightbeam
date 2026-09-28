@@ -1,0 +1,2 @@
+* Store metadata
+* build.sh can produce an unsigned APK (SIGN=0)

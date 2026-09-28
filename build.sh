@@ -7,6 +7,7 @@ cd "$(dirname "$0")"
 ANDROID_JAR=${ANDROID_JAR:-/usr/lib/android-sdk/platforms/android-23/android.jar}
 DX=${DX:-$(command -v dalvik-exchange || command -v dx)}
 KEYSTORE=${KEYSTORE:-debug.keystore}
+SIGN=${SIGN:-1}   # SIGN=0: stop at the unsigned, aligned APK (build/aligned.apk), e.g. for F-Droid
 OUT=build
 
 rm -rf "$OUT" && mkdir -p "$OUT/classes"
@@ -18,6 +19,10 @@ javac -source 8 -target 8 -nowarn -Xlint:-options -bootclasspath "$ANDROID_JAR" 
 aapt package -f -M app/AndroidManifest.xml -S app/res -I "$ANDROID_JAR" -F "$OUT/unsigned.apk"
 (cd "$OUT" && aapt add unsigned.apk classes.dex >/dev/null)
 zipalign -f 4 "$OUT/unsigned.apk" "$OUT/aligned.apk"
+if [ "$SIGN" = 0 ]; then
+    echo "built $OUT/aligned.apk (unsigned)"
+    exit 0
+fi
 
 if [ ! -f "$KEYSTORE" ]; then
     keytool -genkeypair -keystore "$KEYSTORE" -storepass android -keypass android -alias key \
