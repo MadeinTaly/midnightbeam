@@ -15,6 +15,13 @@ to be restarted to pick up new values from automation tools.
 - **Tiny**: ~20 KB APK, plain Java, no libraries, no internet permission, no tracking
 - Android 8.0+ (API 26), phones work too
 
+![Settings screen, focused row highlighted](docs/settings-screen.png)
+<sub>The settings screen as rendered by the app on a 1080p Android TV projector (the focused row is highlighted).</sub>
+
+![Filter effect on a test pattern](docs/filter-simulation.png)
+<sub>Effect on a test pattern, simulated with the same colour and blending formula the app uses
+(real screen captures do not include overlays on many TV boxes).</sub>
+
 ## Install
 
 1. Download `overlay-dimmer.apk` from the [latest release](../../releases/latest).
