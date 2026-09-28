@@ -100,6 +100,10 @@ update each other, so uninstall the release build before installing your own.
 - The colour comes from Tanner Helland's black-body approximation
   ([source](https://tannerhelland.com/2012/09/18/convert-temperature-rgb-algorithm-code.html)).
 
+## Support
+
+If Overlay Dimmer is useful to you, you can support its development here: https://gt.1471995.xyz
+
 ## License
 
 [MIT](LICENSE)
