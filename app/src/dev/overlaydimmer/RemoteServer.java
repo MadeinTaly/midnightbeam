@@ -28,6 +28,8 @@ import java.util.Locale;
  *   POST /api/set        {"red":0-100,"bright":5-100,"temp":1000-6500,"on":true|false}, any subset
  *   GET  /api/schedule   {"enabled":bool,"slots":[{"time":"HH:MM","on":bool,"red":..,"bright":..,"temp":..}]}
  *   POST /api/schedule   same shape
+ *   GET  /api/days       saved days: [{"name":..,"slots":[..]}]
+ *   POST /api/days       {"name":..,"slots":[..]} saves or replaces a day; {"name":..,"delete":true} deletes it
  */
 final class RemoteServer extends Thread {
     static final int PORT = 8765;
@@ -147,6 +149,18 @@ final class RemoteServer extends Thread {
                 } catch (JSONException e) {
                     send(out, 400, "application/json", "{\"error\":\"bad json\"}");
                 }
+            } else if (method.equals("GET") && path.equals("/api/days")) {
+                send(out, 200, "application/json", service.daysJson());
+            } else if (method.equals("POST") && path.equals("/api/days")) {
+                try {
+                    JSONObject j = new JSONObject(new String(body, 0, read, StandardCharsets.UTF_8));
+                    DayTask task = new DayTask(service, j.optString("name"), j.optBoolean("delete", false),
+                            j.optJSONArray("slots"));
+                    main.post(task);
+                    send(out, 200, "application/json", "{\"ok\":true}");
+                } catch (JSONException e) {
+                    send(out, 400, "application/json", "{\"error\":\"bad json\"}");
+                }
             } else {
                 send(out, 404, "application/json", "{\"error\":\"not found\"}");
             }
@@ -233,6 +247,26 @@ final class RemoteServer extends Thread {
         @Override
         public void run() {
             service.applySchedule(enabled, slots);
+        }
+    }
+
+    /** Saves or deletes a named day on the main thread. */
+    static final class DayTask implements Runnable {
+        private final DimService service;
+        private final String name;
+        private final boolean delete;
+        private final JSONArray slots;
+
+        DayTask(DimService service, String name, boolean delete, JSONArray slots) {
+            this.service = service;
+            this.name = name;
+            this.delete = delete;
+            this.slots = slots;
+        }
+
+        @Override
+        public void run() {
+            if (delete) service.deleteDay(name); else service.saveDay(name, slots);
         }
     }
 

@@ -1,0 +1,5 @@
+* Profiles unified between quick buttons and schedule, with new values
+* Custom setting per time slot, add and remove slots
+* Save a day with a name (kept on the TV)
+* Screen icons showing the filter effect
+* English by default, Italian available (automatic, switchable on the phone page)

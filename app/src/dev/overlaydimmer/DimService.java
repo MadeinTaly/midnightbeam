@@ -48,6 +48,7 @@ public class DimService extends Service implements Runnable {
     private static final float MAX_FILTER_ALPHA = 0.65f; // opacity of the filter at red=100
     static final int DEFAULT_TEMP = 1100;
     private static final int MAX_SLOTS = 24;
+    private static final int MAX_DAYS = 20;
 
     private final Handler main = new Handler(Looper.getMainLooper());
     private SharedPreferences prefs;
@@ -140,8 +141,20 @@ public class DimService extends Service implements Runnable {
 
     /** Validates and stores the schedule, then applies the slot active now. */
     void applySchedule(boolean enabled, JSONArray slots) {
+        JSONArray clean = cleanSlots(slots);
+        scheduleOn = enabled && clean.length() > 0;
+        scheduleSlots = clean.toString();
+        prefs.edit().putBoolean("schedule_on", scheduleOn).putString("schedule", scheduleSlots)
+                .remove("schedule_last").apply();
+        main.removeCallbacks(this);
+        run();
+        render();
+    }
+
+    /** Keeps only well-formed slots, with values clamped to their ranges. */
+    private static JSONArray cleanSlots(JSONArray slots) {
         JSONArray clean = new JSONArray();
-        for (int i = 0; i < slots.length() && clean.length() < MAX_SLOTS; i++) {
+        for (int i = 0; slots != null && i < slots.length() && clean.length() < MAX_SLOTS; i++) {
             JSONObject s = slots.optJSONObject(i);
             if (s == null || minutes(s.optString("time")) < 0) continue;
             try {
@@ -157,13 +170,44 @@ public class DimService extends Service implements Runnable {
             } catch (JSONException ignored) {
             }
         }
-        scheduleOn = enabled && clean.length() > 0;
-        scheduleSlots = clean.toString();
-        prefs.edit().putBoolean("schedule_on", scheduleOn).putString("schedule", scheduleSlots)
-                .remove("schedule_last").apply();
-        main.removeCallbacks(this);
-        run();
-        render();
+        return clean;
+    }
+
+    // ---- Saved days: named schedules created on the phone page, kept on the TV for every phone ----
+
+    String daysJson() {
+        return prefs.getString("days", "[]");
+    }
+
+    /** Saves (or replaces, by name) a named day. */
+    void saveDay(String name, JSONArray slots) {
+        name = shortText(name, 32).trim();
+        JSONArray clean = cleanSlots(slots);
+        if (name.isEmpty() || clean.length() == 0) return;
+        JSONArray out = new JSONArray();
+        try {
+            JSONArray days = new JSONArray(daysJson());
+            for (int i = 0; i < days.length(); i++) {
+                JSONObject d = days.getJSONObject(i);
+                if (!d.optString("name").equals(name)) out.put(d);
+            }
+            if (out.length() < MAX_DAYS) out.put(new JSONObject().put("name", name).put("slots", clean));
+        } catch (JSONException ignored) {
+        }
+        prefs.edit().putString("days", out.toString()).apply();
+    }
+
+    void deleteDay(String name) {
+        JSONArray out = new JSONArray();
+        try {
+            JSONArray days = new JSONArray(daysJson());
+            for (int i = 0; i < days.length(); i++) {
+                JSONObject d = days.getJSONObject(i);
+                if (!d.optString("name").equals(name)) out.put(d);
+            }
+        } catch (JSONException ignored) {
+        }
+        prefs.edit().putString("days", out.toString()).apply();
     }
 
     String pairingKey() {

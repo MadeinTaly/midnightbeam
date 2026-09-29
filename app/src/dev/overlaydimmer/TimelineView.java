@@ -113,7 +113,7 @@ public class TimelineView extends View implements Comparator<JSONObject> {
     }
 
     private static String modelText(JSONObject s) {
-        if (!s.optBoolean("on", true)) return "☀ no filter";
+        if (!s.optBoolean("on", true)) return "\u2600 " + MainActivity.t("no filter", "nessun filtro");
         return s.optInt("red") + "% · " + s.optInt("bright", 100) + "% · " + s.optInt("temp") + "K";
     }
 

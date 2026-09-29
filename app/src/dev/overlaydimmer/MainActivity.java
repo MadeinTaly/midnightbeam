@@ -20,6 +20,8 @@ import android.widget.SeekBar;
 import android.widget.Switch;
 import android.widget.TextView;
 
+import java.util.Locale;
+
 import io.nayuki.qrcodegen.QrCode;
 
 /**
@@ -45,6 +47,11 @@ public class MainActivity extends Activity
     private Slider bright;
     private Slider temp;
     private boolean ready;
+
+    /** UI language: Italian on Italian devices, English otherwise. */
+    static String t(String en, String it) {
+        return "it".equals(Locale.getDefault().getLanguage()) ? it : en;
+    }
 
     static final int FOCUS = Color.rgb(255, 140, 40);
     static final int NORMAL = Color.rgb(220, 220, 220);
@@ -76,7 +83,7 @@ public class MainActivity extends Activity
         root.addView(title);
 
         enabled = new Switch(this);
-        enabled.setText("Enabled");
+        enabled.setText(t("Enabled", "Attivo"));
         enabled.setTextColor(Color.WHITE);
         enabled.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20);
         enabled.setPadding(0, dp(24), 0, dp(8));
@@ -86,9 +93,9 @@ public class MainActivity extends Activity
         enabled.setOnCheckedChangeListener(this);
         root.addView(enabled);
 
-        red = new Slider(this, root, "Warm filter", "%", 0, 100, 5, p.getInt("red", 0));
-        bright = new Slider(this, root, "Brightness", "%", 5, 100, 5, p.getInt("bright", 100));
-        temp = new Slider(this, root, "Colour temperature (lower = redder)", " K", 1000, 4000, 100,
+        red = new Slider(this, root, t("Warm filter", "Filtro caldo"), "%", 0, 100, 5, p.getInt("red", 0));
+        bright = new Slider(this, root, t("Brightness", "Luminosità"), "%", 5, 100, 5, p.getInt("bright", 100));
+        temp = new Slider(this, root, t("Colour temperature (lower = redder)", "Colore (più basso = più rosso)"), " K", 1000, 4000, 100,
                 p.getInt("temp", DimService.DEFAULT_TEMP));
 
         LinearLayout side = new LinearLayout(this);
@@ -98,7 +105,7 @@ public class MainActivity extends Activity
         page.addView(side, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 2f));
 
         remote = new Switch(this);
-        remote.setText("Phone remote");
+        remote.setText(t("Phone remote", "Telecomando dal telefono"));
         remote.setTextColor(Color.WHITE);
         remote.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20);
         remote.setPadding(dp(8), dp(8), dp(8), dp(8));
@@ -118,7 +125,7 @@ public class MainActivity extends Activity
         side.addView(remoteInfo);
 
         newKey = new Button(this);
-        newKey.setText("New pairing code");
+        newKey.setText(t("New pairing code", "Nuovo codice di abbinamento"));
         newKey.setAllCaps(false);
         newKey.setTextColor(Color.WHITE);
         newKey.setBackgroundColor(BUTTON_BACKGROUND);
@@ -158,8 +165,11 @@ public class MainActivity extends Activity
     public void run() {
         boolean on = prefs.getBoolean("schedule_on", false);
         timeline.setSchedule(prefs.getString("schedule", "[]"), on);
-        timelineTitle.setText(timeline.isEmpty() ? "Schedule: set it from the phone remote"
-                : on ? "Schedule \u00b7 on" : "Schedule \u00b7 off (turn it on from the phone remote)");
+        timelineTitle.setText(timeline.isEmpty()
+                ? t("Schedule: set it from the phone remote", "Programmazione: impostala dal telefono")
+                : on ? t("Schedule \u00b7 on", "Programmazione \u00b7 attiva")
+                : t("Schedule \u00b7 off (turn it on from the phone remote)",
+                    "Programmazione \u00b7 spenta (attivala dal telefono)"));
         timeline.setVisibility(timeline.isEmpty() ? View.GONE : View.VISIBLE);
         main.postDelayed(this, 30000);
     }
@@ -170,18 +180,20 @@ public class MainActivity extends Activity
         qr.setVisibility(on ? View.VISIBLE : View.GONE);
         newKey.setVisibility(on ? View.VISIBLE : View.GONE);
         if (!on) {
-            remoteInfo.setText("Control this filter from a phone on the same network.");
+            remoteInfo.setText(t("Control this filter from a phone on the same network.",
+                    "Comanda il filtro da un telefono sulla stessa rete."));
             return;
         }
         String ip = RemoteServer.localIp();
         if (ip == null) {
             qr.setVisibility(View.GONE);
-            remoteInfo.setText("Not connected to a network.");
+            remoteInfo.setText(t("Not connected to a network.", "Nessuna rete collegata."));
             return;
         }
         String url = "http://" + ip + ":" + RemoteServer.PORT + "/#k=" + DimService.pairingKey(prefs);
         qr.setImageBitmap(qrBitmap(url));
-        remoteInfo.setText("Scan with the phone camera\n" + ip + ":" + RemoteServer.PORT);
+        remoteInfo.setText(t("Scan with the phone camera", "Inquadra con la fotocamera del telefono")
+                + "\n" + ip + ":" + RemoteServer.PORT);
     }
 
     /** QR code as a bitmap: black modules on white, with the standard 4-module quiet zone. */

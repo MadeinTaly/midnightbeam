@@ -20,9 +20,13 @@
   <main class="max-w-3xl mx-auto px-4 pt-8 pb-40 space-y-4">
     <header class="flex items-center gap-3 mb-2">
       <div class="app-brand-mark">&#9790;</div>
-      <div>
+      <div class="flex-1">
         <h1 class="text-2xl">Overlay Dimmer</h1>
         <p class="text-sm" style="color: var(--app-muted)" data-t="subtitle"></p>
+      </div>
+      <div class="flex gap-1 text-xs" role="group" aria-label="Language">
+        <button class="lang sm-chip" data-lang="en" style="min-height:2rem">EN</button>
+        <button class="lang sm-chip" data-lang="it" style="min-height:2rem">IT</button>
       </div>
     </header>
 
@@ -49,10 +53,9 @@
         <div class="flex justify-between text-sm mb-1"><span style="color: var(--app-muted)" data-t="temp"></span><span id="temp-v"></span></div>
         <input id="temp" type="range" min="1000" max="4000" step="100" class="slider-white w-full">
       </div>
-      <div class="grid grid-cols-3 gap-2">
-        <button class="btn-secondary preset" data-red="0" data-bright="100" data-t="day"></button>
-        <button class="btn-secondary preset" data-red="50" data-bright="80" data-t="evening"></button>
-        <button class="btn-secondary preset" data-red="80" data-bright="40" data-t="night"></button>
+      <div>
+        <div class="sm-group-label" data-t="profiles"></div>
+        <div id="quick" class="grid grid-cols-3 gap-2"></div>
       </div>
     </section>
 
@@ -78,6 +81,7 @@
         </div>
         <div id="sm-spectrum" class="sm-spectrum" aria-hidden="true"></div>
         <div id="sm-reels" class="sm-reels"></div>
+        <button id="sm-add" class="btn-secondary w-full mt-3 text-sm" data-t="addSlot"></button>
         <p class="sm-editor-note" data-t="note"></p>
       </div>
     </section>
@@ -97,24 +101,44 @@
 (function () {
   'use strict';
   var T = {
-    en: { subtitle: 'Warm filter and brightness for the TV', pairTitle: 'Not paired', pairText: 'Scan the QR code shown in the Overlay Dimmer app on the TV again.', filter: 'Filter', red: 'Warm filter', bright: 'Brightness', temp: 'Colour (lower = redder)', day: 'Day', evening: 'Evening', night: 'Night', error: 'error',
+    en: { subtitle: 'Warm filter and brightness for the TV', pairTitle: 'Not paired', pairText: 'Scan the QR code shown in the Overlay Dimmer app on the TV again.', filter: 'Filter', red: 'Warm filter', bright: 'Brightness', temp: 'Colour (lower = redder)', profiles: 'Profiles', error: 'error',
       schedTitle: 'Your evening of light', schedSub: 'From afternoon to late night, every slot has its own mood.', cycle: '24-hour cycle', chooseDay: 'Choose a day', schedActive: 'Schedule on',
       rhythm: 'The rhythm of the light', rhythmSub: 'Pick a model. Drag the edges to set the times.', nowKey: 'TV time', note: 'Colours are a preview of a grey picture under the filter. The TV switches slot by itself, even with the phone off.',
       dirty: '● changes not applied', apply: 'Apply to TV', sending: 'Sending…', applied: 'Schedule applied', savedOff: 'Schedule off', close: 'Close', startOf: 'Start of', slot: 'Slot',
       fasce: { morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening', film: 'Movie', night: 'Night' },
-      models: { none: 'No filter', soft: 'Soft', evening: 'Evening', cinema: 'Cinema', night: 'Night', deep: 'Deep night' },
-      presets: { movie: 'Movie night', early: 'Early to bed', late: 'Night owl', always: 'No filter' } },
-    it: { subtitle: 'Filtro caldo e luminosità per il TV', pairTitle: 'Non abbinato', pairText: 'Inquadra di nuovo il QR mostrato nell\u2019app Overlay Dimmer sul TV.', filter: 'Filtro', red: 'Filtro caldo', bright: 'Luminosità', temp: 'Colore (più basso = più rosso)', day: 'Giorno', evening: 'Sera', night: 'Notte', error: 'errore',
+      models: { off: 'Off', soft: 'Soft', evening: 'Evening', cinema: 'Cinema', night: 'Night', deep: 'Deep night', custom: 'Custom' },
+      presets: { movie: 'Movie night', early: 'Early to bed', late: 'Night owl' },
+      presetsLabel: 'Presets', myDays: 'My days', saveDay: 'Save as day', dayName: 'Name of this day', daySaved: 'Day saved', deleteDay: 'Delete', addSlot: '+ Add slot', removeSlot: 'Remove slot', done: 'Done', slotName: 'Slot name' },
+    it: { subtitle: 'Filtro caldo e luminosità per il TV', pairTitle: 'Non abbinato', pairText: 'Inquadra di nuovo il QR mostrato nell\u2019app Overlay Dimmer sul TV.', filter: 'Filtro', red: 'Filtro caldo', bright: 'Luminosità', temp: 'Colore (più basso = più rosso)', profiles: 'Profili', error: 'errore',
       schedTitle: 'La tua serata di luce', schedSub: 'Dal pomeriggio a notte fonda, ogni fascia ha il suo carattere.', cycle: 'Ciclo di 24 ore', chooseDay: 'Scegli una giornata', schedActive: 'Programmazione attiva',
       rhythm: 'Il ritmo della luce', rhythmSub: 'Seleziona un modello. Trascina i bordi per regolare gli orari.', nowKey: 'Ora TV', note: 'I colori sono un\u2019anteprima di un\u2019immagine grigia sotto il filtro. Il TV cambia fascia da solo, anche col telefono spento.',
       dirty: '● modifiche non applicate', apply: 'Applica al TV', sending: 'Invio…', applied: 'Programmazione applicata', savedOff: 'Programmazione spenta', close: 'Chiudi', startOf: 'Inizio', slot: 'Fascia',
       fasce: { morning: 'Mattina', afternoon: 'Pomeriggio', evening: 'Sera', film: 'Film', night: 'Notte' },
-      models: { none: 'Nessun filtro', soft: 'Tenue', evening: 'Sera', cinema: 'Cinema', night: 'Notte', deep: 'Notte fonda' },
-      presets: { movie: 'Serata film', early: 'A letto presto', late: 'Nottambulo', always: 'Nessun filtro' } }
+      models: { off: 'Spento', soft: 'Tenue', evening: 'Sera', cinema: 'Cinema', night: 'Notte', deep: 'Notte fonda', custom: 'Personalizzato' },
+      presets: { movie: 'Serata film', early: 'A letto presto', late: 'Nottambulo' },
+      presetsLabel: 'Preset', myDays: 'Le mie giornate', saveDay: 'Salva come giornata', dayName: 'Nome di questa giornata', daySaved: 'Giornata salvata', deleteDay: 'Elimina', addSlot: '+ Aggiungi fascia', removeSlot: 'Rimuovi fascia', done: 'Fatto', slotName: 'Nome della fascia' }
   };
-  var L = T[(navigator.language || 'en').slice(0, 2)] || T.en;
-  document.documentElement.lang = L === T.it ? 'it' : 'en';
-  Array.prototype.forEach.call(document.querySelectorAll('[data-t]'), function (el) { el.textContent = L[el.getAttribute('data-t')]; });
+  // Language: the one chosen on this phone, else the phone language, else English.
+  var saved = null; try { saved = localStorage.getItem('od_lang'); } catch (e) {}
+  var lang = T[saved] ? saved : (T[(navigator.language || 'en').slice(0, 2)] ? (navigator.language || 'en').slice(0, 2) : 'en');
+  var L = T[lang];
+  function applyTexts() {
+    document.documentElement.lang = lang;
+    Array.prototype.forEach.call(document.querySelectorAll('[data-t]'), function (el) { el.textContent = L[el.getAttribute('data-t')]; });
+    Array.prototype.forEach.call(document.querySelectorAll('.lang'), function (b) {
+      b.setAttribute('aria-pressed', String(b.getAttribute('data-lang') === lang));
+      b.style.background = b.getAttribute('data-lang') === lang ? 'var(--app-surface-soft)' : '';
+      b.style.borderColor = b.getAttribute('data-lang') === lang ? 'var(--app-accent)' : '';
+    });
+  }
+  applyTexts();
+  Array.prototype.forEach.call(document.querySelectorAll('.lang'), function (b) {
+    b.addEventListener('click', function () {
+      lang = b.getAttribute('data-lang'); L = T[lang];
+      try { localStorage.setItem('od_lang', lang); } catch (e) {}
+      applyTexts(); renderQuick(); renderPresets(); renderReels();
+    });
+  });
 
   function $(id) { return document.getElementById(id); }
 
@@ -156,6 +180,7 @@
     $('on').checked = s.on;
     $('red').value = s.red; $('bright').value = s.bright; $('temp').value = s.temp;
     labels();
+    current = s; renderQuick();
   }
   var pending = null;
   function sendLive() {
@@ -169,45 +194,57 @@
     $(id).addEventListener('input', function () { labels(); $('on').checked = true; sendLive(); });
   });
   $('on').addEventListener('change', function () { api('/api/set', { on: $('on').checked }).then(show).catch(function () {}); });
-  Array.prototype.forEach.call(document.querySelectorAll('.preset'), function (b) {
-    b.addEventListener('click', function () {
-      api('/api/set', { on: true, red: +b.getAttribute('data-red'), bright: +b.getAttribute('data-bright') }).then(show).catch(function () {});
+  // Quick profiles: the same models used by the schedule, so a profile means the same thing everywhere.
+  var current = null;
+  function renderQuick() {
+    var box = $('quick'); box.innerHTML = '';
+    MODELS.forEach(function (m) {
+      if (m.id === 'off' || m.id === 'custom') return;
+      var b = document.createElement('button');
+      b.className = 'sm-model-option';
+      var active = current && current.on && current.red === m.red && current.bright === m.bright && current.temp === m.temp;
+      b.setAttribute('aria-pressed', String(!!active));
+      b.innerHTML = '<div>' + screenIcon(m) + '</div><div>' + L.models[m.id] + '</div>';
+      b.onclick = function () {
+        api('/api/set', { on: true, red: m.red, bright: m.bright, temp: m.temp }).then(show).catch(function () {});
+      };
+      box.appendChild(b);
     });
-  });
+  }
   function refresh() { api('/api/state').then(show).catch(function () {}); }
 
   // ---- Schedule: timeline of time slots, ported from the xaqua-web "slot-machine" schedule ----
   // Slots are cards sized by their duration; drag a card edge (or use the arrow keys on it) to move its start
-  // time. Each slot has a model (a filter setting); tap the emoji to pick another one. Apply sends the whole
-  // day to the TV, which switches slot by itself, even with the phone off.
-  var DAY_MIN = 1440, MIN_GAP = 30, SNAP = 5;
+  // time. Tap a slot's icon to choose its setting (or a custom one), rename or remove it. Slots can be added,
+  // and a day can be saved with a name on the TV. Apply sends the day to the TV, which switches slot by itself.
+  var DAY_MIN = 1440, MIN_GAP = 30, SNAP = 5, MAX_SLOTS = 12;
   var MODELS = [
-    { id: 'none',    emoji: '☀️', on: false, red: 0,   bright: 100, temp: 1100 },
-    { id: 'soft',    emoji: '🌤️', on: true, red: 25, bright: 95, temp: 1800 },
-    { id: 'evening', emoji: '🌇', on: true,  red: 50,  bright: 80,  temp: 1100 },
-    { id: 'cinema',  emoji: '🎬', on: true,  red: 30,  bright: 60,  temp: 1500 },
-    { id: 'night',   emoji: '🌙', on: true,  red: 80,  bright: 40,  temp: 1100 },
-    { id: 'deep',    emoji: '🌑', on: true,  red: 100, bright: 20,  temp: 1000 }
+    { id: 'off',     on: false, red: 0,  bright: 100, temp: 1100 },
+    { id: 'soft',    on: true,  red: 10, bright: 70,  temp: 1800 },
+    { id: 'evening', on: true,  red: 20, bright: 40,  temp: 1100 },
+    { id: 'cinema',  on: true,  red: 15, bright: 55,  temp: 1500 },
+    { id: 'night',   on: true,  red: 20, bright: 10,  temp: 1100 },
+    { id: 'deep',    on: true,  red: 40, bright: 5,   temp: 1000 },
+    { id: 'custom',  on: true,  red: 20, bright: 40,  temp: 1100 }
   ];
   var FASCE = [
-    { key: 'morning',   time: '07:00', model: 'none' },
-    { key: 'afternoon', time: '14:00', model: 'none' },
+    { key: 'morning',   time: '07:00', model: 'off' },
+    { key: 'afternoon', time: '14:00', model: 'off' },
     { key: 'evening',   time: '19:30', model: 'evening' },
     { key: 'film',      time: '21:00', model: 'cinema' },
     { key: 'night',     time: '23:00', model: 'night' }
   ];
   var PRESETS = [
-    { id: 'movie', emoji: '🎬', sel: { morning: 'none', afternoon: 'none', evening: 'evening', film: 'cinema', night: 'night' },
+    { id: 'movie', icon: '🎬', sel: { morning: 'off', afternoon: 'off', evening: 'evening', film: 'cinema', night: 'night' },
       times: { morning: '07:00', afternoon: '14:00', evening: '19:30', film: '21:00', night: '23:30' } },
-    { id: 'early', emoji: '😴', sel: { morning: 'none', afternoon: 'soft', evening: 'evening', film: 'night', night: 'deep' },
+    { id: 'early', icon: '😴', sel: { morning: 'off', afternoon: 'soft', evening: 'evening', film: 'night', night: 'deep' },
       times: { morning: '07:00', afternoon: '16:00', evening: '19:00', film: '21:00', night: '22:30' } },
-    { id: 'late', emoji: '🦉', sel: { morning: 'none', afternoon: 'none', evening: 'soft', film: 'cinema', night: 'night' },
-      times: { morning: '08:30', afternoon: '15:00', evening: '20:30', film: '22:00', night: '01:00' } },
-    { id: 'always', emoji: '🔆', sel: { morning: 'none', afternoon: 'none', evening: 'none', film: 'none', night: 'none' },
-      times: { morning: '07:00', afternoon: '14:00', evening: '19:30', film: '21:00', night: '23:00' } }
+    { id: 'late', icon: '🦉', sel: { morning: 'off', afternoon: 'off', evening: 'soft', film: 'cinema', night: 'night' },
+      times: { morning: '08:30', afternoon: '15:00', evening: '20:30', film: '22:00', night: '01:00' } }
   ];
   var st = { fasce: [], enabled: false, dirty: false };
-  var cardEls = {}, nowLine = null, deviceOffset = 0;
+  var days = [];
+  var cardEls = {}, nowLine = null, deviceOffset = 0, uid = 0;
 
   function el(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
@@ -216,7 +253,6 @@
   function m2t(min) { min = ((Math.round(min) % DAY_MIN) + DAY_MIN) % DAY_MIN; var h = Math.floor(min / 60), m = min % 60; return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m; }
   function isWide() { return window.matchMedia('(min-width: 768px)').matches; }
   function modelById(id) { for (var i = 0; i < MODELS.length; i++) if (MODELS[i].id === id) return MODELS[i]; return MODELS[0]; }
-  function modelLabel(m) { return L.models[m.id]; }
   function faById(id) { for (var i = 0; i < st.fasce.length; i++) if (st.fasce[i].id === id) return st.fasce[i]; return null; }
   function ordered() {
     var arr = st.fasce.slice().sort(function (a, b) { return t2m(a.time) - t2m(b.time); });
@@ -224,6 +260,9 @@
     return arr;
   }
   function nowMinutes() { var n = new Date(); var m = n.getHours() * 60 + n.getMinutes() + n.getSeconds() / 60 + deviceOffset; return ((m % DAY_MIN) + DAY_MIN) % DAY_MIN; }
+  // Values of a slot: its model, or its own values for a custom slot.
+  function valuesOf(fa) { var m = modelById(fa.modelId); return m.id === 'custom' && fa.custom ? { on: true, red: fa.custom.red, bright: fa.custom.bright, temp: fa.custom.temp } : m; }
+  function labelOf(fa) { return fa.key ? L.fasce[fa.key] : fa.label; }
 
   // Preview of a mid-grey picture under the filter, with the same formula the app uses (DimService.java).
   function kelvinRgb(k) {
@@ -233,41 +272,75 @@
     b = t >= 66 ? 255 : t <= 19 ? 0 : 138.5177312231 * Math.log(t - 10) - 305.0447927307;
     return [r, g, b].map(function (v) { return clamp(Math.round(v), 0, 255); });
   }
-  function previewCss(m) {
-    if (!m.on) return 'rgb(205,205,205)';
-    var tint = kelvinRgb(m.temp), tintA = m.red / 100 * 0.65, dimA = (100 - m.bright) / 100, base = 205;
-    var c = tint.map(function (v) { return ((base * (1 - tintA) + v * tintA) * (1 - dimA)) | 0; });
+  function previewCss(v) {
+    if (!v.on) return 'rgb(205,205,205)';
+    var tint = kelvinRgb(v.temp), tintA = v.red / 100 * 0.65, dimA = (100 - v.bright) / 100, base = 205;
+    var c = tint.map(function (x) { return ((base * (1 - tintA) + x * tintA) * (1 - dimA)) | 0; });
     return 'rgb(' + c.join(',') + ')';
+  }
+  // Icon: a tiny screen showing the effect (striped when off, a gradient for "custom").
+  function screenIcon(model, values) {
+    if (model.id === 'off') return '<span class="od-screen off"></span>';
+    if (model.id === 'custom' && !values) return '<span class="od-screen custom"></span>';
+    return '<span class="od-screen" style="background:' + previewCss(values || model) + '"></span>';
   }
 
   function markDirty() { st.dirty = true; $('sm-dirty').classList.remove('hidden'); $('sm-status').textContent = ''; }
 
+  function chip(html, onclick) { var b = el('button', 'sm-chip', html); b.onclick = onclick; return b; }
   function renderPresets() {
     var box = $('sm-presets'); box.innerHTML = '';
+    var sec = el('div', ''); sec.appendChild(el('div', 'sm-group-label', esc(L.presetsLabel)));
+    var chips = el('div', 'flex flex-wrap gap-2 mb-4');
     PRESETS.forEach(function (p) {
-      var b = el('button', 'sm-chip', '<span class="text-base">' + p.emoji + '</span>' + esc(L.presets[p.id]));
-      b.onclick = function () {
-        st.fasce = FASCE.map(function (f) { return { id: f.key, label: L.fasce[f.key], modelId: p.sel[f.key], time: p.times[f.key] }; });
+      chips.appendChild(chip('<span class="text-base">' + p.icon + '</span>' + esc(L.presets[p.id]), function () {
+        st.fasce = FASCE.map(function (f) { return { id: 'f' + (uid++), key: f.key, label: L.fasce[f.key], modelId: p.sel[f.key], time: p.times[f.key] }; });
         renderReels(); markDirty();
-      };
-      box.appendChild(b);
+      }));
     });
+    sec.appendChild(chips); box.appendChild(sec);
+    var mine = el('div', 'border-t pt-4'); mine.style.borderColor = 'var(--app-border)';
+    mine.appendChild(el('div', 'sm-group-label', esc(L.myDays)));
+    var mineChips = el('div', 'flex flex-wrap gap-2');
+    days.forEach(function (d) {
+      var wrap = el('span', 'sm-chip'); wrap.style.padding = '0'; wrap.style.overflow = 'hidden';
+      var b = el('button', 'px-3 py-2', '🗓️ ' + esc(d.name));
+      b.onclick = function () { st.fasce = slotsToFasce(d.slots); renderReels(); markDirty(); };
+      var del = el('button', 'px-3 py-2 sm-danger', '✕');
+      del.setAttribute('aria-label', L.deleteDay + ' ' + d.name);
+      del.onclick = function () {
+        if (!confirm(L.deleteDay + ' “' + d.name + '”?')) return;
+        api('/api/days', { name: d.name, delete: true }).then(loadDays).catch(function () {});
+      };
+      wrap.appendChild(b); wrap.appendChild(del); mineChips.appendChild(wrap);
+    });
+    mineChips.appendChild(chip('💾 ' + esc(L.saveDay), saveDay));
+    mine.appendChild(mineChips); box.appendChild(mine);
+  }
+  function saveDay() {
+    var name = prompt(L.dayName, '');
+    if (!name || !name.trim()) return;
+    api('/api/days', { name: name.trim(), slots: slotsFromState() }).then(function () { toast(L.daySaved); loadDays(); })
+      .catch(function () { toast(L.error, 'error'); });
+  }
+  function loadDays() {
+    return api('/api/days').then(function (d) { days = Array.isArray(d) ? d : []; renderPresets(); }).catch(function () {});
   }
 
   function renderReels() {
     var box = $('sm-reels'); box.innerHTML = ''; cardEls = {};
     ordered().forEach(function (fa, idx) {
-      var m = modelById(fa.modelId);
+      var m = modelById(fa.modelId), v = valuesOf(fa);
       var card = el('div', 'sm-slot');
       card.style.flexGrow = fa._dur;
       var tint = el('div', 'sm-slot-tint');
-      tint.style.background = m.on ? previewCss(m) : 'transparent';
+      tint.style.background = v.on ? previewCss(v) : 'transparent';
       card.appendChild(tint);
       if (idx > 0) {
         var handle = el('div', 'sm-boundary');
         handle.tabIndex = 0;
         handle.setAttribute('role', 'slider');
-        handle.setAttribute('aria-label', L.startOf + ' ' + fa.label);
+        handle.setAttribute('aria-label', L.startOf + ' ' + labelOf(fa));
         handle.addEventListener('keydown', function (e) {
           if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].indexOf(e.key) < 0) return;
           e.preventDefault();
@@ -281,19 +354,20 @@
       var content = el('div', 'sm-slot-content');
       var badge = el('div', 'sm-slot-time');
       content.appendChild(badge);
-      content.appendChild(el('div', 'sm-slot-label', esc(fa.label)));
+      content.appendChild(el('div', 'sm-slot-label', esc(labelOf(fa))));
       var pick = el('button', 'sm-model-trigger');
-      pick.setAttribute('aria-label', fa.label + ': ' + modelLabel(m));
+      pick.setAttribute('aria-label', labelOf(fa) + ': ' + L.models[m.id]);
       pick.setAttribute('aria-haspopup', 'dialog');
-      pick.appendChild(el('div', '', m.emoji));
-      pick.appendChild(el('div', '', esc(modelLabel(m)) + ' <span style="color: var(--app-muted)">▾</span>'));
-      pick.onclick = function (e) { e.stopPropagation(); openModelPicker(fa.id); };
+      pick.appendChild(el('div', '', screenIcon(m, v)));
+      pick.appendChild(el('div', '', esc(L.models[m.id]) + ' <span style="color: var(--app-muted)">▾</span>'));
+      pick.onclick = function (e) { e.stopPropagation(); openSlot(fa.id); };
       content.appendChild(pick);
       card.appendChild(content);
       box.appendChild(card); cardEls[fa.id] = { card: card, badge: badge };
     });
     nowLine = el('div', 'sm-now-line');
     box.appendChild(nowLine);
+    $('sm-add').disabled = st.fasce.length >= MAX_SLOTS;
     layout();
   }
 
@@ -306,7 +380,7 @@
       refs.badge.textContent = fa.time + '–' + m2t((t2m(fa.time) + fa._dur) % DAY_MIN);
       var seg = el('span', 'sm-spectrum-segment');
       seg.style.flexGrow = fa._dur;
-      seg.style.background = previewCss(modelById(fa.modelId));
+      seg.style.background = previewCss(valuesOf(fa));
       spectrum.appendChild(seg);
     });
     if (nowLine) {
@@ -316,38 +390,84 @@
     }
   }
 
-  function openModelPicker(id) {
+  // Slot popup: name, setting (model grid or custom sliders, like the xaqua-web WLED editor), remove.
+  function openSlot(id) {
     var fa = faById(id); if (!fa) return;
     var ov = el('div', 'sm-modal-overlay');
     var panel = el('div', 'sm-model-panel');
     panel.style.transform = 'scale(.82)'; panel.style.opacity = '0';
     panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-modal', 'true');
-    panel.appendChild(el('div', '', esc(fa.label) + ' · ' + fa.time));
+    panel.appendChild(el('div', '', fa.time));
+    var name = el('input', 'input mb-3'); name.value = labelOf(fa); name.maxLength = 24;
+    name.setAttribute('aria-label', L.slotName);
+    name.oninput = function () { fa.key = null; fa.label = name.value; markDirty(); };
+    panel.appendChild(name);
     var grid = el('div', 'grid grid-cols-3 gap-2');
-    MODELS.forEach(function (m) {
-      var tile = el('button', 'sm-model-option');
-      tile.setAttribute('aria-pressed', String(m.id === fa.modelId));
-      tile.appendChild(el('div', '', m.emoji));
-      tile.appendChild(el('div', '', esc(modelLabel(m))));
-      tile.onclick = function () { fa.modelId = m.id; renderReels(); markDirty(); close(); };
-      grid.appendChild(tile);
-    });
+    var custom = el('div', 'od-custom space-y-3');
+    function sliders() {
+      var c = fa.custom || (fa.custom = { red: valuesOf(fa).red, bright: valuesOf(fa).bright, temp: valuesOf(fa).temp });
+      custom.innerHTML = '';
+      [['red', L.red, 0, 100, 5, '%', 'slider-amber'], ['bright', L.bright, 5, 100, 5, '%', 'slider-power'], ['temp', L.temp, 1000, 4000, 100, ' K', 'slider-white']].forEach(function (d) {
+        var row = el('div', '');
+        var head = el('div', 'flex justify-between text-sm mb-1', '<span>' + esc(d[1]) + '</span><span>' + c[d[0]] + d[5] + '</span>');
+        var r = el('input', d[6] + ' w-full'); r.type = 'range'; r.min = d[2]; r.max = d[3]; r.step = d[4]; r.value = c[d[0]];
+        r.oninput = function () { c[d[0]] = +r.value; head.lastChild.textContent = r.value + d[5]; markDirty(); renderReels(); };
+        row.appendChild(head); row.appendChild(r); custom.appendChild(row);
+      });
+    }
+    function tiles() {
+      grid.innerHTML = '';
+      MODELS.forEach(function (m) {
+        var tile = el('button', 'sm-model-option');
+        tile.setAttribute('aria-pressed', String(m.id === fa.modelId));
+        tile.appendChild(el('div', '', screenIcon(m, m.id === 'custom' && fa.modelId === 'custom' ? valuesOf(fa) : null)));
+        tile.appendChild(el('div', '', esc(L.models[m.id])));
+        tile.onclick = function () {
+          fa.modelId = m.id; markDirty(); renderReels(); tiles();
+          if (m.id === 'custom') { custom.classList.remove('hidden'); sliders(); } else custom.classList.add('hidden');
+        };
+        grid.appendChild(tile);
+      });
+    }
+    tiles();
     panel.appendChild(grid);
-    var dismiss = el('button', 'sm-modal-dismiss', esc(L.close));
-    dismiss.onclick = close;
-    panel.appendChild(dismiss);
+    if (fa.modelId === 'custom') sliders(); else custom.classList.add('hidden');
+    panel.appendChild(custom);
+    var actions = el('div', 'flex gap-2 mt-3');
+    var remove = el('button', 'btn-secondary sm-danger flex-1', esc(L.removeSlot));
+    remove.disabled = st.fasce.length <= 1;
+    remove.onclick = function () {
+      st.fasce = st.fasce.filter(function (x) { return x.id !== id; });
+      markDirty(); close(); renderReels();
+    };
+    var done = el('button', 'btn-primary flex-1', esc(L.done));
+    done.onclick = close;
+    actions.appendChild(remove); actions.appendChild(done);
+    panel.appendChild(actions);
     ov.appendChild(panel); document.body.appendChild(ov);
-    var firstTile = panel.querySelector('button'); if (firstTile) firstTile.focus();
     requestAnimationFrame(function () { panel.style.transform = 'scale(1)'; panel.style.opacity = '1'; });
     function onKey(e) { if (e.key === 'Escape') close(); }
     document.addEventListener('keydown', onKey);
     function close() {
       document.removeEventListener('keydown', onKey);
       if (ov.isConnected) document.body.removeChild(ov);
+      renderReels();
       var trigger = cardEls[id] && cardEls[id].card.querySelector('.sm-model-trigger');
       if (trigger) trigger.focus();
     }
     ov.onclick = function (e) { if (e.target === ov) close(); };
+  }
+
+  // New slot in the middle of the longest one, with the same setting.
+  function addSlot() {
+    if (st.fasce.length >= MAX_SLOTS) return;
+    var arr = ordered(), longest = arr[0];
+    arr.forEach(function (fa) { if (fa._dur > longest._dur) longest = fa; });
+    if (!longest || longest._dur < MIN_GAP * 2) return;
+    var n = { id: 'f' + (uid++), key: null, label: L.slot + ' ' + (st.fasce.length + 1), modelId: longest.modelId,
+      time: m2t(Math.round((t2m(longest.time) + longest._dur / 2) / SNAP) * SNAP),
+      custom: longest.custom ? { red: longest.custom.red, bright: longest.custom.bright, temp: longest.custom.temp } : null };
+    st.fasce.push(n); renderReels(); markDirty(); openSlot(n.id);
   }
 
   function setTime(id, minutes) {
@@ -370,8 +490,17 @@
 
   function slotsFromState() {
     return ordered().map(function (fa) {
-      var m = modelById(fa.modelId);
-      return { time: fa.time, on: m.on, red: m.red, bright: m.bright, temp: m.temp, model: m.id, label: fa.label };
+      var v = valuesOf(fa);
+      return { time: fa.time, on: v.on, red: v.red, bright: v.bright, temp: v.temp, model: fa.modelId, label: labelOf(fa) };
+    });
+  }
+  function slotsToFasce(slots) {
+    return slots.map(function (s) {
+      var key = null; for (var k in T.en.fasce) if (T.en.fasce[k] === s.label || T.it.fasce[k] === s.label) key = k;
+      var known = null; for (var i = 0; i < MODELS.length; i++) if (MODELS[i].id === s.model) known = MODELS[i];
+      var modelId = known ? known.id : (s.on ? 'custom' : 'off');
+      return { id: 'f' + (uid++), key: key, label: s.label || L.slot, modelId: modelId, time: s.time,
+        custom: modelId === 'custom' ? { red: s.red, bright: s.bright, temp: s.temp } : null };
     });
   }
   function sendSchedule(enabled) {
@@ -384,16 +513,11 @@
     }).catch(function () { btn.disabled = false; $('sm-status').textContent = '✕ ' + L.error; });
   }
   function defaultState() {
-    st.fasce = FASCE.map(function (f) { return { id: f.key, label: L.fasce[f.key], modelId: f.model, time: f.time }; });
+    st.fasce = FASCE.map(function (f) { return { id: 'f' + (uid++), key: f.key, label: L.fasce[f.key], modelId: f.model, time: f.time }; });
   }
   function loadSchedule() {
     return api('/api/schedule').then(function (d) {
-      if (d.slots && d.slots.length && !st.dirty) {
-        st.fasce = d.slots.map(function (s, i) {
-          var m = s.model ? modelById(s.model) : null;
-          return { id: 's' + i, label: s.label || L.slot + ' ' + (i + 1), modelId: m ? m.id : 'none', time: s.time };
-        });
-      }
+      if (d.slots && d.slots.length && !st.dirty) st.fasce = slotsToFasce(d.slots);
       st.enabled = !!d.enabled; $('sched-on').checked = st.enabled;
       renderReels();
     }).catch(function () {});
@@ -401,11 +525,13 @@
   function bootSchedule() {
     defaultState(); renderPresets(); renderReels();
     $('sm-apply').onclick = function () { sendSchedule(true); };
+    $('sm-add').onclick = addSlot;
     $('sched-on').addEventListener('change', function () { sendSchedule($('sched-on').checked); });
-    loadSchedule();
+    loadSchedule(); loadDays();
   }
 
   labels();
+  renderQuick();
   refresh();
   bootSchedule();
   window.addEventListener('resize', layout);

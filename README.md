@@ -56,9 +56,13 @@ Open the app from the launcher:
 1. In the app on the TV, turn on **Phone remote**: a QR code appears.
 2. Scan it with the phone camera. The page opens in the browser; *Add to Home screen* makes it an app icon.
 3. Move the sliders or pick a preset: the TV follows instantly.
-4. **Schedule**: pick a day preset or tap the emoji of each time slot to choose its filter, drag the edges
-   between slots to set the times, then **Apply to TV**. The TV switches slot by itself; a manual change
-   lasts until the next slot.
+4. **Schedule**: pick a day preset, tap the icon of a time slot to choose its setting (a profile or a custom
+   one), rename or remove it, add slots, drag the edges between slots to set the times, then
+   **Apply to TV**. The TV switches slot by itself; a manual change lasts until the next slot.
+   **Save as day** keeps a named day on the TV, available to every paired phone.
+
+The page is in English, or Italian on Italian phones (switchable with EN | IT); the TV app follows the
+device language.
 
 The QR code carries a random pairing key: requests without it are refused. **New pairing code** on the TV
 disconnects every paired phone. The remote works only while the phone is on the same network as the TV.
@@ -69,6 +73,7 @@ HTTP API (port 8765, header `X-Key: <pairing key>`), handy for scripts:
 curl -H "X-Key: $KEY" http://TV-IP:8765/api/state
 curl -H "X-Key: $KEY" -H "Content-Type: application/json" -d '{"red":60,"bright":40}' http://TV-IP:8765/api/set
 curl -H "X-Key: $KEY" http://TV-IP:8765/api/schedule
+curl -H "X-Key: $KEY" http://TV-IP:8765/api/days
 ```
 
 ## ADB commands

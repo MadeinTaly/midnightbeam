@@ -125,3 +125,11 @@
 }
 @media (max-width:767px) { .sm-cycle { display:none; } .sm-editor, .sm-preset-panel.card { padding:1.15rem; } }
 @media (prefers-reduced-motion:reduce) { .sm-model-panel { transition:none; } }
+
+/* Screen icons: a tiny TV showing the effect of the filter setting */
+.od-screen { display:inline-block; position:relative; width:1.9rem; height:1.25rem; border-radius:.3rem; border:2px solid var(--app-ink); box-sizing:border-box; }
+.od-screen::after { content:''; position:absolute; left:50%; bottom:-.42rem; width:.7rem; height:.2rem; transform:translateX(-50%); border-radius:.1rem; background:var(--app-ink); }
+.od-screen.off { background:repeating-linear-gradient(45deg, var(--app-surface-soft), var(--app-surface-soft) 3px, var(--app-border) 3px, var(--app-border) 6px); }
+.od-screen.custom { background:linear-gradient(90deg, #ff8a3d, #6e3a1f 55%, #1a1a1a); }
+.sm-danger { color:#b74141; }
+.od-custom { margin-top:1rem; padding-top:1rem; border-top:1px solid var(--app-border); }
