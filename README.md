@@ -91,6 +91,12 @@ sudo apt install openjdk-17-jdk-headless dalvik-exchange aapt zipalign apksigner
 ./build.sh
 ```
 
+With the Android SDK instead of the Debian packages:
+
+```sh
+BUILD_TOOLS=$ANDROID_HOME/build-tools/34.0.0 ANDROID_JAR=$ANDROID_HOME/platforms/android-28/android.jar ./build.sh
+```
+
 The first build creates a local `debug.keystore` to sign the APK. APKs signed with different keys cannot
 update each other, so uninstall the release build before installing your own.
 

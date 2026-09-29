@@ -1,11 +1,17 @@
 #!/usr/bin/env bash
-# Builds overlay-dimmer.apk without Gradle or the Android SDK manager.
-# Debian/Ubuntu: apt install openjdk-17-jdk-headless dalvik-exchange aapt zipalign apksigner android-sdk-platform-23
+# Builds overlay-dimmer.apk without Gradle. Two toolchains:
+#  - Debian/Ubuntu packages (default):
+#      apt install openjdk-17-jdk-headless dalvik-exchange aapt zipalign apksigner android-sdk-platform-23
+#  - Android SDK: BUILD_TOOLS=<sdk>/build-tools/<ver> ANDROID_JAR=<sdk>/platforms/android-<n>/android.jar ./build.sh
+#    (uses d8, aapt and zipalign from build-tools)
 set -euo pipefail
 cd "$(dirname "$0")"
 
 ANDROID_JAR=${ANDROID_JAR:-/usr/lib/android-sdk/platforms/android-23/android.jar}
-DX=${DX:-$(command -v dalvik-exchange || command -v dx)}
+BUILD_TOOLS=${BUILD_TOOLS:-}
+tool() { if [ -n "$BUILD_TOOLS" ]; then echo "$BUILD_TOOLS/$1"; else command -v "$1"; fi; }
+AAPT=$(tool aapt)
+ZIPALIGN=$(tool zipalign)
 KEYSTORE=${KEYSTORE:-debug.keystore}
 SIGN=${SIGN:-1}   # SIGN=0: stop at the unsigned, aligned APK (build/aligned.apk), e.g. for F-Droid
 OUT=build
@@ -14,11 +20,16 @@ rm -rf "$OUT" && mkdir -p "$OUT/classes"
 
 javac -source 8 -target 8 -nowarn -Xlint:-options -bootclasspath "$ANDROID_JAR" -d "$OUT/classes" \
     $(find app/src -name '*.java')
-"$DX" --dex --output="$OUT/classes.dex" "$OUT/classes"
+if [ -n "$BUILD_TOOLS" ]; then
+    "$BUILD_TOOLS/d8" --min-api 26 --lib "$ANDROID_JAR" --output "$OUT" $(find "$OUT/classes" -name '*.class')
+else
+    DX=${DX:-$(command -v dalvik-exchange || command -v dx)}
+    "$DX" --dex --output="$OUT/classes.dex" "$OUT/classes"
+fi
 
-aapt package -f -M app/AndroidManifest.xml -S app/res -I "$ANDROID_JAR" -F "$OUT/unsigned.apk"
-(cd "$OUT" && aapt add unsigned.apk classes.dex >/dev/null)
-zipalign -f 4 "$OUT/unsigned.apk" "$OUT/aligned.apk"
+"$AAPT" package -f -M app/AndroidManifest.xml -S app/res -I "$ANDROID_JAR" -F "$OUT/unsigned.apk"
+(cd "$OUT" && "$AAPT" add unsigned.apk classes.dex >/dev/null)
+"$ZIPALIGN" -f 4 "$OUT/unsigned.apk" "$OUT/aligned.apk"
 if [ "$SIGN" = 0 ]; then
     echo "built $OUT/aligned.apk (unsigned)"
     exit 0

@@ -1,0 +1,1 @@
+* build.sh can also use the Android SDK build-tools (d8, aapt, zipalign)
