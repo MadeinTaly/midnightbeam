@@ -6,15 +6,17 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 
 /**
- * Restores the last setting after a reboot. BOOT_COMPLETED is delivered to apps one at a time and on some
- * TV boxes reaches the last ones a minute or more after boot, so the receiver has a high priority (manifest).
+ * Restores the last setting, the phone remote and the schedule after a reboot. BOOT_COMPLETED is delivered
+ * to apps one at a time and on some TV boxes reaches the last ones a minute or more after boot, so the
+ * receiver has a high priority (manifest).
  */
 public class BootReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         SharedPreferences p = context.getSharedPreferences(DimService.PREFS, Context.MODE_PRIVATE);
         boolean neutral = p.getInt("red", 0) == 0 && p.getInt("bright", 100) == 100;
-        if (p.getBoolean("off", false) || neutral) return;
+        boolean filter = !p.getBoolean("off", false) && !neutral;
+        if (!filter && !p.getBoolean("remote", false) && !p.getBoolean("schedule_on", false)) return;
         Compat.startForegroundService(context, new Intent(context, DimService.class));
     }
 }

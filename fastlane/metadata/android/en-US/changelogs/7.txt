@@ -1,0 +1,3 @@
+* Phone remote: scan a QR code on the TV and control it from the phone browser
+* Daily schedule with a timeline editor, applied by the TV itself
+* Schedule bar at the bottom of the TV screen

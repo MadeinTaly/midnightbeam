@@ -3,17 +3,24 @@ package dev.overlaydimmer;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.View.OnFocusChangeListener;
+import android.widget.Button;
 import android.widget.CompoundButton;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.SeekBar;
 import android.widget.Switch;
 import android.widget.TextView;
+
+import io.nayuki.qrcodegen.QrCode;
 
 /**
  * Remote-friendly settings screen for cheap TV-box remotes: only D-pad and OK are needed
@@ -24,8 +31,16 @@ import android.widget.TextView;
  * attribute with an unnamed parameter, which crashes older d8 versions (e.g. build-tools 34).
  */
 public class MainActivity extends Activity
-        implements CompoundButton.OnCheckedChangeListener, OnFocusChangeListener {
+        implements CompoundButton.OnCheckedChangeListener, OnFocusChangeListener, View.OnClickListener, Runnable {
+    private final Handler main = new Handler(Looper.getMainLooper());
+    private SharedPreferences prefs;
+    private TimelineView timeline;
+    private TextView timelineTitle;
     private Switch enabled;
+    private Switch remote;
+    private ImageView qr;
+    private TextView remoteInfo;
+    private Button newKey;
     private Slider red;
     private Slider bright;
     private Slider temp;
@@ -34,17 +49,28 @@ public class MainActivity extends Activity
     static final int FOCUS = Color.rgb(255, 140, 40);
     static final int NORMAL = Color.rgb(220, 220, 220);
     static final int FOCUS_BACKGROUND = Color.rgb(45, 35, 25);
+    static final int BUTTON_BACKGROUND = Color.rgb(40, 40, 44);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         SharedPreferences p = getSharedPreferences(DimService.PREFS, MODE_PRIVATE);
+        prefs = p;
+
+        // Two columns (filter controls, phone remote QR code) above the schedule timeline.
+        LinearLayout screen = new LinearLayout(this);
+        screen.setOrientation(LinearLayout.VERTICAL);
+        screen.setBackgroundColor(Color.rgb(18, 18, 20));
+        int pad = dp(48);
+        screen.setPadding(pad, dp(28), pad, dp(24));
+
+        LinearLayout page = new LinearLayout(this);
+        page.setOrientation(LinearLayout.HORIZONTAL);
+        screen.addView(page, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f));
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(Color.rgb(18, 18, 20));
-        int pad = dp(48);
-        root.setPadding(pad, dp(32), pad, pad);
+        page.addView(root, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 3f));
 
         TextView title = text("Overlay Dimmer", 28, Color.WHITE);
         root.addView(title);
@@ -65,21 +91,139 @@ public class MainActivity extends Activity
         temp = new Slider(this, root, "Colour temperature (lower = redder)", " K", 1000, 4000, 100,
                 p.getInt("temp", DimService.DEFAULT_TEMP));
 
-        setContentView(root);
+        LinearLayout side = new LinearLayout(this);
+        side.setOrientation(LinearLayout.VERTICAL);
+        side.setGravity(Gravity.CENTER_HORIZONTAL);
+        side.setPadding(dp(40), dp(8), 0, 0);
+        page.addView(side, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 2f));
+
+        remote = new Switch(this);
+        remote.setText("Phone remote");
+        remote.setTextColor(Color.WHITE);
+        remote.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20);
+        remote.setPadding(dp(8), dp(8), dp(8), dp(8));
+        remote.setChecked(p.getBoolean("remote", false));
+        remote.setFocusable(true);
+        remote.setOnFocusChangeListener(this);
+        remote.setOnCheckedChangeListener(this);
+        side.addView(remote, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+
+        qr = new ImageView(this);
+        qr.setPadding(0, dp(16), 0, dp(8));
+        side.addView(qr, new LinearLayout.LayoutParams(dp(210), dp(226)));
+
+        remoteInfo = text("", 14, NORMAL);
+        remoteInfo.setGravity(Gravity.CENTER_HORIZONTAL);
+        side.addView(remoteInfo);
+
+        newKey = new Button(this);
+        newKey.setText("New pairing code");
+        newKey.setAllCaps(false);
+        newKey.setTextColor(Color.WHITE);
+        newKey.setBackgroundColor(BUTTON_BACKGROUND);
+        newKey.setPadding(dp(20), dp(10), dp(20), dp(10));
+        newKey.setFocusable(true);
+        newKey.setOnClickListener(this);
+        newKey.setOnFocusChangeListener(this);
+        side.addView(newKey, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+
+        timelineTitle = text("", 15, NORMAL);
+        timelineTitle.setPadding(0, dp(12), 0, dp(6));
+        screen.addView(timelineTitle);
+        timeline = new TimelineView(this);
+        screen.addView(timeline, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(68)));
+
+        setContentView(screen);
+        refreshRemote();
         enabled.requestFocus();
         ready = true;
     }
 
-    /** Focus highlight of the on/off switch (the sliders handle their own). */
+    @Override
+    protected void onResume() {
+        super.onResume();
+        run();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        main.removeCallbacks(this);
+    }
+
+    /** Refreshes the schedule timeline (set from the phone page) every 30 s while the screen is open. */
+    @Override
+    public void run() {
+        boolean on = prefs.getBoolean("schedule_on", false);
+        timeline.setSchedule(prefs.getString("schedule", "[]"), on);
+        timelineTitle.setText(timeline.isEmpty() ? "Schedule: set it from the phone remote"
+                : on ? "Schedule \u00b7 on" : "Schedule \u00b7 off (turn it on from the phone remote)");
+        timeline.setVisibility(timeline.isEmpty() ? View.GONE : View.VISIBLE);
+        main.postDelayed(this, 30000);
+    }
+
+    /** Shows the QR code and the address of the phone remote when it is on. */
+    private void refreshRemote() {
+        boolean on = remote.isChecked();
+        qr.setVisibility(on ? View.VISIBLE : View.GONE);
+        newKey.setVisibility(on ? View.VISIBLE : View.GONE);
+        if (!on) {
+            remoteInfo.setText("Control this filter from a phone on the same network.");
+            return;
+        }
+        String ip = RemoteServer.localIp();
+        if (ip == null) {
+            qr.setVisibility(View.GONE);
+            remoteInfo.setText("Not connected to a network.");
+            return;
+        }
+        String url = "http://" + ip + ":" + RemoteServer.PORT + "/#k=" + DimService.pairingKey(prefs);
+        qr.setImageBitmap(qrBitmap(url));
+        remoteInfo.setText("Scan with the phone camera\n" + ip + ":" + RemoteServer.PORT);
+    }
+
+    /** QR code as a bitmap: black modules on white, with the standard 4-module quiet zone. */
+    private static Bitmap qrBitmap(String text) {
+        QrCode code = QrCode.encodeText(text, QrCode.Ecc.MEDIUM);
+        int border = 4;
+        int size = code.size + border * 2;
+        int[] px = new int[size * size];
+        for (int y = 0; y < size; y++) {
+            for (int x = 0; x < size; x++) {
+                boolean dark = code.getModule(x - border, y - border);
+                px[y * size + x] = dark ? Color.BLACK : Color.WHITE;
+            }
+        }
+        Bitmap small = Bitmap.createBitmap(px, size, size, Bitmap.Config.ARGB_8888);
+        return Bitmap.createScaledBitmap(small, size * 8, size * 8, false); // crisp, no smoothing
+    }
+
+    @Override
+    public void onClick(View v) {
+        if (v == newKey) {
+            DimService.newPairingKey(prefs); // phones paired with the old code stop working
+            refreshRemote();
+        }
+    }
+
+    /** Focus highlight of the switches and the button (the sliders handle their own). */
     @Override
     public void onFocusChange(View v, boolean hasFocus) {
-        enabled.setTextColor(hasFocus ? FOCUS : Color.WHITE);
-        enabled.setBackgroundColor(hasFocus ? FOCUS_BACKGROUND : Color.TRANSPARENT);
+        if (v instanceof TextView) ((TextView) v).setTextColor(hasFocus ? FOCUS : Color.WHITE);
+        v.setBackgroundColor(hasFocus ? FOCUS_BACKGROUND : v == newKey ? BUTTON_BACKGROUND : Color.TRANSPARENT);
     }
 
     @Override
     public void onCheckedChanged(CompoundButton b, boolean checked) {
-        apply();
+        if (b == remote) {
+            if (checked) DimService.pairingKey(prefs);
+            Compat.startForegroundService(this, new Intent(this, DimService.class).putExtra("remote", checked));
+            refreshRemote();
+        } else {
+            apply();
+        }
     }
 
     /** Called by a slider moved by the user: moving a slider also turns the filter on. */

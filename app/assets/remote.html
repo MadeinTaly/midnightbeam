@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#102824">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Overlay Dimmer</title>
+  <script>
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      document.documentElement.classList.add('dark');
+    }
+  </script>
+  <link rel="stylesheet" href="/remote.css">
+</head>
+<body class="app-shell">
+  <div class="water-ambient" aria-hidden="true"><div class="water-glow"></div></div>
+
+  <main class="max-w-3xl mx-auto px-4 pt-8 pb-40 space-y-4">
+    <header class="flex items-center gap-3 mb-2">
+      <div class="app-brand-mark">&#9790;</div>
+      <div>
+        <h1 class="text-2xl">Overlay Dimmer</h1>
+        <p class="text-sm" style="color: var(--app-muted)" data-t="subtitle"></p>
+      </div>
+    </header>
+
+    <div id="pair-error" class="hidden card border-red-300 dark:border-red-900/60">
+      <p class="font-semibold text-red-600 dark:text-red-400" data-t="pairTitle"></p>
+      <p class="text-sm mt-1" style="color: var(--app-muted)" data-t="pairText"></p>
+    </div>
+
+    <!-- Live controls -->
+    <section class="card space-y-5">
+      <div class="flex items-center justify-between">
+        <h2 class="font-bold text-lg" data-t="filter"></h2>
+        <label class="switch"><input id="on" type="checkbox"><span></span></label>
+      </div>
+      <div>
+        <div class="flex justify-between text-sm mb-1"><span class="text-amber-600 dark:text-amber-400" data-t="red"></span><span id="red-v"></span></div>
+        <input id="red" type="range" min="0" max="100" step="5" class="slider-amber w-full">
+      </div>
+      <div>
+        <div class="flex justify-between text-sm mb-1"><span style="color: var(--app-muted)" data-t="bright"></span><span id="bright-v"></span></div>
+        <input id="bright" type="range" min="5" max="100" step="5" class="slider-power w-full">
+      </div>
+      <div>
+        <div class="flex justify-between text-sm mb-1"><span style="color: var(--app-muted)" data-t="temp"></span><span id="temp-v"></span></div>
+        <input id="temp" type="range" min="1000" max="4000" step="100" class="slider-white w-full">
+      </div>
+      <div class="grid grid-cols-3 gap-2">
+        <button class="btn-secondary preset" data-red="0" data-bright="100" data-t="day"></button>
+        <button class="btn-secondary preset" data-red="50" data-bright="80" data-t="evening"></button>
+        <button class="btn-secondary preset" data-red="80" data-bright="40" data-t="night"></button>
+      </div>
+    </section>
+
+    <!-- Schedule: the xaqua-web "slot-machine" timeline -->
+    <section class="pt-4">
+      <header class="sm-heading">
+        <div><h2 data-t="schedTitle"></h2><p data-t="schedSub"></p></div>
+        <span class="sm-cycle" data-t="cycle"></span>
+      </header>
+
+      <div class="sm-preset-panel card mb-4">
+        <div class="flex items-center justify-between mb-3 gap-3">
+          <h3 class="font-semibold text-sm" data-t="chooseDay"></h3>
+          <label class="inline-flex items-center gap-2 text-sm"><span data-t="schedActive"></span><span class="switch"><input id="sched-on" type="checkbox"><span></span></span></label>
+        </div>
+        <div id="sm-presets" class="flex flex-wrap gap-2"></div>
+      </div>
+
+      <div class="sm-editor">
+        <div class="sm-editor-heading">
+          <div><h3 data-t="rhythm"></h3><p data-t="rhythmSub"></p></div>
+          <span class="sm-now-key" data-t="nowKey"></span>
+        </div>
+        <div id="sm-spectrum" class="sm-spectrum" aria-hidden="true"></div>
+        <div id="sm-reels" class="sm-reels"></div>
+        <p class="sm-editor-note" data-t="note"></p>
+      </div>
+    </section>
+  </main>
+
+  <div class="sm-apply-bar">
+    <div class="sm-apply-inner">
+      <div class="sm-apply-feedback" aria-live="polite">
+        <span id="sm-dirty" class="text-amber-600 hidden" data-t="dirty"></span>
+        <span id="sm-status" style="color: var(--app-muted)"></span>
+      </div>
+      <button id="sm-apply" class="btn-primary ml-auto" data-t="apply"></button>
+    </div>
+  </div>
+
+<script>
+(function () {
+  'use strict';
+  var T = {
+    en: { subtitle: 'Warm filter and brightness for the TV', pairTitle: 'Not paired', pairText: 'Scan the QR code shown in the Overlay Dimmer app on the TV again.', filter: 'Filter', red: 'Warm filter', bright: 'Brightness', temp: 'Colour (lower = redder)', day: 'Day', evening: 'Evening', night: 'Night', error: 'error',
+      schedTitle: 'Your evening of light', schedSub: 'From afternoon to late night, every slot has its own mood.', cycle: '24-hour cycle', chooseDay: 'Choose a day', schedActive: 'Schedule on',
+      rhythm: 'The rhythm of the light', rhythmSub: 'Pick a model. Drag the edges to set the times.', nowKey: 'TV time', note: 'Colours are a preview of a grey picture under the filter. The TV switches slot by itself, even with the phone off.',
+      dirty: '● changes not applied', apply: 'Apply to TV', sending: 'Sending…', applied: 'Schedule applied', savedOff: 'Schedule off', close: 'Close', startOf: 'Start of', slot: 'Slot',
+      fasce: { morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening', film: 'Movie', night: 'Night' },
+      models: { none: 'No filter', soft: 'Soft', evening: 'Evening', cinema: 'Cinema', night: 'Night', deep: 'Deep night' },
+      presets: { movie: 'Movie night', early: 'Early to bed', late: 'Night owl', always: 'No filter' } },
+    it: { subtitle: 'Filtro caldo e luminosità per il TV', pairTitle: 'Non abbinato', pairText: 'Inquadra di nuovo il QR mostrato nell\u2019app Overlay Dimmer sul TV.', filter: 'Filtro', red: 'Filtro caldo', bright: 'Luminosità', temp: 'Colore (più basso = più rosso)', day: 'Giorno', evening: 'Sera', night: 'Notte', error: 'errore',
+      schedTitle: 'La tua serata di luce', schedSub: 'Dal pomeriggio a notte fonda, ogni fascia ha il suo carattere.', cycle: 'Ciclo di 24 ore', chooseDay: 'Scegli una giornata', schedActive: 'Programmazione attiva',
+      rhythm: 'Il ritmo della luce', rhythmSub: 'Seleziona un modello. Trascina i bordi per regolare gli orari.', nowKey: 'Ora TV', note: 'I colori sono un\u2019anteprima di un\u2019immagine grigia sotto il filtro. Il TV cambia fascia da solo, anche col telefono spento.',
+      dirty: '● modifiche non applicate', apply: 'Applica al TV', sending: 'Invio…', applied: 'Programmazione applicata', savedOff: 'Programmazione spenta', close: 'Chiudi', startOf: 'Inizio', slot: 'Fascia',
+      fasce: { morning: 'Mattina', afternoon: 'Pomeriggio', evening: 'Sera', film: 'Film', night: 'Notte' },
+      models: { none: 'Nessun filtro', soft: 'Tenue', evening: 'Sera', cinema: 'Cinema', night: 'Notte', deep: 'Notte fonda' },
+      presets: { movie: 'Serata film', early: 'A letto presto', late: 'Nottambulo', always: 'Nessun filtro' } }
+  };
+  var L = T[(navigator.language || 'en').slice(0, 2)] || T.en;
+  document.documentElement.lang = L === T.it ? 'it' : 'en';
+  Array.prototype.forEach.call(document.querySelectorAll('[data-t]'), function (el) { el.textContent = L[el.getAttribute('data-t')]; });
+
+  function $(id) { return document.getElementById(id); }
+
+  // Pairing key: arrives in the URL fragment from the QR code, then kept on the phone.
+  var m = location.hash.match(/k=([0-9a-f]+)/);
+  if (m) { try { localStorage.setItem('od_key', m[1]); } catch (e) {} history.replaceState(null, '', location.pathname); }
+  var key = m ? m[1] : (function () { try { return localStorage.getItem('od_key'); } catch (e) { return null; } })();
+
+  function api(path, body) {
+    return fetch(path, {
+      method: body ? 'POST' : 'GET',
+      headers: body ? { 'X-Key': key || '', 'Content-Type': 'application/json' } : { 'X-Key': key || '' },
+      body: body ? JSON.stringify(body) : undefined
+    }).then(function (r) {
+      $('pair-error').classList.toggle('hidden', r.status !== 403);
+      if (!r.ok) throw new Error(r.status);
+      return r.json();
+    });
+  }
+  function toast(msg, kind) {
+    var t = document.createElement('div');
+    t.className = 'toast ' + (kind === 'error' ? 'bg-red-600' : 'bg-emerald-700');
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(function () { t.remove(); }, 2200);
+  }
+
+  // ---- Live controls ----
+  function labels() {
+    $('red-v').textContent = $('red').value + '%';
+    $('bright-v').textContent = $('bright').value + '%';
+    $('temp-v').textContent = $('temp').value + ' K';
+  }
+  function show(s) {
+    if (typeof s.minute === 'number') {
+      var n = new Date(); deviceOffset = s.minute - (n.getHours() * 60 + n.getMinutes() + n.getSeconds() / 60);
+      if (deviceOffset > 720) deviceOffset -= 1440; if (deviceOffset < -720) deviceOffset += 1440;
+    }
+    $('on').checked = s.on;
+    $('red').value = s.red; $('bright').value = s.bright; $('temp').value = s.temp;
+    labels();
+  }
+  var pending = null;
+  function sendLive() {
+    clearTimeout(pending);
+    pending = setTimeout(function () {
+      api('/api/set', { on: true, red: +$('red').value, bright: +$('bright').value, temp: +$('temp').value })
+        .then(show).catch(function () {});
+    }, 120);
+  }
+  ['red', 'bright', 'temp'].forEach(function (id) {
+    $(id).addEventListener('input', function () { labels(); $('on').checked = true; sendLive(); });
+  });
+  $('on').addEventListener('change', function () { api('/api/set', { on: $('on').checked }).then(show).catch(function () {}); });
+  Array.prototype.forEach.call(document.querySelectorAll('.preset'), function (b) {
+    b.addEventListener('click', function () {
+      api('/api/set', { on: true, red: +b.getAttribute('data-red'), bright: +b.getAttribute('data-bright') }).then(show).catch(function () {});
+    });
+  });
+  function refresh() { api('/api/state').then(show).catch(function () {}); }
+
+  // ---- Schedule: timeline of time slots, ported from the xaqua-web "slot-machine" schedule ----
+  // Slots are cards sized by their duration; drag a card edge (or use the arrow keys on it) to move its start
+  // time. Each slot has a model (a filter setting); tap the emoji to pick another one. Apply sends the whole
+  // day to the TV, which switches slot by itself, even with the phone off.
+  var DAY_MIN = 1440, MIN_GAP = 30, SNAP = 5;
+  var MODELS = [
+    { id: 'none',    emoji: '☀️', on: false, red: 0,   bright: 100, temp: 1100 },
+    { id: 'soft',    emoji: '🌤️', on: true, red: 25, bright: 95, temp: 1800 },
+    { id: 'evening', emoji: '🌇', on: true,  red: 50,  bright: 80,  temp: 1100 },
+    { id: 'cinema',  emoji: '🎬', on: true,  red: 30,  bright: 60,  temp: 1500 },
+    { id: 'night',   emoji: '🌙', on: true,  red: 80,  bright: 40,  temp: 1100 },
+    { id: 'deep',    emoji: '🌑', on: true,  red: 100, bright: 20,  temp: 1000 }
+  ];
+  var FASCE = [
+    { key: 'morning',   time: '07:00', model: 'none' },
+    { key: 'afternoon', time: '14:00', model: 'none' },
+    { key: 'evening',   time: '19:30', model: 'evening' },
+    { key: 'film',      time: '21:00', model: 'cinema' },
+    { key: 'night',     time: '23:00', model: 'night' }
+  ];
+  var PRESETS = [
+    { id: 'movie', emoji: '🎬', sel: { morning: 'none', afternoon: 'none', evening: 'evening', film: 'cinema', night: 'night' },
+      times: { morning: '07:00', afternoon: '14:00', evening: '19:30', film: '21:00', night: '23:30' } },
+    { id: 'early', emoji: '😴', sel: { morning: 'none', afternoon: 'soft', evening: 'evening', film: 'night', night: 'deep' },
+      times: { morning: '07:00', afternoon: '16:00', evening: '19:00', film: '21:00', night: '22:30' } },
+    { id: 'late', emoji: '🦉', sel: { morning: 'none', afternoon: 'none', evening: 'soft', film: 'cinema', night: 'night' },
+      times: { morning: '08:30', afternoon: '15:00', evening: '20:30', film: '22:00', night: '01:00' } },
+    { id: 'always', emoji: '🔆', sel: { morning: 'none', afternoon: 'none', evening: 'none', film: 'none', night: 'none' },
+      times: { morning: '07:00', afternoon: '14:00', evening: '19:30', film: '21:00', night: '23:00' } }
+  ];
+  var st = { fasce: [], enabled: false, dirty: false };
+  var cardEls = {}, nowLine = null, deviceOffset = 0;
+
+  function el(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
+  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+  function t2m(hhmm) { var p = String(hhmm).split(':'); return (+p[0]) * 60 + (+p[1]); }
+  function m2t(min) { min = ((Math.round(min) % DAY_MIN) + DAY_MIN) % DAY_MIN; var h = Math.floor(min / 60), m = min % 60; return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m; }
+  function isWide() { return window.matchMedia('(min-width: 768px)').matches; }
+  function modelById(id) { for (var i = 0; i < MODELS.length; i++) if (MODELS[i].id === id) return MODELS[i]; return MODELS[0]; }
+  function modelLabel(m) { return L.models[m.id]; }
+  function faById(id) { for (var i = 0; i < st.fasce.length; i++) if (st.fasce[i].id === id) return st.fasce[i]; return null; }
+  function ordered() {
+    var arr = st.fasce.slice().sort(function (a, b) { return t2m(a.time) - t2m(b.time); });
+    for (var i = 0; i < arr.length; i++) { var nx = arr[(i + 1) % arr.length]; var d = t2m(nx.time) - t2m(arr[i].time); if (d <= 0) d += DAY_MIN; arr[i]._dur = d; }
+    return arr;
+  }
+  function nowMinutes() { var n = new Date(); var m = n.getHours() * 60 + n.getMinutes() + n.getSeconds() / 60 + deviceOffset; return ((m % DAY_MIN) + DAY_MIN) % DAY_MIN; }
+
+  // Preview of a mid-grey picture under the filter, with the same formula the app uses (DimService.java).
+  function kelvinRgb(k) {
+    var t = k / 100, r, g, b;
+    r = t <= 66 ? 255 : 329.698727446 * Math.pow(t - 60, -0.1332047592);
+    g = t <= 66 ? 99.4708025861 * Math.log(t) - 161.1195681661 : 288.1221695283 * Math.pow(t - 60, -0.0755148492);
+    b = t >= 66 ? 255 : t <= 19 ? 0 : 138.5177312231 * Math.log(t - 10) - 305.0447927307;
+    return [r, g, b].map(function (v) { return clamp(Math.round(v), 0, 255); });
+  }
+  function previewCss(m) {
+    if (!m.on) return 'rgb(205,205,205)';
+    var tint = kelvinRgb(m.temp), tintA = m.red / 100 * 0.65, dimA = (100 - m.bright) / 100, base = 205;
+    var c = tint.map(function (v) { return ((base * (1 - tintA) + v * tintA) * (1 - dimA)) | 0; });
+    return 'rgb(' + c.join(',') + ')';
+  }
+
+  function markDirty() { st.dirty = true; $('sm-dirty').classList.remove('hidden'); $('sm-status').textContent = ''; }
+
+  function renderPresets() {
+    var box = $('sm-presets'); box.innerHTML = '';
+    PRESETS.forEach(function (p) {
+      var b = el('button', 'sm-chip', '<span class="text-base">' + p.emoji + '</span>' + esc(L.presets[p.id]));
+      b.onclick = function () {
+        st.fasce = FASCE.map(function (f) { return { id: f.key, label: L.fasce[f.key], modelId: p.sel[f.key], time: p.times[f.key] }; });
+        renderReels(); markDirty();
+      };
+      box.appendChild(b);
+    });
+  }
+
+  function renderReels() {
+    var box = $('sm-reels'); box.innerHTML = ''; cardEls = {};
+    ordered().forEach(function (fa, idx) {
+      var m = modelById(fa.modelId);
+      var card = el('div', 'sm-slot');
+      card.style.flexGrow = fa._dur;
+      var tint = el('div', 'sm-slot-tint');
+      tint.style.background = m.on ? previewCss(m) : 'transparent';
+      card.appendChild(tint);
+      if (idx > 0) {
+        var handle = el('div', 'sm-boundary');
+        handle.tabIndex = 0;
+        handle.setAttribute('role', 'slider');
+        handle.setAttribute('aria-label', L.startOf + ' ' + fa.label);
+        handle.addEventListener('keydown', function (e) {
+          if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].indexOf(e.key) < 0) return;
+          e.preventDefault();
+          setTime(fa.id, t2m(fa.time) + ((e.key === 'ArrowRight' || e.key === 'ArrowDown') ? SNAP : -SNAP));
+          layout(); markDirty();
+        });
+        handle.appendChild(el('div', ''));
+        attachEdge(handle, fa.id);
+        card.appendChild(handle);
+      }
+      var content = el('div', 'sm-slot-content');
+      var badge = el('div', 'sm-slot-time');
+      content.appendChild(badge);
+      content.appendChild(el('div', 'sm-slot-label', esc(fa.label)));
+      var pick = el('button', 'sm-model-trigger');
+      pick.setAttribute('aria-label', fa.label + ': ' + modelLabel(m));
+      pick.setAttribute('aria-haspopup', 'dialog');
+      pick.appendChild(el('div', '', m.emoji));
+      pick.appendChild(el('div', '', esc(modelLabel(m)) + ' <span style="color: var(--app-muted)">▾</span>'));
+      pick.onclick = function (e) { e.stopPropagation(); openModelPicker(fa.id); };
+      content.appendChild(pick);
+      card.appendChild(content);
+      box.appendChild(card); cardEls[fa.id] = { card: card, badge: badge };
+    });
+    nowLine = el('div', 'sm-now-line');
+    box.appendChild(nowLine);
+    layout();
+  }
+
+  function layout() {
+    var arr = ordered(); var first = arr.length ? t2m(arr[0].time) : 0;
+    var spectrum = $('sm-spectrum'); spectrum.innerHTML = '';
+    arr.forEach(function (fa) {
+      var refs = cardEls[fa.id]; if (!refs) return;
+      refs.card.style.flexGrow = fa._dur;
+      refs.badge.textContent = fa.time + '–' + m2t((t2m(fa.time) + fa._dur) % DAY_MIN);
+      var seg = el('span', 'sm-spectrum-segment');
+      seg.style.flexGrow = fa._dur;
+      seg.style.background = previewCss(modelById(fa.modelId));
+      spectrum.appendChild(seg);
+    });
+    if (nowLine) {
+      var frac = ((((nowMinutes() - first) % DAY_MIN) + DAY_MIN) % DAY_MIN) / DAY_MIN;
+      if (isWide()) { nowLine.style.left = (frac * 100) + '%'; nowLine.style.top = '0'; }
+      else { nowLine.style.top = (frac * 100) + '%'; nowLine.style.left = '0'; }
+    }
+  }
+
+  function openModelPicker(id) {
+    var fa = faById(id); if (!fa) return;
+    var ov = el('div', 'sm-modal-overlay');
+    var panel = el('div', 'sm-model-panel');
+    panel.style.transform = 'scale(.82)'; panel.style.opacity = '0';
+    panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-modal', 'true');
+    panel.appendChild(el('div', '', esc(fa.label) + ' · ' + fa.time));
+    var grid = el('div', 'grid grid-cols-3 gap-2');
+    MODELS.forEach(function (m) {
+      var tile = el('button', 'sm-model-option');
+      tile.setAttribute('aria-pressed', String(m.id === fa.modelId));
+      tile.appendChild(el('div', '', m.emoji));
+      tile.appendChild(el('div', '', esc(modelLabel(m))));
+      tile.onclick = function () { fa.modelId = m.id; renderReels(); markDirty(); close(); };
+      grid.appendChild(tile);
+    });
+    panel.appendChild(grid);
+    var dismiss = el('button', 'sm-modal-dismiss', esc(L.close));
+    dismiss.onclick = close;
+    panel.appendChild(dismiss);
+    ov.appendChild(panel); document.body.appendChild(ov);
+    var firstTile = panel.querySelector('button'); if (firstTile) firstTile.focus();
+    requestAnimationFrame(function () { panel.style.transform = 'scale(1)'; panel.style.opacity = '1'; });
+    function onKey(e) { if (e.key === 'Escape') close(); }
+    document.addEventListener('keydown', onKey);
+    function close() {
+      document.removeEventListener('keydown', onKey);
+      if (ov.isConnected) document.body.removeChild(ov);
+      var trigger = cardEls[id] && cardEls[id].card.querySelector('.sm-model-trigger');
+      if (trigger) trigger.focus();
+    }
+    ov.onclick = function (e) { if (e.target === ov) close(); };
+  }
+
+  function setTime(id, minutes) {
+    var arr = ordered(), idx = -1; for (var i = 0; i < arr.length; i++) if (arr[i].id === id) idx = i;
+    var prev = idx > 0 ? t2m(arr[idx - 1].time) + MIN_GAP : 0;
+    var next = idx < arr.length - 1 ? t2m(arr[idx + 1].time) - MIN_GAP : DAY_MIN - 1;
+    var fa = faById(id); if (fa) fa.time = m2t(clamp(Math.round(minutes / SNAP) * SNAP, prev, next));
+  }
+  function attachEdge(handle, id) {
+    handle.addEventListener('pointerdown', function (ev) {
+      ev.preventDefault(); ev.stopPropagation();
+      var box = $('sm-reels'), rect = box.getBoundingClientRect(), wide = isWide();
+      var size = wide ? rect.width : rect.height, startCoord = wide ? ev.clientX : ev.clientY, startMin = t2m(faById(id).time);
+      handle.setPointerCapture(ev.pointerId);
+      function move(e) { var cur = wide ? e.clientX : e.clientY; setTime(id, startMin + (cur - startCoord) / size * DAY_MIN); layout(); }
+      function up() { try { handle.releasePointerCapture(ev.pointerId); } catch (x) {} handle.removeEventListener('pointermove', move); handle.removeEventListener('pointerup', up); markDirty(); }
+      handle.addEventListener('pointermove', move); handle.addEventListener('pointerup', up);
+    });
+  }
+
+  function slotsFromState() {
+    return ordered().map(function (fa) {
+      var m = modelById(fa.modelId);
+      return { time: fa.time, on: m.on, red: m.red, bright: m.bright, temp: m.temp, model: m.id, label: fa.label };
+    });
+  }
+  function sendSchedule(enabled) {
+    var btn = $('sm-apply'); btn.disabled = true; $('sm-status').textContent = L.sending;
+    return api('/api/schedule', { enabled: enabled, slots: slotsFromState() }).then(function () {
+      btn.disabled = false; st.enabled = enabled; $('sched-on').checked = enabled;
+      st.dirty = false; $('sm-dirty').classList.add('hidden');
+      $('sm-status').textContent = '✓ ' + (enabled ? L.applied : L.savedOff);
+      setTimeout(refresh, 400);
+    }).catch(function () { btn.disabled = false; $('sm-status').textContent = '✕ ' + L.error; });
+  }
+  function defaultState() {
+    st.fasce = FASCE.map(function (f) { return { id: f.key, label: L.fasce[f.key], modelId: f.model, time: f.time }; });
+  }
+  function loadSchedule() {
+    return api('/api/schedule').then(function (d) {
+      if (d.slots && d.slots.length && !st.dirty) {
+        st.fasce = d.slots.map(function (s, i) {
+          var m = s.model ? modelById(s.model) : null;
+          return { id: 's' + i, label: s.label || L.slot + ' ' + (i + 1), modelId: m ? m.id : 'none', time: s.time };
+        });
+      }
+      st.enabled = !!d.enabled; $('sched-on').checked = st.enabled;
+      renderReels();
+    }).catch(function () {});
+  }
+  function bootSchedule() {
+    defaultState(); renderPresets(); renderReels();
+    $('sm-apply').onclick = function () { sendSchedule(true); };
+    $('sched-on').addEventListener('change', function () { sendSchedule($('sched-on').checked); });
+    loadSchedule();
+  }
+
+  labels();
+  refresh();
+  bootSchedule();
+  window.addEventListener('resize', layout);
+  setInterval(function () { if (!document.hidden) { refresh(); layout(); } }, 15000);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) { refresh(); loadSchedule(); } });
+})();
+</script>
+</body>
+</html>

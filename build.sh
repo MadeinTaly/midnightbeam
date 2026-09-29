@@ -27,7 +27,7 @@ else
     "$DX" --dex --output="$OUT/classes.dex" "$OUT/classes"
 fi
 
-"$AAPT" package -f -M app/AndroidManifest.xml -S app/res -I "$ANDROID_JAR" -F "$OUT/unsigned.apk"
+"$AAPT" package -f -M app/AndroidManifest.xml -S app/res -A app/assets -I "$ANDROID_JAR" -F "$OUT/unsigned.apk"
 (cd "$OUT" && "$AAPT" add unsigned.apk classes.dex >/dev/null)
 "$ZIPALIGN" -f 4 "$OUT/unsigned.apk" "$OUT/aligned.apk"
 if [ "$SIGN" = 0 ]; then

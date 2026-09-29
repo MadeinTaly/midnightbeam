@@ -8,11 +8,16 @@ The difference is that changes apply instantly, with no flash to full brightness
 to be restarted to pick up new values from automation tools.
 
 - **Live control** from `adb shell` / Home Assistant: warm filter, brightness, colour temperature
+- **Phone remote**: scan a QR code on the TV and control it from any phone browser (Android or iPhone),
+  no app to install; the page works offline, on the local network only
+- **Daily schedule**: a timeline of time slots (movie night, early to bed…) that the TV applies by itself,
+  even with the phone off; shown as a bar at the bottom of the TV screen
 - **Remote-friendly settings screen**: only D-pad and OK are needed, with a visible focus highlight
   for the many TV-box themes that show none
 - **Restores the last setting at boot**, early: the boot receiver has a high priority, because on some boxes
   `BOOT_COMPLETED` reaches apps one at a time and can take over a minute
-- **Tiny**: ~20 KB APK, plain Java, no libraries, no internet permission, no tracking
+- **Tiny**: ~55 KB APK, plain Java, no tracking; the network is used only by the optional phone remote,
+  inside your home network (no outgoing connections)
 - Android 8.0+ (API 26), phones work too
 
 ![Settings screen, focused row highlighted](docs/settings-screen.png)
@@ -46,6 +51,26 @@ Open the app from the launcher:
 | Left / Right | change the focused value (applied immediately) |
 | OK | switch the filter on / off |
 
+## Phone remote and schedule
+
+1. In the app on the TV, turn on **Phone remote**: a QR code appears.
+2. Scan it with the phone camera. The page opens in the browser; *Add to Home screen* makes it an app icon.
+3. Move the sliders or pick a preset: the TV follows instantly.
+4. **Schedule**: pick a day preset or tap the emoji of each time slot to choose its filter, drag the edges
+   between slots to set the times, then **Apply to TV**. The TV switches slot by itself; a manual change
+   lasts until the next slot.
+
+The QR code carries a random pairing key: requests without it are refused. **New pairing code** on the TV
+disconnects every paired phone. The remote works only while the phone is on the same network as the TV.
+
+HTTP API (port 8765, header `X-Key: <pairing key>`), handy for scripts:
+
+```sh
+curl -H "X-Key: $KEY" http://TV-IP:8765/api/state
+curl -H "X-Key: $KEY" -H "Content-Type: application/json" -d '{"red":60,"bright":40}' http://TV-IP:8765/api/set
+curl -H "X-Key: $KEY" http://TV-IP:8765/api/schedule
+```
+
 ## ADB commands
 
 ```sh
@@ -57,6 +82,9 @@ adb shell am start-foreground-service -n dev.overlaydimmer/.DimService --ei brig
 
 # off
 adb shell am start-foreground-service -n dev.overlaydimmer/.DimService --ez off true
+
+# phone remote on / off
+adb shell am start-foreground-service -n dev.overlaydimmer/.DimService --ez remote true
 
 # current state
 adb shell dumpsys activity service dev.overlaydimmer/.DimService
@@ -97,7 +125,11 @@ With the Android SDK instead of the Debian packages:
 BUILD_TOOLS=$ANDROID_HOME/build-tools/34.0.0 ANDROID_JAR=$ANDROID_HOME/platforms/android-28/android.jar ./build.sh
 ```
 
-The first build creates a local `debug.keystore` to sign the APK. APKs signed with different keys cannot
+The first build creates a local `debug.keystore` to sign the APK.
+
+The phone remote page is `web/remote.html`, styled with Tailwind CSS compiled at development time
+(`web/build-css.sh`, needs Node). The generated `app/assets/remote.css` is committed, so building the APK
+does not need Node and the page has no CDN dependency. APKs signed with different keys cannot
 update each other, so uninstall the release build before installing your own.
 
 ## Notes
@@ -105,6 +137,12 @@ update each other, so uninstall the release build before installing your own.
 - It is an overlay: it darkens and tints the picture but cannot lower the real backlight or LED power.
 - The colour comes from Tanner Helland's black-body approximation
   ([source](https://tannerhelland.com/2012/09/18/convert-temperature-rgb-algorithm-code.html)).
+
+## Third-party
+
+- [QR Code generator library](https://www.nayuki.io/page/qr-code-generator-library) by Project Nayuki,
+  MIT License (`app/src/io/nayuki/qrcodegen`, unmodified)
+- [Tailwind CSS](https://tailwindcss.com), MIT License (compiled into `app/assets/remote.css`)
 
 ## Support
 
