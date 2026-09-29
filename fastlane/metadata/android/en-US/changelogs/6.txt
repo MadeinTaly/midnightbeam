@@ -1,0 +1,1 @@
+* Settings screen without inner/anonymous classes: builds with older d8 versions (e.g. F-Droid build server)
