@@ -62,7 +62,8 @@ public class DimService extends Service implements Runnable {
     private volatile boolean off;
     private volatile boolean remote;
     private volatile boolean scheduleOn;
-    private volatile String scheduleSlots = "[]";
+    private volatile String scheduleResolved = "[]"; // daily Slot[] or weekly {mon:[..],..}, normalised
+    private volatile String scheduleValue = "[]";    // as sent by the page (dayrhythm value), for reloading the editor
 
     @Override
     public void onCreate() {
@@ -79,6 +80,7 @@ public class DimService extends Service implements Runnable {
             if (newValues || intent.hasExtra("off")) {
                 setValues(intent.getIntExtra("red", red), intent.getIntExtra("bright", bright),
                         intent.getIntExtra("temp", temp), intent.getBooleanExtra("off", !newValues && off));
+                holdManual();
             }
             if (intent.hasExtra("remote")) {
                 remote = intent.getBooleanExtra("remote", false);
@@ -98,7 +100,8 @@ public class DimService extends Service implements Runnable {
         off = prefs.getBoolean("off", false);
         remote = prefs.getBoolean("remote", false);
         scheduleOn = prefs.getBoolean("schedule_on", false);
-        scheduleSlots = prefs.getString("schedule", "[]");
+        scheduleResolved = prefs.getString("schedule", "[]");
+        scheduleValue = prefs.getString("schedule_value", scheduleResolved);
     }
 
     private void setValues(int r, int b, int t, boolean o) {
@@ -136,41 +139,118 @@ public class DimService extends Service implements Runnable {
         boolean newValues = t.red >= 0 || t.bright >= 0 || t.temp >= 0;
         boolean o = t.on >= 0 ? t.on == 0 : (!newValues && off);
         setValues(t.red >= 0 ? t.red : red, t.bright >= 0 ? t.bright : bright, t.temp >= 0 ? t.temp : temp, o);
+        holdManual();
         render();
     }
 
-    /** Validates and stores the schedule, then applies the slot active now. */
-    void applySchedule(boolean enabled, JSONArray slots) {
-        JSONArray clean = cleanSlots(slots);
-        scheduleOn = enabled && clean.length() > 0;
-        scheduleSlots = clean.toString();
-        prefs.edit().putBoolean("schedule_on", scheduleOn).putString("schedule", scheduleSlots)
-                .remove("schedule_last").apply();
+    /**
+     * Validates and stores the schedule, then applies the slot active now. Body: {"enabled", "resolved", "value"}
+     * as sent by the dayrhythm page (resolved = daily Slot[] or weekly {mon:[..],..}); the older {"slots":[..]}
+     * form is still accepted.
+     */
+    void applySchedule(boolean enabled, JSONObject body) {
+        Object resolved = body.opt("resolved");
+        if (resolved == null) resolved = body.opt("slots");
+        String normalised;
+        boolean any;
+        if (resolved instanceof JSONObject) {
+            JSONObject week = new JSONObject();
+            any = false;
+            for (String d : ScheduleMath.WEEKDAYS) {
+                JSONArray day = cleanSlots(((JSONObject) resolved).optJSONArray(d));
+                any |= day.length() > 0;
+                try {
+                    week.put(d, day);
+                } catch (JSONException ignored) {
+                }
+            }
+            normalised = week.toString();
+        } else {
+            JSONArray day = cleanSlots(resolved instanceof JSONArray ? (JSONArray) resolved : new JSONArray());
+            any = day.length() > 0;
+            normalised = day.toString();
+        }
+        if (body.has("transition")) prefs.edit().putInt("transition", clamp(body.optInt("transition", 30), 0, 240)).apply();
+        Object value = body.opt("value");
+        String raw = value instanceof JSONArray || value instanceof JSONObject ? value.toString() : normalised;
+        if (raw.length() > 65536) raw = normalised;
+        scheduleOn = enabled && any;
+        scheduleResolved = normalised;
+        scheduleValue = raw;
+        prefs.edit().putBoolean("schedule_on", scheduleOn).putString("schedule", scheduleResolved)
+                .putString("schedule_value", scheduleValue).remove("schedule_last").apply();
         main.removeCallbacks(this);
         run();
         render();
     }
 
-    /** Keeps only well-formed slots, with values clamped to their ranges. */
+    /**
+     * Keeps only well-formed slots, with values clamped to their ranges. Accepts both the flat form
+     * {time,on,red,bright,temp} and the dayrhythm form {time,model,label,values:{on,red,bright,temp}}.
+     */
     private static JSONArray cleanSlots(JSONArray slots) {
         JSONArray clean = new JSONArray();
         for (int i = 0; slots != null && i < slots.length() && clean.length() < MAX_SLOTS; i++) {
             JSONObject s = slots.optJSONObject(i);
             if (s == null || minutes(s.optString("time")) < 0) continue;
+            JSONObject v = s.optJSONObject("values");
+            if (v == null) v = s;
+            String model = s.optString("model");
+            boolean on = v.has("on") ? v.optBoolean("on", true) : s.optBoolean("on", !"off".equals(model));
             try {
                 clean.put(new JSONObject()
                         .put("time", s.optString("time"))
-                        .put("on", s.optBoolean("on", true))
-                        .put("red", clamp(s.optInt("red", 0), 0, 100))
-                        .put("bright", clamp(s.optInt("bright", 100), 5, 100))
-                        .put("temp", clamp(s.optInt("temp", DEFAULT_TEMP), 1000, 6500))
-                        // UI metadata for the remote page timeline, stored as-is (short strings only)
-                        .put("model", shortText(s.optString("model"), 24))
-                        .put("label", shortText(s.optString("label"), 24)));
+                        .put("on", on)
+                        .put("red", clamp(v.optInt("red", 0), 0, 100))
+                        .put("bright", clamp(v.optInt("bright", 100), 5, 100))
+                        .put("temp", clamp(v.optInt("temp", DEFAULT_TEMP), 1000, 6500))
+                        .put("model", shortText(model, 24))
+                        .put("label", shortText(s.optString("label"), 40)));
             } catch (JSONException ignored) {
             }
         }
         return clean;
+    }
+
+    /**
+     * Today's slots for the TV timeline. Weekly: today's own slots, starting with the slot carried over from the
+     * previous days when today does not start at midnight (marked "carry").
+     */
+    static String todaySlots(String resolved) {
+        if (resolved == null || !resolved.trim().startsWith("{")) return resolved == null ? "[]" : resolved;
+        try {
+            JSONObject week = new JSONObject(resolved);
+            int today = ScheduleMath.mondayIndex(Calendar.getInstance().get(Calendar.DAY_OF_WEEK));
+            JSONArray own = week.optJSONArray(ScheduleMath.WEEKDAYS[today]);
+            if (own == null) own = new JSONArray();
+            int[][] starts = weekStarts(week);
+            int[] carried = ScheduleMath.activeWeekly(starts, today, 0);
+            JSONArray out = new JSONArray();
+            boolean startsAtMidnight = false;
+            for (int i = 0; i < own.length(); i++) {
+                if (minutes(own.getJSONObject(i).optString("time")) == 0) startsAtMidnight = true;
+            }
+            if (carried != null && !startsAtMidnight && !(carried[0] == today)) {
+                JSONObject c = new JSONObject(week.getJSONArray(ScheduleMath.WEEKDAYS[carried[0]])
+                        .getJSONObject(carried[1]).toString());
+                c.put("time", "00:00").put("carry", true);
+                out.put(c);
+            }
+            for (int i = 0; i < own.length(); i++) out.put(own.getJSONObject(i));
+            return out.toString();
+        } catch (JSONException e) {
+            return "[]";
+        }
+    }
+
+    private static int[][] weekStarts(JSONObject week) throws JSONException {
+        int[][] starts = new int[7][];
+        for (int d = 0; d < 7; d++) {
+            JSONArray day = week.optJSONArray(ScheduleMath.WEEKDAYS[d]);
+            starts[d] = new int[day == null ? 0 : day.length()];
+            for (int i = 0; i < starts[d].length; i++) starts[d][i] = minutes(day.getJSONObject(i).optString("time"));
+        }
+        return starts;
     }
 
     // ---- Saved days: named schedules created on the phone page, kept on the TV for every phone ----
@@ -228,9 +308,16 @@ public class DimService extends Service implements Runnable {
 
     String scheduleJson() {
         try {
-            return new JSONObject().put("enabled", scheduleOn).put("slots", new JSONArray(scheduleSlots)).toString();
+            JSONObject o = new JSONObject().put("enabled", scheduleOn);
+            String v = scheduleValue.trim();
+            o.put("value", v.startsWith("{") ? new JSONObject(v) : new JSONArray(v));
+            String r = scheduleResolved.trim();
+            o.put("resolved", r.startsWith("{") ? new JSONObject(r) : new JSONArray(r));
+            o.put("slots", r.startsWith("{") ? new JSONArray() : new JSONArray(r)); // older clients
+            o.put("transition", prefs.getInt("transition", 30));
+            return o.toString();
         } catch (JSONException e) {
-            return "{\"enabled\":false,\"slots\":[]}";
+            return "{\"enabled\":false,\"value\":[],\"resolved\":[],\"slots\":[]}";
         }
     }
 
@@ -263,35 +350,80 @@ public class DimService extends Service implements Runnable {
 
     // ---- Schedule tick ----
 
-    /** Schedule tick: applies the active slot when it changes, then re-arms itself at the next minute. */
+    /**
+     * Schedule tick. Applies the active slot; in the last minutes of a slot (the transition, default 30 min, at most
+     * half the slot) the values glide towards the next slot's, so the change is not noticeable. A manual change
+     * (app, phone, adb) holds until the next slot starts. Runs every minute, every 15 s during a transition.
+     */
     @Override
     public void run() {
-        if (scheduleOn) {
-            try {
-                JSONArray slots = new JSONArray(scheduleSlots);
-                Calendar now = Calendar.getInstance();
-                int current = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE);
-                JSONObject active = null;
-                JSONObject latest = null;
-                for (int i = 0; i < slots.length(); i++) {
-                    JSONObject s = slots.getJSONObject(i);
-                    int m = minutes(s.getString("time"));
-                    if (latest == null || m > minutes(latest.getString("time"))) latest = s;
-                    if (m <= current && (active == null || m > minutes(active.getString("time")))) active = s;
+        if (!scheduleOn) return;
+        long delay;
+        Calendar now = Calendar.getInstance();
+        delay = (60 - now.get(Calendar.SECOND)) * 1000L + 500;
+        try {
+            double m = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE) + now.get(Calendar.SECOND) / 60.0;
+            java.util.List<JSONObject> list = new java.util.ArrayList<>();
+            java.util.List<Integer> abs = new java.util.ArrayList<>();
+            int period;
+            double t;
+            if (scheduleResolved.trim().startsWith("{")) {
+                JSONObject week = new JSONObject(scheduleResolved);
+                for (int d = 0; d < 7; d++) {
+                    JSONArray day = week.optJSONArray(ScheduleMath.WEEKDAYS[d]);
+                    for (int i = 0; day != null && i < day.length(); i++) {
+                        list.add(day.getJSONObject(i));
+                        abs.add(d * ScheduleMath.DAY + minutes(day.getJSONObject(i).optString("time")));
+                    }
                 }
-                if (active == null) active = latest; // before the first slot: yesterday's last one
-                String key = active.getString("time");
-                if (!key.equals(prefs.getString("schedule_last", null))) {
-                    prefs.edit().putString("schedule_last", key).apply();
-                    setValues(active.optInt("red"), active.optInt("bright", 100), active.optInt("temp", DEFAULT_TEMP),
-                            !active.optBoolean("on", true));
-                    render();
+                period = ScheduleMath.WEEK;
+                t = ScheduleMath.mondayIndex(now.get(Calendar.DAY_OF_WEEK)) * ScheduleMath.DAY + m;
+            } else {
+                JSONArray day = new JSONArray(scheduleResolved);
+                for (int i = 0; i < day.length(); i++) {
+                    list.add(day.getJSONObject(i));
+                    abs.add(minutes(day.getJSONObject(i).optString("time")));
                 }
-            } catch (JSONException ignored) {
+                period = ScheduleMath.DAY;
+                t = m;
             }
-            Calendar c = Calendar.getInstance();
-            main.postDelayed(this, (60 - c.get(Calendar.SECOND)) * 1000L + 500);
+            int[] starts = new int[abs.size()];
+            for (int i = 0; i < starts.length; i++) starts[i] = abs.get(i);
+            double[] w = ScheduleMath.window(starts, period, t);
+            if (w != null) {
+                JSONObject a = list.get((int) w[0]);
+                JSONObject b = list.get((int) w[1]);
+                String key = String.valueOf(starts[(int) w[0]]);
+                if (!key.equals(prefs.getString("schedule_last", null))) {
+                    prefs.edit().putString("schedule_last", key).remove("manual_key").apply();
+                }
+                if (!key.equals(prefs.getString("manual_key", null))) {
+                    double f = ScheduleMath.rampFraction(w[2], w[3], prefs.getInt("transition", 30));
+                    boolean aOn = a.optBoolean("on", true), bOn = b.optBoolean("on", true);
+                    // an "off" slot blends as a neutral picture (no filter, full brightness)
+                    int r = (int) Math.round(lerp(aOn ? a.optInt("red") : 0, bOn ? b.optInt("red") : 0, f));
+                    int br = (int) Math.round(lerp(aOn ? a.optInt("bright", 100) : 100, bOn ? b.optInt("bright", 100) : 100, f));
+                    int tp = (int) Math.round(lerp(a.optInt("temp", DEFAULT_TEMP), b.optInt("temp", DEFAULT_TEMP), f));
+                    boolean o = !(aOn || (bOn && f > 0));
+                    if (r != red || br != bright || tp != temp || o != off) {
+                        setValues(r, br, tp, o);
+                        render();
+                    }
+                    if (w[2] <= Math.min(prefs.getInt("transition", 30), w[3] / 2) + 1) delay = 15000;
+                }
+            }
+        } catch (JSONException ignored) {
         }
+        main.postDelayed(this, delay);
+    }
+
+    private static double lerp(double a, double b, double f) {
+        return a + (b - a) * f;
+    }
+
+    /** A manual change while the schedule is on holds until the next slot starts. */
+    private void holdManual() {
+        if (scheduleOn) prefs.edit().putString("manual_key", prefs.getString("schedule_last", "")).apply();
     }
 
     private static String shortText(String s, int max) {
@@ -300,10 +432,7 @@ public class DimService extends Service implements Runnable {
     }
 
     private static int minutes(String hhmm) {
-        if (hhmm == null || !hhmm.matches("\\d{2}:\\d{2}")) return -1;
-        int h = Integer.parseInt(hhmm.substring(0, 2));
-        int m = Integer.parseInt(hhmm.substring(3));
-        return h < 24 && m < 60 ? h * 60 + m : -1;
+        return ScheduleMath.minutes(hhmm);
     }
 
     // ---- Overlay ----

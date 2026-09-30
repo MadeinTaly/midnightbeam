@@ -164,7 +164,7 @@ public class MainActivity extends Activity
     @Override
     public void run() {
         boolean on = prefs.getBoolean("schedule_on", false);
-        timeline.setSchedule(prefs.getString("schedule", "[]"), on);
+        timeline.setSchedule(DimService.todaySlots(prefs.getString("schedule", "[]")), on);
         timelineTitle.setText(timeline.isEmpty()
                 ? t("Schedule: set it from the phone remote", "Programmazione: impostala dal telefono")
                 : on ? t("Schedule \u00b7 on", "Programmazione \u00b7 attiva")

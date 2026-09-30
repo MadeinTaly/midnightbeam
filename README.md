@@ -10,7 +10,7 @@ to be restarted to pick up new values from automation tools.
 - **Live control** from `adb shell` / Home Assistant: warm filter, brightness, colour temperature
 - **Phone remote**: scan a QR code on the TV and control it from any phone browser (Android or iPhone),
   no app to install; the page works offline, on the local network only
-- **Daily schedule**: a timeline of time slots (movie night, early to bed…) that the TV applies by itself,
+- **Daily or weekly schedule**: a timeline of time slots (movie night, early to bed…) that the TV applies by itself,
   even with the phone off; shown as a bar at the bottom of the TV screen
 - **Remote-friendly settings screen**: only D-pad and OK are needed, with a visible focus highlight
   for the many TV-box themes that show none
@@ -56,10 +56,16 @@ Open the app from the launcher:
 1. In the app on the TV, turn on **Phone remote**: a QR code appears.
 2. Scan it with the phone camera. The page opens in the browser; *Add to Home screen* makes it an app icon.
 3. Move the sliders or pick a preset: the TV follows instantly.
-4. **Schedule**: pick a day preset, tap the icon of a time slot to choose its setting (a profile or a custom
-   one), rename or remove it, add slots, drag the edges between slots to set the times, then
-   **Apply to TV**. The TV switches slot by itself; a manual change lasts until the next slot.
-   **Save as day** keeps a named day on the TV, available to every paired phone.
+4. **Schedule** (built with [dayrhythm](https://github.com/MadeinTaly/dayrhythm)): pick a day preset, tap a
+   time slot to choose its setting (a profile or a custom one), rename or remove it, add slots, drag the edges
+   between slots to set the times. Every change is **saved to the TV automatically**; there is no Apply button.
+   The TV switches slot by itself; a manual change lasts until the next slot.
+   **Save this day** keeps a named day on the TV, available to every paired phone.
+5. **Transition** (Off, 15, 30 or 60 minutes): values glide gradually into the next slot.
+6. **Weekly mode**: switch from *Same every day* to *Per weekday* to give each weekday its own slots
+   (with a copy-to-other-days shortcut).
+7. **Add to Home screen**: the page has a button that installs it as an app icon (on iPhone: Share, then
+   Add to Home Screen).
 
 The page is in English, or Italian on Italian phones (switchable with EN | IT); the TV app follows the
 device language.
@@ -148,6 +154,7 @@ update each other, so uninstall the release build before installing your own.
 - [QR Code generator library](https://www.nayuki.io/page/qr-code-generator-library) by Project Nayuki,
   MIT License (`app/src/io/nayuki/qrcodegen`, unmodified)
 - [Tailwind CSS](https://tailwindcss.com), MIT License (compiled into `app/assets/remote.css`)
+- [dayrhythm](https://github.com/MadeinTaly/dayrhythm), MIT License (`app/assets/dayrhythm.min.js`, the schedule editor of the phone page)
 
 ## Support
 

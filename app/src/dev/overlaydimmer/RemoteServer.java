@@ -26,14 +26,25 @@ import java.util.Locale;
  *   GET  /remote.css     its stylesheet (Tailwind, compiled at development time, see web/)
  *   GET  /api/state      current values
  *   POST /api/set        {"red":0-100,"bright":5-100,"temp":1000-6500,"on":true|false}, any subset
- *   GET  /api/schedule   {"enabled":bool,"slots":[{"time":"HH:MM","on":bool,"red":..,"bright":..,"temp":..}]}
- *   POST /api/schedule   same shape
+ *   GET  /api/schedule   {"enabled":bool,"value":<dayrhythm value>,"resolved":<Slot[] or {mon:[..],..}>}
+ *   POST /api/schedule   {"enabled":bool,"value":..,"resolved":..}  (older {"enabled","slots":[..]} still accepted)
  *   GET  /api/days       saved days: [{"name":..,"slots":[..]}]
  *   POST /api/days       {"name":..,"slots":[..]} saves or replaces a day; {"name":..,"delete":true} deletes it
  */
 final class RemoteServer extends Thread {
     static final int PORT = 8765;
     private static final int MAX_BODY = 4096;
+
+    /** Static files for "add to home screen" (manifest and icons) and the page's scripts. */
+    private static final java.util.Map<String, String> STATIC = new java.util.HashMap<>();
+
+    static {
+        STATIC.put("/manifest.webmanifest", "application/manifest+json");
+        STATIC.put("/icon-192.png", "image/png");
+        STATIC.put("/icon-512.png", "image/png");
+        STATIC.put("/apple-touch-icon.png", "image/png");
+        STATIC.put("/dayrhythm.min.js", "text/javascript; charset=utf-8");
+    }
 
     private final DimService service;
     private final AssetManager assets;
@@ -120,6 +131,8 @@ final class RemoteServer extends Thread {
             send(out, 200, "text/html; charset=utf-8", asset("remote.html"));
         } else if (method.equals("GET") && path.equals("/remote.css")) {
             send(out, 200, "text/css; charset=utf-8", asset("remote.css"));
+        } else if (method.equals("GET") && STATIC.containsKey(path)) {
+            send(out, 200, STATIC.get(path), assetBytes(path.substring(1)));
         } else if (path.startsWith("/api/")) {
             if (!keyMatches(key)) {
                 send(out, 403, "application/json", "{\"error\":\"pairing key\"}");
@@ -143,8 +156,7 @@ final class RemoteServer extends Thread {
             } else if (method.equals("POST") && path.equals("/api/schedule")) {
                 try {
                     JSONObject j = new JSONObject(new String(body, 0, read, StandardCharsets.UTF_8));
-                    main.post(new ScheduleTask(service, j.optBoolean("enabled", false),
-                            j.optJSONArray("slots") != null ? j.getJSONArray("slots") : new JSONArray()));
+                    main.post(new ScheduleTask(service, j.optBoolean("enabled", false), j));
                     send(out, 200, "application/json", "{\"ok\":true}");
                 } catch (JSONException e) {
                     send(out, 400, "application/json", "{\"error\":\"bad json\"}");
@@ -176,17 +188,24 @@ final class RemoteServer extends Thread {
     }
 
     private String asset(String name) throws IOException {
+        return new String(assetBytes(name), StandardCharsets.UTF_8);
+    }
+
+    private byte[] assetBytes(String name) throws IOException {
         try (InputStream a = assets.open(name)) {
             ByteArrayOutputStream b = new ByteArrayOutputStream();
             byte[] buf = new byte[4096];
             int n;
             while ((n = a.read(buf)) > 0) b.write(buf, 0, n);
-            return b.toString("UTF-8");
+            return b.toByteArray();
         }
     }
 
     private static void send(OutputStream out, int code, String type, String body) throws IOException {
-        byte[] b = body.getBytes(StandardCharsets.UTF_8);
+        send(out, code, type, body.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static void send(OutputStream out, int code, String type, byte[] b) throws IOException {
         String status = code == 200 ? "OK" : code == 403 ? "Forbidden" : code == 404 ? "Not Found" : "Error";
         String head = "HTTP/1.1 " + code + " " + status + "\r\n"
                 + "Content-Type: " + type + "\r\n"
@@ -236,17 +255,17 @@ final class RemoteServer extends Thread {
     static final class ScheduleTask implements Runnable {
         private final DimService service;
         private final boolean enabled;
-        private final JSONArray slots;
+        private final JSONObject body;
 
-        ScheduleTask(DimService service, boolean enabled, JSONArray slots) {
+        ScheduleTask(DimService service, boolean enabled, JSONObject body) {
             this.service = service;
             this.enabled = enabled;
-            this.slots = slots;
+            this.body = body;
         }
 
         @Override
         public void run() {
-            service.applySchedule(enabled, slots);
+            service.applySchedule(enabled, body);
         }
     }
 

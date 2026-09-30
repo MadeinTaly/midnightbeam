@@ -1,0 +1,4 @@
+* New phone schedule editor (dayrhythm): changes are saved to the TV automatically, no Apply button
+* Weekly mode: a different schedule for each weekday
+* Transition: values glide gradually into the next slot (off, 15, 30 or 60 minutes)
+* Add to Home screen button on the phone page
