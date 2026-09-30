@@ -1,0 +1,3 @@
+* Android 12 and later: the phone responds to touches again while the filter is on
+* Optional accessibility mode: full darkness, also over the status and navigation bars
+* The icon is no longer shown inside the app

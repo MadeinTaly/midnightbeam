@@ -43,6 +43,8 @@ public class MainActivity extends Activity
     private ImageView qr;
     private TextView remoteInfo;
     private Button newKey;
+    private Button accessibility;
+    private TextView accessibilityHint;
     private Slider red;
     private Slider bright;
     private Slider temp;
@@ -93,6 +95,21 @@ public class MainActivity extends Activity
 
         TextView title = text("Overlay Dimmer", 28, ACCENT);
         root.addView(title);
+
+        accessibilityHint = text(t("For full darkness and to cover the system bars, enable Overlay Dimmer in Accessibility",
+                "Per un oscuramento totale e per coprire le barre di sistema, attiva Overlay Dimmer in Accessibilità"), 16, LIGHT);
+        accessibilityHint.setPadding(0, dp(12), 0, dp(4));
+        accessibility = new Button(this);
+        accessibility.setText(t("Open Accessibility settings", "Apri impostazioni Accessibilità"));
+        accessibility.setAllCaps(false);
+        accessibility.setTextColor(LIGHT);
+        accessibility.setBackgroundColor(BUTTON_BACKGROUND);
+        accessibility.setFocusable(true);
+        accessibility.setOnClickListener(this);
+        accessibility.setOnFocusChangeListener(this);
+        root.addView(accessibilityHint);
+        root.addView(accessibility, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT));
 
         enabled = new Switch(this);
         enabled.setText(t("Enabled", "Attivo"));
@@ -163,6 +180,11 @@ public class MainActivity extends Activity
     @Override
     protected void onResume() {
         super.onResume();
+        if (accessibility != null) {
+            int vis = Compat.needsAccessibilityHint() ? View.VISIBLE : View.GONE;
+            accessibility.setVisibility(vis);
+            accessibilityHint.setVisibility(vis);
+        }
         if (timeline != null) run();
     }
 
@@ -226,7 +248,9 @@ public class MainActivity extends Activity
 
     @Override
     public void onClick(View v) {
-        if (v == newKey) {
+        if (v == accessibility) {
+            startActivity(Compat.accessibilitySettings());
+        } else if (v == newKey) {
             DimService.newPairingKey(prefs); // phones paired with the old code stop working
             refreshRemote();
         }
@@ -236,7 +260,7 @@ public class MainActivity extends Activity
     @Override
     public void onFocusChange(View v, boolean hasFocus) {
         if (v instanceof TextView) ((TextView) v).setTextColor(hasFocus ? FOCUS : LIGHT);
-        v.setBackgroundColor(hasFocus ? FOCUS_BACKGROUND : v == newKey ? BUTTON_BACKGROUND : Color.TRANSPARENT);
+        v.setBackgroundColor(hasFocus ? FOCUS_BACKGROUND : v == newKey || v == accessibility ? BUTTON_BACKGROUND : Color.TRANSPARENT);
     }
 
     @Override

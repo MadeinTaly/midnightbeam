@@ -106,6 +106,12 @@ curl -H "X-Key: $KEY" http://TV-IP:8765/api/schedule
 curl -H "X-Key: $KEY" http://TV-IP:8765/api/days
 ```
 
+## Android 12 and later
+
+Android 12 blocks touches through an overlay of another app unless the overlay is at most 80% opaque (the system limit, `InputManager.getMaximumObscuringOpacityForTouch()`). Overlay Dimmer therefore caps the filter at that opacity, so the phone stays usable; `/api/state` and `dumpsys` report `clamped` when the requested darkness was limited.
+
+For full darkness, covering the status and navigation bars, you can optionally enable Overlay Dimmer in Settings > Accessibility. The service only lends its window to draw the dimming overlay: it requests no access to window content, does not read the screen or your input, and sends nothing anywhere. Without it, everything works as described above.
+
 ## ADB commands
 
 ```sh

@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="accessibility_description">Only used to draw the dimming overlay above everything, including the status and navigation bars, without blocking touches. It does not read the screen, your input or any app content, and it sends nothing anywhere.</string>
+</resources>

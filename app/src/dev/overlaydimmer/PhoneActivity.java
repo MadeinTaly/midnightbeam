@@ -42,7 +42,7 @@ import static dev.overlaydimmer.MainActivity.t;
  */
 public class PhoneActivity extends Activity implements View.OnClickListener, DialogInterface.OnClickListener, Runnable {
     static final String UA_SUFFIX = " OverlayDimmerApp/1.3";
-    private static final int RENAME = 1, DELETE = 2, TOGGLE = 3, RETRY = 4, PERMISSION = 5;
+    private static final int RENAME = 1, DELETE = 2, TOGGLE = 3, RETRY = 4, PERMISSION = 5, ACCESSIBILITY = 6;
     private static final Pattern HOST = Pattern.compile("[A-Za-z0-9.\\-]{1,253}");
     private static final Pattern KEY = Pattern.compile("[0-9a-f]{1,128}");
 
@@ -52,6 +52,7 @@ public class PhoneActivity extends Activity implements View.OnClickListener, Dia
     private AppWebClient client;
     private TextView title;
     private TextView permission;
+    private TextView accessibility;
     private LinearLayout panel;
     private TextView error;
     private String current = ""; // "host:port" of the selected saved device, "" = this device
@@ -99,6 +100,16 @@ public class PhoneActivity extends Activity implements View.OnClickListener, Dia
         permission.setVisibility(View.GONE);
         root.addView(permission);
 
+        accessibility = label(t("For full darkness and to cover the system bars, enable Overlay Dimmer in Accessibility",
+                "Per un oscuramento totale e per coprire le barre di sistema, attiva Overlay Dimmer in Accessibilità")
+                + " \u203a", 14, BG);
+        accessibility.setBackgroundColor(ACCENT);
+        accessibility.setPadding(dp(16), dp(10), dp(16), dp(10));
+        accessibility.setTag(new int[] {ACCESSIBILITY, 0});
+        accessibility.setOnClickListener(this);
+        accessibility.setVisibility(View.GONE);
+        root.addView(accessibility);
+
         panel = new LinearLayout(this);
         panel.setOrientation(LinearLayout.VERTICAL);
         panel.setBackgroundColor(BG);
@@ -143,6 +154,7 @@ public class PhoneActivity extends Activity implements View.OnClickListener, Dia
         super.onResume();
         resumed = true;
         permission.setVisibility(Settings.canDrawOverlays(this) ? View.GONE : View.VISIBLE);
+        accessibility.setVisibility(Compat.needsAccessibilityHint() ? View.VISIBLE : View.GONE);
         setLocal(current.isEmpty());
         if (needsLoad || current.isEmpty()) startLoad();
         web.onResume();
@@ -367,6 +379,8 @@ public class PhoneActivity extends Activity implements View.OnClickListener, Dia
             }
         } else if (kind == RETRY) {
             startLoad();
+        } else if (kind == ACCESSIBILITY) {
+            startActivity(Compat.accessibilitySettings());
         } else if (kind == PERMISSION) {
             startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName())));
         }

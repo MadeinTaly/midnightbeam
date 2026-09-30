@@ -9,6 +9,7 @@ import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.graphics.drawable.Icon;
+import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
@@ -44,6 +45,7 @@ import java.util.Calendar;
 public class DimService extends Service implements Runnable {
     static final String PREFS = "dim";
     private static final String CHANNEL = "dim";
+    private static final int TYPE_ACCESSIBILITY_OVERLAY = 2032;
     private static final int TYPE_APPLICATION_OVERLAY = 2038; // API 26 constant, not in the API 23 stubs
     private static final float MAX_FILTER_ALPHA = 0.65f; // opacity of the filter at red=100
     static final int DEFAULT_TEMP = 1100;
@@ -53,6 +55,9 @@ public class DimService extends Service implements Runnable {
     private final Handler main = new Handler(Looper.getMainLooper());
     private SharedPreferences prefs;
     private View view;
+    private WindowManager viewWm;
+    private boolean viewAccessibility;
+    private volatile boolean clamped;
     private RemoteServer server;
 
     // Read by the server thread, so volatile.
@@ -87,6 +92,7 @@ public class DimService extends Service implements Runnable {
                 remote = intent.getBooleanExtra("remote", false);
                 prefs.edit().putBoolean("remote", remote).apply();
             }
+            if (intent.hasExtra("refresh")) removeOverlay(); // re-created in the right window by render()
             if (intent.hasExtra("local")) local = intent.getBooleanExtra("local", false);
             if (intent.getBooleanExtra("newkey", false)) newPairingKey(prefs);
         }
@@ -340,6 +346,8 @@ public class DimService extends Service implements Runnable {
             Calendar now = Calendar.getInstance();
             return new JSONObject().put("on", !o).put("red", r).put("bright", b).put("temp", t)
                     .put("schedule", scheduleOn)
+                    .put("mode", DimAccessibilityService.instance != null ? "accessibility" : "overlay")
+                    .put("clamped", clamped)
                     // device clock, minutes since midnight: the page draws the "now" line with it
                     .put("minute", now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE)
                             + now.get(Calendar.SECOND) / 60.0);
@@ -486,19 +494,40 @@ public class DimService extends Service implements Runnable {
     }
 
     private void showOverlay(int color) {
+        DimAccessibilityService svc = DimAccessibilityService.instance;
+        boolean acc = svc != null;
+        if (view != null && viewAccessibility != acc) removeOverlay();
+        float maxAlpha = 1f;
+        clamped = false;
+        if (!acc && Build.VERSION.SDK_INT >= 31) {
+            maxAlpha = Compat.maxObscuringOpacity(this);
+            float desired = Color.alpha(color) / 255f;
+            if (desired > maxAlpha) {
+                clamped = true;
+                color = Color.argb(Math.round(Math.min(1f, desired / maxAlpha) * 255),
+                        Color.red(color), Color.green(color), Color.blue(color));
+            } else if (maxAlpha > 0f) {
+                color = Color.argb(Math.round(desired / maxAlpha * 255),
+                        Color.red(color), Color.green(color), Color.blue(color));
+            }
+        }
         if (view == null) {
             view = new View(this);
+            viewAccessibility = acc;
+            viewWm = acc ? (WindowManager) svc.getSystemService(Context.WINDOW_SERVICE)
+                    : getSystemService(WindowManager.class);
             WindowManager.LayoutParams lp = new WindowManager.LayoutParams(
                     WindowManager.LayoutParams.MATCH_PARENT,
                     WindowManager.LayoutParams.MATCH_PARENT,
-                    TYPE_APPLICATION_OVERLAY,
+                    acc ? TYPE_ACCESSIBILITY_OVERLAY : TYPE_APPLICATION_OVERLAY,
                     WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
                             | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
                             | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
                             | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
                     PixelFormat.TRANSLUCENT);
+            lp.alpha = maxAlpha;
             view.setBackgroundColor(color);
-            getSystemService(WindowManager.class).addView(view, lp);
+            viewWm.addView(view, lp);
         } else {
             view.setBackgroundColor(color);
         }
@@ -506,7 +535,11 @@ public class DimService extends Service implements Runnable {
 
     private void removeOverlay() {
         if (view != null) {
-            getSystemService(WindowManager.class).removeView(view);
+            try {
+                viewWm.removeView(view);
+            } catch (IllegalArgumentException e) {
+                // the accessibility window is already gone with its service
+            }
             view = null;
         }
     }
@@ -551,7 +584,8 @@ public class DimService extends Service implements Runnable {
     @Override
     protected void dump(FileDescriptor fd, PrintWriter pw, String[] args) {
         pw.println("red=" + red + " bright=" + bright + " temp=" + temp + " visible=" + (view != null)
-                + " off=" + off + " remote=" + (server != null) + " schedule=" + scheduleOn);
+                + " off=" + off + " mode=" + (DimAccessibilityService.instance != null ? "accessibility" : "overlay")
+                + " clamped=" + clamped + " remote=" + (server != null) + " schedule=" + scheduleOn);
     }
 
     private static int clamp(int v, int min, int max) {
