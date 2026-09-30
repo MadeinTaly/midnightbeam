@@ -1,4 +1,4 @@
-package dev.overlaydimmer;
+package dev.redmoonbeam;
 
 import android.content.res.AssetManager;
 import android.os.Handler;
@@ -56,7 +56,7 @@ final class RemoteServer extends Thread {
     final boolean lan;
 
     RemoteServer(DimService service, boolean lan) {
-        super("overlay-dimmer-remote");
+        super("redmoonbeam-remote");
         this.service = service;
         this.lan = lan;
         this.assets = service.getAssets();
@@ -244,7 +244,7 @@ final class RemoteServer extends Thread {
         private final Socket socket;
 
         Connection(RemoteServer server, Socket socket) {
-            super("overlay-dimmer-conn");
+            super("redmoonbeam-conn");
             this.server = server;
             this.socket = socket;
             setDaemon(true);

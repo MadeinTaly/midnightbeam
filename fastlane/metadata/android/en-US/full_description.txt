@@ -3,7 +3,7 @@ A tiny screen dimmer and warm (red) filter for Android TV boxes, projectors and 
 It draws a click-through overlay above everything, video included. Filter strength, brightness and colour temperature can be changed live, with no flash to full brightness:
 
 * from the TV remote, in a settings screen that needs only the D-pad and OK, with a clearly visible focus highlight for TV boxes whose theme shows none
-* from adb shell, e.g. <i>am start-foreground-service -n dev.overlaydimmer/.DimService --ei red 60 --ei bright 40 --ei temp 1100</i>
+* from adb shell, e.g. <i>am start-foreground-service -n dev.redmoonbeam/.DimService --ei red 60 --ei bright 40 --ei temp 1100</i>
 * from Home Assistant, through the Android Debug Bridge integration (example package and dashboard in the source repository)
 * from a phone: scan the QR code shown on the TV and use the page in the phone browser, no app to install
 
@@ -13,4 +13,4 @@ The last setting is restored early at boot. The service can only be controlled b
 
 Plain Java, about 55 KB, no tracking. The network permission is used only by the optional phone remote, inside the home network, protected by a pairing key; the app makes no outgoing connections.
 
-The overlay permission can be granted with <i>adb shell appops set dev.overlaydimmer SYSTEM_ALERT_WINDOW allow</i>, or in Settings, Special app access, Display over other apps.
+The overlay permission can be granted with <i>adb shell appops set dev.redmoonbeam SYSTEM_ALERT_WINDOW allow</i>, or in Settings, Special app access, Display over other apps.

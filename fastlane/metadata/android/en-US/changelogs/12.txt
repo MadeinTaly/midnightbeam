@@ -1,0 +1,3 @@
+* Renamed to RedMoonBeam (new package id: reinstall needed, the old app can be uninstalled)
+* The weekly schedule is shown as 7 horizontal day rows
+* Dragging an edge pushes the neighbouring slots and follows the finger (dayrhythm 0.2.0)

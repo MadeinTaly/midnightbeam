@@ -1,4 +1,4 @@
-package dev.overlaydimmer;
+package dev.redmoonbeam;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;

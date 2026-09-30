@@ -1,4 +1,4 @@
-package dev.overlaydimmer;
+package dev.redmoonbeam;
 
 import android.accessibilityservice.AccessibilityService;
 import android.content.Intent;

@@ -1,4 +1,4 @@
-package dev.overlaydimmer;
+package dev.redmoonbeam;
 
 import android.app.Activity;
 import android.content.Intent;
@@ -93,11 +93,11 @@ public class MainActivity extends Activity
         root.setOrientation(LinearLayout.VERTICAL);
         page.addView(root, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 3f));
 
-        TextView title = text("Overlay Dimmer", 28, ACCENT);
+        TextView title = text("RedMoonBeam", 28, ACCENT);
         root.addView(title);
 
-        accessibilityHint = text(t("For full darkness and to cover the system bars, enable Overlay Dimmer in Accessibility",
-                "Per un oscuramento totale e per coprire le barre di sistema, attiva Overlay Dimmer in Accessibilità"), 16, LIGHT);
+        accessibilityHint = text(t("For full darkness and to cover the system bars, enable RedMoonBeam in Accessibility",
+                "Per un oscuramento totale e per coprire le barre di sistema, attiva RedMoonBeam in Accessibilità"), 16, LIGHT);
         accessibilityHint.setPadding(0, dp(12), 0, dp(4));
         accessibility = new Button(this);
         accessibility.setText(t("Open Accessibility settings", "Apri impostazioni Accessibilità"));

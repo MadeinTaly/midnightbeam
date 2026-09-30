@@ -1,6 +1,6 @@
-![Overlay Dimmer](docs/header.png)
+![RedMoonBeam](docs/header.png)
 
-# Overlay Dimmer
+# RedMoonBeam
 
 A tiny screen dimmer and warm (red) filter for **Android TV boxes, projectors and TVs** that can be controlled
 **live from ADB or Home Assistant**, as well as with the TV remote.
@@ -31,22 +31,26 @@ to be restarted to pick up new values from automation tools.
 <sub>Effect on a test pattern, simulated with the same colour and blending formula the app uses
 (real screen captures do not include overlays on many TV boxes).</sub>
 
+New in 1.4: the app is now called **RedMoonBeam** (new package id `dev.redmoonbeam`: uninstall the old
+Overlay Dimmer and install this one). The weekly schedule on the phone page shows the seven days as horizontal rows,
+and dragging an edge now follows the finger and pushes the neighbouring slots (dayrhythm 0.2.0).
+
 New in 1.3: a new look (icon, banner and palette: primary `#FF2B2B`, accent `#FF6B4D`, light `#FFD9B3`,
 background `#0B0B0F`, surface `#20304A`), shared by the TV screen, the phone app and the remote page.
 
 ## Install
 
-1. Download `overlay-dimmer.apk` from the [latest release](../../releases/latest).
+1. Download `redmoonbeam.apk` from the [latest release](../../releases/latest).
 2. Install and allow drawing over other apps:
 
    ```sh
-   adb install overlay-dimmer.apk
-   adb shell appops set dev.overlaydimmer SYSTEM_ALERT_WINDOW allow
+   adb install redmoonbeam.apk
+   adb shell appops set dev.redmoonbeam SYSTEM_ALERT_WINDOW allow
    ```
 
    Without ADB: install the APK with a file manager, then enable
-   *Settings → Apps → Special app access → Display over other apps → Overlay Dimmer*.
-3. Open **Overlay Dimmer** from the app list once and set it up.
+   *Settings → Apps → Special app access → Display over other apps → RedMoonBeam*.
+3. Open **RedMoonBeam** from the app list once and set it up.
 
 ## Remote control
 
@@ -85,9 +89,9 @@ On a phone or tablet, the launcher opens the remote page inside the app (a WebVi
 - **Saved devices**: tap the bar at the top to list them, switch between them, rename or delete them.
 - **Pairing a TV**: scan its QR code. The code is still the plain `http://IP:8765/#k=KEY` link, so without the app
   it just opens the page in the browser. With the app installed the link opens the app (on older Android you may
-  need to allow it in *Settings → Apps → Overlay Dimmer → Open by default*, or use the button below) and saves the TV.
+  need to allow it in *Settings → Apps → RedMoonBeam → Open by default*, or use the button below) and saves the TV.
 - **Open in the app**: on an Android browser, the remote page shows this button, which hands the TV to the app
-  (`overlaydimmer://add?host=…&port=…&k=…&name=…`) or, if the app is not installed, opens the download page.
+  (`redmoonbeam://add?host=…&port=…&k=…&name=…`) or, if the app is not installed, opens the download page.
   Inside the app, it and *Add to Home screen* are hidden.
 
 The page is in English, or Italian on Italian phones (switchable with EN | IT); the TV app follows the
@@ -108,27 +112,27 @@ curl -H "X-Key: $KEY" http://TV-IP:8765/api/days
 
 ## Android 12 and later
 
-Android 12 blocks touches through an overlay of another app unless the overlay is at most 80% opaque (the system limit, `InputManager.getMaximumObscuringOpacityForTouch()`). Overlay Dimmer therefore caps the filter at that opacity, so the phone stays usable; `/api/state` and `dumpsys` report `clamped` when the requested darkness was limited.
+Android 12 blocks touches through an overlay of another app unless the overlay is at most 80% opaque (the system limit, `InputManager.getMaximumObscuringOpacityForTouch()`). RedMoonBeam therefore caps the filter at that opacity, so the phone stays usable; `/api/state` and `dumpsys` report `clamped` when the requested darkness was limited.
 
-For full darkness, covering the status and navigation bars, you can optionally enable Overlay Dimmer in Settings > Accessibility. The service only lends its window to draw the dimming overlay: it requests no access to window content, does not read the screen or your input, and sends nothing anywhere. Without it, everything works as described above.
+For full darkness, covering the status and navigation bars, you can optionally enable RedMoonBeam in Settings > Accessibility. The service only lends its window to draw the dimming overlay: it requests no access to window content, does not read the screen or your input, and sends nothing anywhere. Without it, everything works as described above.
 
 ## ADB commands
 
 ```sh
 # warm filter 0-100, brightness 5-100 (100 = no dimming), colour temperature 1000-6500 K
-adb shell am start-foreground-service -n dev.overlaydimmer/.DimService --ei red 60 --ei bright 40 --ei temp 1100
+adb shell am start-foreground-service -n dev.redmoonbeam/.DimService --ei red 60 --ei bright 40 --ei temp 1100
 
 # change a single value, the others are kept
-adb shell am start-foreground-service -n dev.overlaydimmer/.DimService --ei bright 70
+adb shell am start-foreground-service -n dev.redmoonbeam/.DimService --ei bright 70
 
 # off
-adb shell am start-foreground-service -n dev.overlaydimmer/.DimService --ez off true
+adb shell am start-foreground-service -n dev.redmoonbeam/.DimService --ez off true
 
 # phone remote on / off
-adb shell am start-foreground-service -n dev.overlaydimmer/.DimService --ez remote true
+adb shell am start-foreground-service -n dev.redmoonbeam/.DimService --ez remote true
 
 # current state
-adb shell dumpsys activity service dev.overlaydimmer/.DimService
+adb shell dumpsys activity service dev.redmoonbeam/.DimService
 ```
 
 Lower colour temperature means redder: 1000-1200 K is a deep red, 1800 K orange, 3000 K+ yellowish.
@@ -140,7 +144,7 @@ The service can only be controlled by the app itself and from `adb shell` / root
 
 The [`homeassistant/`](homeassistant) folder has a ready-made example:
 
-- [`overlay_dimmer.yaml`](homeassistant/overlay_dimmer.yaml): package with sliders, presets and state
+- [`redmoonbeam.yaml`](homeassistant/redmoonbeam.yaml): package with sliders, presets and state
   sensors, using the built-in **Android Debug Bridge** integration (`androidtv.adb_command`)
 - [`dashboard.yaml`](homeassistant/dashboard.yaml): example dashboard
 - [`status.sh`](homeassistant/status.sh): optional script that prints the state as JSON for the sensors
@@ -148,7 +152,7 @@ The [`homeassistant/`](homeassistant) folder has a ready-made example:
 Replace `media_player.my_tv` with your own entity and copy `status.sh` to the device:
 
 ```sh
-adb push homeassistant/status.sh /data/local/tmp/overlay-dimmer-status.sh
+adb push homeassistant/status.sh /data/local/tmp/redmoonbeam-status.sh
 ```
 
 ## Build
@@ -188,7 +192,7 @@ update each other, so uninstall the release build before installing your own.
 
 ## Support
 
-If Overlay Dimmer is useful to you, you can support its development here: https://gt.1471995.xyz
+If RedMoonBeam is useful to you, you can support its development here: https://gt.1471995.xyz
 
 ## License
 

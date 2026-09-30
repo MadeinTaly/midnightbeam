@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds overlay-dimmer.apk without Gradle. Two toolchains:
+# Builds redmoonbeam.apk without Gradle. Two toolchains:
 #  - Debian/Ubuntu packages (default):
 #      apt install openjdk-17-jdk-headless dalvik-exchange aapt zipalign apksigner android-sdk-platform-23
 #  - Android SDK: BUILD_TOOLS=<sdk>/build-tools/<ver> ANDROID_JAR=<sdk>/platforms/android-<n>/android.jar ./build.sh
@@ -37,8 +37,8 @@ fi
 
 if [ ! -f "$KEYSTORE" ]; then
     keytool -genkeypair -keystore "$KEYSTORE" -storepass android -keypass android -alias key \
-        -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=overlay-dimmer" >/dev/null 2>&1
+        -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=redmoonbeam" >/dev/null 2>&1
 fi
 apksigner sign --ks "$KEYSTORE" --ks-pass pass:android --key-pass pass:android \
-    --out overlay-dimmer.apk "$OUT/aligned.apk"
-echo "built overlay-dimmer.apk ($(stat -c %s overlay-dimmer.apk) bytes)"
+    --out redmoonbeam.apk "$OUT/aligned.apk"
+echo "built redmoonbeam.apk ($(stat -c %s redmoonbeam.apk) bytes)"

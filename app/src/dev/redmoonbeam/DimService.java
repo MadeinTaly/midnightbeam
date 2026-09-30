@@ -1,4 +1,4 @@
-package dev.overlaydimmer;
+package dev.redmoonbeam;
 
 import android.app.Notification;
 import android.app.NotificationManager;
@@ -29,9 +29,9 @@ import java.util.Calendar;
  * Full-screen, click-through overlay that dims the screen and adds a warm (red) tint.
  * Values change live, without restarting anything:
  *
- *   am start-foreground-service -n dev.overlaydimmer/.DimService --ei red 60 --ei bright 40 --ei temp 1100
- *   am start-foreground-service -n dev.overlaydimmer/.DimService --ez off true
- *   am start-foreground-service -n dev.overlaydimmer/.DimService --ez remote true    (phone remote on/off)
+ *   am start-foreground-service -n dev.redmoonbeam/.DimService --ei red 60 --ei bright 40 --ei temp 1100
+ *   am start-foreground-service -n dev.redmoonbeam/.DimService --ez off true
+ *   am start-foreground-service -n dev.redmoonbeam/.DimService --ez remote true    (phone remote on/off)
  *
  * red    0-100      strength of the warm filter
  * bright 5-100      100 = no dimming
@@ -40,7 +40,7 @@ import java.util.Calendar;
  * It also runs the phone remote (RemoteServer) and the daily schedule: time slots, the active one is the
  * last slot whose time has passed (wrapping over midnight), applied once when it becomes active, so a manual
  * change lasts until the next slot. Checked every minute.
- * Current state: dumpsys activity service dev.overlaydimmer/.DimService
+ * Current state: dumpsys activity service dev.redmoonbeam/.DimService
  */
 public class DimService extends Service implements Runnable {
     static final String PREFS = "dim";
@@ -549,7 +549,7 @@ public class DimService extends Service implements Runnable {
         try {
             Class<?> channelClass = Class.forName("android.app.NotificationChannel");
             Object channel = channelClass.getConstructor(String.class, CharSequence.class, int.class)
-                    .newInstance(CHANNEL, "Overlay Dimmer", 1 /* IMPORTANCE_MIN */);
+                    .newInstance(CHANNEL, "RedMoonBeam", 1 /* IMPORTANCE_MIN */);
             NotificationManager nm = getSystemService(NotificationManager.class);
             NotificationManager.class.getMethod("createNotificationChannel", channelClass).invoke(nm, channel);
             Notification.Builder b = Notification.Builder.class
@@ -558,7 +558,7 @@ public class DimService extends Service implements Runnable {
             if (remote) text += " · phone remote on";
             if (scheduleOn) text += " · schedule on";
             return b.setSmallIcon(Icon.createWithResource("android", android.R.drawable.ic_menu_view))
-                    .setContentTitle("Overlay Dimmer")
+                    .setContentTitle("RedMoonBeam")
                     .setContentText(text)
                     .build();
         } catch (ReflectiveOperationException e) {
