@@ -12,6 +12,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
@@ -24,6 +25,7 @@ import java.util.Locale;
  *
  *   GET  /               the remote page (the key travels in the URL fragment, never sent to the server by the browser)
  *   GET  /remote.css     its stylesheet (Tailwind, compiled at development time, see web/)
+ *   GET  /api/info       {"name":..,"model":..} device name, to label the device in the phone app
  *   GET  /api/state      current values
  *   POST /api/set        {"red":0-100,"bright":5-100,"temp":1000-6500,"on":true|false}, any subset
  *   GET  /api/schedule   {"enabled":bool,"value":<dayrhythm value>,"resolved":<Slot[] or {mon:[..],..}>}
@@ -50,10 +52,13 @@ final class RemoteServer extends Thread {
     private final AssetManager assets;
     private final Handler main = new Handler(Looper.getMainLooper());
     private volatile ServerSocket socket;
+    /** true: all interfaces (LAN remote); false: loopback only (the phone app's own WebView). */
+    final boolean lan;
 
-    RemoteServer(DimService service) {
+    RemoteServer(DimService service, boolean lan) {
         super("overlay-dimmer-remote");
         this.service = service;
+        this.lan = lan;
         this.assets = service.getAssets();
         setDaemon(true);
     }
@@ -71,12 +76,14 @@ final class RemoteServer extends Thread {
 
     @Override
     public void run() {
-        try (ServerSocket s = new ServerSocket(PORT)) {
+        try (ServerSocket s = lan ? new ServerSocket(PORT) : new ServerSocket(PORT, 50, InetAddress.getByName("127.0.0.1"))) {
             socket = s;
             while (!isInterrupted()) {
-                try (Socket c = s.accept()) {
+                try {
+                    Socket c = s.accept();
                     c.setSoTimeout(5000);
-                    handle(c);
+                    // one short-lived thread per connection: browsers open several sockets in parallel
+                    new Connection(this, c).start();
                 } catch (IOException e) {
                     if (isInterrupted()) return;
                 }
@@ -136,6 +143,8 @@ final class RemoteServer extends Thread {
         } else if (path.startsWith("/api/")) {
             if (!keyMatches(key)) {
                 send(out, 403, "application/json", "{\"error\":\"pairing key\"}");
+            } else if (method.equals("GET") && path.equals("/api/info")) {
+                send(out, 200, "application/json", service.infoJson());
             } else if (method.equals("GET") && path.equals("/api/state")) {
                 send(out, 200, "application/json", service.stateJson());
             } else if (method.equals("POST") && path.equals("/api/set")) {
@@ -227,6 +236,27 @@ final class RemoteServer extends Thread {
             if (sb.length() > 8192) throw new IOException("line too long");
         }
         return sb.length() > 0 ? sb.toString() : null;
+    }
+
+    /** Serves one connection on its own thread (a plain class, see MainActivity). */
+    static final class Connection extends Thread {
+        private final RemoteServer server;
+        private final Socket socket;
+
+        Connection(RemoteServer server, Socket socket) {
+            super("overlay-dimmer-conn");
+            this.server = server;
+            this.socket = socket;
+            setDaemon(true);
+        }
+
+        @Override
+        public void run() {
+            try (Socket c = socket) {
+                server.handle(c);
+            } catch (IOException ignored) {
+            }
+        }
     }
 
     /** Applies values on the main thread; -1 means "leave unchanged". A plain class, see MainActivity. */

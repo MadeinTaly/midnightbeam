@@ -1,3 +1,5 @@
+![Overlay Dimmer](docs/header.png)
+
 # Overlay Dimmer
 
 A tiny screen dimmer and warm (red) filter for **Android TV boxes, projectors and TVs** that can be controlled
@@ -10,13 +12,15 @@ to be restarted to pick up new values from automation tools.
 - **Live control** from `adb shell` / Home Assistant: warm filter, brightness, colour temperature
 - **Phone remote**: scan a QR code on the TV and control it from any phone browser (Android or iPhone),
   no app to install; the page works offline, on the local network only
+- **Phone app mode**: on a phone or tablet the app itself is the remote page, for the phone's own filter and for
+  every TV you saved
 - **Daily or weekly schedule**: a timeline of time slots (movie night, early to bed…) that the TV applies by itself,
   even with the phone off; shown as a bar at the bottom of the TV screen
 - **Remote-friendly settings screen**: only D-pad and OK are needed, with a visible focus highlight
   for the many TV-box themes that show none
 - **Restores the last setting at boot**, early: the boot receiver has a high priority, because on some boxes
   `BOOT_COMPLETED` reaches apps one at a time and can take over a minute
-- **Tiny**: ~55 KB APK, plain Java, no tracking; the network is used only by the optional phone remote,
+- **Small**: ~290 KB APK (most of it the artwork), plain Java, no tracking; the network is used only by the optional phone remote,
   inside your home network (no outgoing connections)
 - Android 8.0+ (API 26), phones work too
 
@@ -26,6 +30,9 @@ to be restarted to pick up new values from automation tools.
 ![Filter effect on a test pattern](docs/filter-simulation.png)
 <sub>Effect on a test pattern, simulated with the same colour and blending formula the app uses
 (real screen captures do not include overlays on many TV boxes).</sub>
+
+New in 1.3: a new look (icon, banner and palette: primary `#FF2B2B`, accent `#FF6B4D`, light `#FFD9B3`,
+background `#0B0B0F`, surface `#20304A`), shared by the TV screen, the phone app and the remote page.
 
 ## Install
 
@@ -67,6 +74,22 @@ Open the app from the launcher:
 7. **Add to Home screen**: the page has a button that installs it as an app icon (on iPhone: Share, then
    Add to Home Screen).
 
+### Phone app mode and saved devices
+
+On a phone or tablet, the launcher opens the remote page inside the app (a WebView):
+
+- **This device** controls the phone's own overlay. While the app is open, the page is served on
+  `127.0.0.1:8765` only (other devices cannot reach it); it is served on the network only when *Phone remote* is
+  on (TV only, or `--ez remote true`). The pairing key is still checked. The app asks you to allow
+  *Display over other apps*, which the overlay needs.
+- **Saved devices**: tap the bar at the top to list them, switch between them, rename or delete them.
+- **Pairing a TV**: scan its QR code. The code is still the plain `http://IP:8765/#k=KEY` link, so without the app
+  it just opens the page in the browser. With the app installed the link opens the app (on older Android you may
+  need to allow it in *Settings → Apps → Overlay Dimmer → Open by default*, or use the button below) and saves the TV.
+- **Open in the app**: on an Android browser, the remote page shows this button, which hands the TV to the app
+  (`overlaydimmer://add?host=…&port=…&k=…&name=…`) or, if the app is not installed, opens the download page.
+  Inside the app, it and *Add to Home screen* are hidden.
+
 The page is in English, or Italian on Italian phones (switchable with EN | IT); the TV app follows the
 device language.
 
@@ -76,6 +99,7 @@ disconnects every paired phone. The remote works only while the phone is on the 
 HTTP API (port 8765, header `X-Key: <pairing key>`), handy for scripts:
 
 ```sh
+curl -H "X-Key: $KEY" http://TV-IP:8765/api/info      # {"name":..,"model":..}
 curl -H "X-Key: $KEY" http://TV-IP:8765/api/state
 curl -H "X-Key: $KEY" -H "Content-Type: application/json" -d '{"red":60,"bright":40}' http://TV-IP:8765/api/set
 curl -H "X-Key: $KEY" http://TV-IP:8765/api/schedule

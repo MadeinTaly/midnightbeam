@@ -53,21 +53,33 @@ public class MainActivity extends Activity
         return "it".equals(Locale.getDefault().getLanguage()) ? it : en;
     }
 
-    static final int FOCUS = Color.rgb(255, 140, 40);
-    static final int NORMAL = Color.rgb(220, 220, 220);
-    static final int FOCUS_BACKGROUND = Color.rgb(45, 35, 25);
-    static final int BUTTON_BACKGROUND = Color.rgb(40, 40, 44);
+    // Palette (same as the phone page): primary, accent, light, background, surface.
+    static final int PRIMARY = Color.rgb(0xFF, 0x2B, 0x2B);
+    static final int ACCENT = Color.rgb(0xFF, 0x6B, 0x4D);
+    static final int LIGHT = Color.rgb(0xFF, 0xD9, 0xB3);
+    static final int BG = Color.rgb(0x0B, 0x0B, 0x0F);
+    static final int SURFACE = Color.rgb(0x20, 0x30, 0x4A);
+
+    static final int FOCUS = ACCENT;
+    static final int NORMAL = LIGHT;
+    static final int FOCUS_BACKGROUND = SURFACE;
+    static final int BUTTON_BACKGROUND = SURFACE;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if (!Compat.isTv(this)) {
+            startActivity(new Intent(this, PhoneActivity.class));
+            finish();
+            return;
+        }
         SharedPreferences p = getSharedPreferences(DimService.PREFS, MODE_PRIVATE);
         prefs = p;
 
         // Two columns (filter controls, phone remote QR code) above the schedule timeline.
         LinearLayout screen = new LinearLayout(this);
         screen.setOrientation(LinearLayout.VERTICAL);
-        screen.setBackgroundColor(Color.rgb(18, 18, 20));
+        screen.setBackgroundColor(BG);
         int pad = dp(48);
         screen.setPadding(pad, dp(28), pad, dp(24));
 
@@ -79,12 +91,12 @@ public class MainActivity extends Activity
         root.setOrientation(LinearLayout.VERTICAL);
         page.addView(root, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 3f));
 
-        TextView title = text("Overlay Dimmer", 28, Color.WHITE);
+        TextView title = text("Overlay Dimmer", 28, ACCENT);
         root.addView(title);
 
         enabled = new Switch(this);
         enabled.setText(t("Enabled", "Attivo"));
-        enabled.setTextColor(Color.WHITE);
+        enabled.setTextColor(LIGHT);
         enabled.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20);
         enabled.setPadding(0, dp(24), 0, dp(8));
         enabled.setChecked(!p.getBoolean("off", false));
@@ -106,7 +118,7 @@ public class MainActivity extends Activity
 
         remote = new Switch(this);
         remote.setText(t("Phone remote", "Telecomando dal telefono"));
-        remote.setTextColor(Color.WHITE);
+        remote.setTextColor(LIGHT);
         remote.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20);
         remote.setPadding(dp(8), dp(8), dp(8), dp(8));
         remote.setChecked(p.getBoolean("remote", false));
@@ -127,7 +139,7 @@ public class MainActivity extends Activity
         newKey = new Button(this);
         newKey.setText(t("New pairing code", "Nuovo codice di abbinamento"));
         newKey.setAllCaps(false);
-        newKey.setTextColor(Color.WHITE);
+        newKey.setTextColor(LIGHT);
         newKey.setBackgroundColor(BUTTON_BACKGROUND);
         newKey.setPadding(dp(20), dp(10), dp(20), dp(10));
         newKey.setFocusable(true);
@@ -151,7 +163,7 @@ public class MainActivity extends Activity
     @Override
     protected void onResume() {
         super.onResume();
-        run();
+        if (timeline != null) run();
     }
 
     @Override
@@ -223,7 +235,7 @@ public class MainActivity extends Activity
     /** Focus highlight of the switches and the button (the sliders handle their own). */
     @Override
     public void onFocusChange(View v, boolean hasFocus) {
-        if (v instanceof TextView) ((TextView) v).setTextColor(hasFocus ? FOCUS : Color.WHITE);
+        if (v instanceof TextView) ((TextView) v).setTextColor(hasFocus ? FOCUS : LIGHT);
         v.setBackgroundColor(hasFocus ? FOCUS_BACKGROUND : v == newKey ? BUTTON_BACKGROUND : Color.TRANSPARENT);
     }
 

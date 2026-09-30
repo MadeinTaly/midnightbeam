@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#102824">
+  <meta name="theme-color" content="#0b0b0f">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -12,9 +12,7 @@
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <title>Overlay Dimmer</title>
   <script>
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      document.documentElement.classList.add('dark');
-    }
+    document.documentElement.classList.add('dark');
   </script>
   <link rel="stylesheet" href="/remote.css">
   <script src="/dayrhythm.min.js"></script>
@@ -24,7 +22,7 @@
 
   <main class="max-w-3xl mx-auto px-4 pt-8 pb-16 space-y-4">
     <header class="flex items-center gap-3 mb-2">
-      <div class="app-brand-mark">&#9790;</div>
+      <img class="app-brand-mark" src="/icon-192.png" alt="">
       <div class="flex-1">
         <h1 class="text-2xl">Overlay Dimmer</h1>
         <p class="text-sm" style="color: var(--app-muted)" data-t="subtitle"></p>
@@ -35,8 +33,8 @@
       </div>
     </header>
 
-    <div id="pair-error" class="hidden card border-red-300 dark:border-red-900/60">
-      <p class="font-semibold text-red-600 dark:text-red-400" data-t="pairTitle"></p>
+    <div id="pair-error" class="hidden card" style="border-color: var(--app-primary)">
+      <p class="font-semibold" style="color: var(--app-accent)" data-t="pairTitle"></p>
       <p class="text-sm mt-1" style="color: var(--app-muted)" data-t="pairText"></p>
     </div>
 
@@ -47,7 +45,7 @@
         <label class="switch"><input id="on" type="checkbox"><span></span></label>
       </div>
       <div>
-        <div class="flex justify-between text-sm mb-1"><span class="text-amber-600 dark:text-amber-400" data-t="red"></span><span id="red-v"></span></div>
+        <div class="flex justify-between text-sm mb-1"><span style="color: var(--app-accent)" data-t="red"></span><span id="red-v"></span></div>
         <input id="red" type="range" min="0" max="100" step="5" class="slider-amber w-full">
       </div>
       <div>
@@ -103,7 +101,8 @@
       <p class="text-xs" style="color: var(--app-muted)" data-t="note"></p>
     </section>
 
-    <div class="pt-2 text-center">
+    <div class="pt-2 flex flex-wrap justify-center gap-2">
+      <a id="open-app" class="btn-primary hidden" href="#" data-t="openApp"></a>
       <button id="a2hs" class="btn-secondary hidden" type="button" data-t="a2hs"></button>
     </div>
   </main>
@@ -111,7 +110,7 @@
   <div class="sm-apply-bar">
     <div class="sm-apply-inner">
       <div class="sm-apply-feedback" aria-live="polite">
-        <span id="sm-dirty" class="text-amber-600 hidden" data-t="dirty"></span>
+        <span id="sm-dirty" class="hidden" style="color: var(--app-accent)" data-t="dirty"></span>
         <span id="sm-status" style="color: var(--app-muted)"></span>
       </div>
       <button id="sm-apply" class="btn-primary ml-auto" data-t="apply"></button>
@@ -133,7 +132,7 @@
       weekMode: 'Days', weekDaily: 'Same every day', weekWeekly: 'Per weekday', transition: 'Transition', trOff: 'Off',
       transitionHelp: 'Values glide gradually into the next slot over the chosen time. A manual change lasts until the next slot.',
       saving: 'Saving…', saved: 'Saved', error: 'Error, not saved', note: 'Colours are a preview of a grey picture under the filter.',
-      a2hs: 'Add to Home screen', close: 'Close',
+      a2hs: 'Add to Home screen', openApp: 'Open in the app', close: 'Close',
       a2hsIos: 'Tap Share, then Add to Home Screen.', a2hsOther: 'Open the browser menu ⋮, then Add to Home screen / Install app.',
       models: { off: 'Off', soft: 'Soft', evening: 'Evening', cinema: 'Cinema', night: 'Night', deep: 'Deep night', custom: 'Custom' },
       fields: { red: 'Warm filter', bright: 'Brightness', temp: 'Colour' },
@@ -144,7 +143,7 @@
       weekMode: 'Giorni', weekDaily: 'Uguale ogni giorno', weekWeekly: 'Per giorno', transition: 'Transizione', trOff: 'Nessuna',
       transitionHelp: 'I valori scivolano gradualmente verso la fascia successiva nel tempo scelto. Una modifica manuale dura fino alla fascia successiva.',
       saving: 'Salvataggio…', saved: 'Salvato', error: 'Errore, non salvato', note: 'I colori sono un’anteprima di un’immagine grigia sotto il filtro.',
-      a2hs: 'Aggiungi a schermata Home', close: 'Chiudi',
+      a2hs: 'Aggiungi a schermata Home', openApp: 'Apri nell’app', close: 'Chiudi',
       a2hsIos: 'Tocca Condividi, poi Aggiungi a schermata Home.', a2hsOther: 'Apri il menu del browser ⋮, poi Aggiungi a schermata Home / Installa app.',
       models: { off: 'Spento', soft: 'Tenue', evening: 'Sera', cinema: 'Cinema', night: 'Notte', deep: 'Notte fonda', custom: 'Personalizzato' },
       fields: { red: 'Filtro caldo', bright: 'Luminosità', temp: 'Colore' },
@@ -219,11 +218,11 @@
   }
   // The same tiny screen as an SVG image for the component's slot icons.
   function iconUri(model) {
-    var fill = model.id === 'off' ? '#c9d6cf' : model.id === 'custom' ? 'url(#g)' : previewCss(model);
-    var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 24"><defs><linearGradient id="g"><stop offset="0" stop-color="#ff8a3d"/><stop offset=".55" stop-color="#6e3a1f"/><stop offset="1" stop-color="#1a1a1a"/></linearGradient></defs>' +
-      '<rect x="2" y="2" width="28" height="17" rx="3" fill="' + fill + '" stroke="#7d918a" stroke-width="2"/>' +
-      (model.id === 'off' ? '<path d="M4 17L28 4M4 11L20 3M12 19L29 10" stroke="#9db0a8" stroke-width="1.5"/>' : '') +
-      '<rect x="11" y="21" width="10" height="2" rx="1" fill="#7d918a"/></svg>';
+    var fill = model.id === 'off' ? '#2b3f5e' : model.id === 'custom' ? 'url(#g)' : previewCss(model);
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 24"><defs><linearGradient id="g"><stop offset="0" stop-color="#ff6b4d"/><stop offset=".55" stop-color="#6e2a24"/><stop offset="1" stop-color="#0b0b0f"/></linearGradient></defs>' +
+      '<rect x="2" y="2" width="28" height="17" rx="3" fill="' + fill + '" stroke="#ffd9b3" stroke-width="2"/>' +
+      (model.id === 'off' ? '<path d="M4 17L28 4M4 11L20 3M12 19L29 10" stroke="#c9a88a" stroke-width="1.5"/>' : '') +
+      '<rect x="11" y="21" width="10" height="2" rx="1" fill="#ffd9b3"/></svg>';
     return { src: 'data:image/svg+xml,' + encodeURIComponent(svg) };
   }
 
@@ -306,7 +305,7 @@
 
   function config() {
     return {
-      theme: 'organic', colorScheme: 'auto', locale: lang, credits: 'minimal', week: weekly ? 'top' : 'off',
+      theme: 'organic', colorScheme: 'dark', locale: lang, credits: 'minimal', week: weekly ? 'top' : 'off',
       maxSlots: 12, minGap: 30, snap: 5, timeFormat: '24h', editor: 'full',
       messages: (function () {
         var o = {}; MODELS.forEach(function (mo) { o['model.' + mo.id] = L.models[mo.id]; });
@@ -321,9 +320,9 @@
           o.summary = '{bright}% · {temp} K';
         }
         if (mo.id === 'custom') o.fields = [
-          { key: 'red', type: 'range', label: L.fields.red, min: 0, max: 100, step: 5, unit: '%', default: 20, accent: '#b57520' },
-          { key: 'bright', type: 'range', label: L.fields.bright, min: 5, max: 100, step: 5, unit: '%', default: 40, accent: '#328466' },
-          { key: 'temp', type: 'range', label: L.fields.temp, min: 1000, max: 4000, step: 100, format: '{value} K', default: 1100, accent: '#789286' }
+          { key: 'red', type: 'range', label: L.fields.red, min: 0, max: 100, step: 5, unit: '%', default: 20, accent: '#ff2b2b' },
+          { key: 'bright', type: 'range', label: L.fields.bright, min: 5, max: 100, step: 5, unit: '%', default: 40, accent: '#ff6b4d' },
+          { key: 'temp', type: 'range', label: L.fields.temp, min: 1000, max: 4000, step: 100, format: '{value} K', default: 1100, accent: '#ffd9b3' }
         ];
         return o;
       }),
@@ -431,7 +430,23 @@
     var dlg = $('a2hs-dialog');
     if (dlg.showModal) dlg.showModal(); else alert($('a2hs-text').textContent);
   });
-  if (!standalone) $('a2hs').classList.remove('hidden');
+  // Inside the Android app (WebView with the OverlayDimmerApp user agent) neither button makes sense.
+  var inApp = /OverlayDimmerApp\//.test(navigator.userAgent), isAndroid = /Android/.test(navigator.userAgent);
+  if (!standalone && !inApp) $('a2hs').classList.remove('hidden');
+
+  // Android browser, not in the app: a link that hands this TV over to the app (pairing), or to the download page.
+  var tvName = '';
+  function openAppLink() {
+    var fallback = encodeURIComponent('https://github.com/MadeinTaly/overlay-dimmer/releases/latest');
+    $('open-app').href = 'intent://add?host=' + encodeURIComponent(location.hostname) + '&port=' + (location.port || 80) +
+      '&k=' + encodeURIComponent(key || '') + '&name=' + encodeURIComponent(tvName || location.hostname) +
+      '#Intent;scheme=overlaydimmer;package=dev.overlaydimmer;S.browser_fallback_url=' + fallback + ';end';
+  }
+  if (isAndroid && !inApp && key) {
+    openAppLink();
+    $('open-app').classList.remove('hidden');
+    api('/api/info').then(function (i) { tvName = i.name || ''; openAppLink(); }).catch(function () {});
+  }
 
   // ---- Boot ----
   applyTexts(); renderA2hs(); labels(); renderQuick();

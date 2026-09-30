@@ -38,7 +38,7 @@ public class TimelineView extends View implements Comparator<JSONObject> {
         super(context);
         density = context.getResources().getDisplayMetrics().density;
         text.setTextSize(13 * density);
-        now.setColor(Color.rgb(217, 119, 97));
+        now.setColor(MainActivity.ACCENT);
         now.setStrokeWidth(3 * density);
     }
 
@@ -88,7 +88,7 @@ public class TimelineView extends View implements Comparator<JSONObject> {
             canvas.drawRoundRect(rect, radius, radius, fill);
 
             boolean dark = !s.optBoolean("on", true) ? false : luminance(fill.getColor()) < 110;
-            text.setColor(dark ? Color.WHITE : Color.rgb(22, 62, 56));
+            text.setColor(dark ? Color.WHITE : MainActivity.BG);
             float tx = rect.left + 10 * density;
             float room = rect.width() - 16 * density;
             if (room > 30 * density) {

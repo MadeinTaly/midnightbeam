@@ -1,11 +1,11 @@
-/** Tailwind config for the phone remote page. Same "ocean" palette and dark mode as the xaqua-web UI. */
+/** Tailwind config for the phone remote page. App palette, dark mode. */
 module.exports = {
   content: ['./remote.html'],
   darkMode: 'class',
   theme: {
     extend: {
       colors: {
-        ocean: { 900: '#102824', 800: '#193730', 700: '#23453c', 600: '#38574b' }
+        brand: { primary: '#ff2b2b', accent: '#ff6b4d', light: '#ffd9b3', bg: '#0b0b0f', surface: '#20304a' }
       }
     }
   }

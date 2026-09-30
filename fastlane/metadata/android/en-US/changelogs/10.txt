@@ -1,0 +1,4 @@
+* Phone app mode: on a phone or tablet the app is the remote page, for the phone itself and for saved devices
+* Saved devices: switch, rename and delete TVs; scan a TV's QR code to add it
+* "Open in the app" button on the remote page in Android browsers
+* New icon, banner and palette

@@ -61,6 +61,7 @@ public class DimService extends Service implements Runnable {
     private volatile int temp = DEFAULT_TEMP;
     private volatile boolean off;
     private volatile boolean remote;
+    private boolean local; // phone UI open: serve the page on loopback only (not persisted)
     private volatile boolean scheduleOn;
     private volatile String scheduleResolved = "[]"; // daily Slot[] or weekly {mon:[..],..}, normalised
     private volatile String scheduleValue = "[]";    // as sent by the page (dayrhythm value), for reloading the editor
@@ -86,6 +87,7 @@ public class DimService extends Service implements Runnable {
                 remote = intent.getBooleanExtra("remote", false);
                 prefs.edit().putBoolean("remote", remote).apply();
             }
+            if (intent.hasExtra("local")) local = intent.getBooleanExtra("local", false);
             if (intent.getBooleanExtra("newkey", false)) newPairingKey(prefs);
         }
         main.removeCallbacks(this);
@@ -116,15 +118,16 @@ public class DimService extends Service implements Runnable {
     private int render() {
         boolean visible = !off && !(red == 0 && bright == 100);
         if (visible) showOverlay(overlayColor(red, bright, temp)); else removeOverlay();
-        if (remote && server == null) {
-            pairingKey(prefs);
-            server = new RemoteServer(this);
-            server.start();
-        } else if (!remote && server != null) {
+        if (server != null && (!(remote || local) || server.lan != remote)) {
             server.shutdown();
             server = null;
         }
-        if (!visible && !remote && !scheduleOn) {
+        if ((remote || local) && server == null) {
+            pairingKey(prefs);
+            server = new RemoteServer(this, remote);
+            server.start();
+        }
+        if (!visible && !remote && !local && !scheduleOn) {
             stopForeground(true);
             stopSelf();
             return START_NOT_STICKY;
@@ -292,6 +295,17 @@ public class DimService extends Service implements Runnable {
 
     String pairingKey() {
         return prefs.getString("key", null);
+    }
+
+    /** Device name and model, for naming this device in the phone app. */
+    String infoJson() {
+        String name = android.provider.Settings.Global.getString(getContentResolver(), "device_name");
+        try {
+            return new JSONObject().put("name", name != null && !name.isEmpty() ? name : android.os.Build.MODEL)
+                    .put("model", android.os.Build.MODEL).toString();
+        } catch (JSONException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     String stateJson() {
