@@ -138,7 +138,7 @@ public class MainActivity extends Activity
         remote.setTextColor(LIGHT);
         remote.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20);
         remote.setPadding(dp(8), dp(8), dp(8), dp(8));
-        remote.setChecked(p.getBoolean("remote", false));
+        remote.setChecked(p.getBoolean("remote", Compat.isTv(this)));
         remote.setFocusable(true);
         remote.setOnFocusChangeListener(this);
         remote.setOnCheckedChangeListener(this);
@@ -186,6 +186,10 @@ public class MainActivity extends Activity
             accessibilityHint.setVisibility(vis);
         }
         if (timeline != null) run();
+        // the phone remote is on by default on TVs: make sure its server runs while the QR code is shown
+        if (remote != null && remote.isChecked()) {
+            Compat.startForegroundService(this, new Intent(this, DimService.class).putExtra("remote", true));
+        }
     }
 
     @Override
@@ -227,7 +231,8 @@ public class MainActivity extends Activity
         String url = "http://" + ip + ":" + RemoteServer.PORT + "/#k=" + DimService.pairingKey(prefs);
         qr.setImageBitmap(qrBitmap(url));
         remoteInfo.setText(t("Scan with the phone camera", "Inquadra con la fotocamera del telefono")
-                + "\n" + ip + ":" + RemoteServer.PORT);
+                + "\n" + ip + ":" + RemoteServer.PORT
+                + "\n" + t("Code", "Codice") + " " + DimService.pairingKey(prefs).replaceAll("(.{4})(?!$)", "$1 "));
     }
 
     /** QR code as a bitmap: black modules on white, with the standard 4-module quiet zone. */

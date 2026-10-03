@@ -108,7 +108,7 @@ public class DimService extends Service implements Runnable {
         bright = prefs.getInt("bright", 100);
         temp = prefs.getInt("temp", DEFAULT_TEMP);
         off = prefs.getBoolean("off", false);
-        remote = prefs.getBoolean("remote", false);
+        remote = prefs.getBoolean("remote", Compat.isTv(this)); // on TVs the phone remote is on by default
         scheduleOn = prefs.getBoolean("schedule_on", false);
         scheduleResolved = prefs.getString("schedule", "[]");
         scheduleValue = prefs.getString("schedule_value", scheduleResolved);

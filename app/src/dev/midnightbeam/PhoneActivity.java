@@ -28,6 +28,7 @@ import static dev.midnightbeam.MainActivity.t;
  */
 public class PhoneActivity extends Activity implements View.OnClickListener, Runnable {
     static final String UA_SUFFIX = " MidnightBeamApp/1.6";
+    private static final int SCAN = 1;
 
     private final Handler main = new Handler(Looper.getMainLooper());
     private SharedPreferences prefs;
@@ -147,16 +148,45 @@ public class PhoneActivity extends Activity implements View.OnClickListener, Run
         if (!failed) retries = 0;
     }
 
-    /** Links of the page that ask the app for something: midnightbeam-app://overlay, midnightbeam-app://accessibility. */
+    /** Links of the page that ask the app for something: midnightbeam-app://overlay, accessibility, scan. */
     void appAction(String what) {
         try {
-            if ("overlay".equals(what)) {
+            if ("scan".equals(what)) {
+                scan();
+            } else if ("overlay".equals(what)) {
                 startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName())));
             } else if ("accessibility".equals(what)) {
                 startActivity(Compat.accessibilitySettings());
             }
         } catch (RuntimeException ignored) {
         }
+    }
+
+    /**
+     * Scans the TV's QR code: with a barcode scanner app that answers the common ZXing SCAN intent (e.g. Binary Eye)
+     * the result comes back here; otherwise the camera app opens, and its QR detection opens the pairing link,
+     * which brings the TV to this activity (see the intent filters).
+     */
+    private void scan() {
+        Intent scan = new Intent("com.google.zxing.client.android.SCAN").putExtra("SCAN_MODE", "QR_CODE_MODE");
+        if (scan.resolveActivity(getPackageManager()) != null) {
+            startActivityForResult(scan, SCAN);
+            return;
+        }
+        try {
+            startActivity(new Intent("android.media.action.STILL_IMAGE_CAMERA"));
+        } catch (RuntimeException e) {
+            web.evaluateJavascript("window.mbNotice && window.mbNotice('noCamera')", null);
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode != SCAN || resultCode != RESULT_OK || data == null) return;
+        String text = data.getStringExtra("SCAN_RESULT");
+        handleIntent(new Intent(Intent.ACTION_VIEW, text == null ? null : Uri.parse(text.trim())));
+        if (select.isEmpty()) web.evaluateJavascript("window.mbNotice && window.mbNotice('badLink')", null);
     }
 
     /** Pairing link (midnightbeam://add?.. or the TV's http://IP:8765/#k=..): save the TV and show it. */

@@ -1,0 +1,3 @@
+* On TVs the phone remote is on by default, so the QR code is shown right away
+* Add device: Scan the QR code (barcode scanner app or the camera) or enter the address and code by hand
+* The TV shows the pairing code under the QR code

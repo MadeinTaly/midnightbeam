@@ -16,7 +16,7 @@ public class BootReceiver extends BroadcastReceiver {
         SharedPreferences p = context.getSharedPreferences(DimService.PREFS, Context.MODE_PRIVATE);
         boolean neutral = p.getInt("red", 0) == 0 && p.getInt("bright", 100) == 100;
         boolean filter = !p.getBoolean("off", false) && !neutral;
-        if (!filter && !p.getBoolean("remote", false) && !p.getBoolean("schedule_on", false)) return;
+        if (!filter && !p.getBoolean("remote", Compat.isTv(context)) && !p.getBoolean("schedule_on", false)) return;
         Compat.startForegroundService(context, new Intent(context, DimService.class));
     }
 }

@@ -398,6 +398,7 @@ import * as DR from '/dayrhythm/src/index.js';
     pencil: '<path d="M4 20h4.2L19.4 8.8a2.1 2.1 0 0 0-3-3L5.2 17v3"/>',
     trash: '<path d="M4 7h16M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13"/>',
     alert: '<path d="M12 3.5l9.5 16.5h-19z"/><path d="M12 10v4.5M12 17.2v.3"/>',
+    qr: '<path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4z"/><path d="M14 14h2.5v2.5H14zM17.5 17.5H20V20h-2.5zM14 19v1M20 14v1"/>',
     link: '<path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1"/><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1"/>'
   };
   function icon(name) { return '<svg class="i" viewBox="0 0 24 24" aria-hidden="true">' + (P[name] || '') + '</svg>'; }
@@ -427,8 +428,11 @@ import * as DR from '/dayrhythm/src/index.js';
       popTitle: 'One step before it works', popText: 'Android has not allowed MidnightBeam to draw over other apps yet, so the filter cannot appear on this phone. Give the permission now: it takes a few seconds.',
       popA11yTitle: 'For full darkness', popA11yText: 'On this Android version the filter stops at 80% darkness and does not cover the status bar unless MidnightBeam is enabled in Accessibility. It is optional and it reads nothing on the screen.',
       setupNow: 'Set up now', later: 'Later', gotIt: 'OK', showWelcome: 'Show the welcome screen', source: 'Source code', support: 'Support the project', version: 'Version {v}',
-      addDevice: 'Add device', addSub: 'TV, projector or another phone', addSteps: ['On the TV, open MidnightBeam and turn on Phone remote.', 'Scan the QR code on the TV with this phone’s camera.', 'The link opens this app and the TV is saved here.'],
-      pasteLink: 'Or paste the link shown under the QR code', add: 'Add', badLink: 'This link is not a MidnightBeam pairing link',
+      addDevice: 'Add device', addSub: 'TV, projector or another phone', scanQr: 'Scan the QR code',
+      addSteps: ['On the TV, open MidnightBeam: the QR code is on the right (Phone remote on).', 'Tap Scan the QR code and point the camera at it.', 'MidnightBeam opens again with the TV saved. If the camera shows a link instead, tap it and choose MidnightBeam.'],
+      noCamera: 'No camera app found: paste the link instead',
+      manual: 'Or add it by hand, with what the TV shows under the QR code', address: 'Address', code: 'Code', add: 'Add',
+      badLink: 'Check the address and the code shown on the TV', needCode: 'Enter the code shown on the TV under the QR code',
       added: 'Device added', rename: 'Name', save: 'Save', remove: 'Remove device', removeAgain: 'Tap again to remove', removed: 'Device removed', cancel: 'Cancel',
       type: 'Type', types: { projector: 'Projector', tv: 'TV', tablet: 'Tablet', phone: 'Phone', monitor: 'Monitor', other: 'Other' },
       newScene: 'New scene', custom: 'Custom', customSub: 'Create your own scene.', sceneName: 'Scene name', sceneSaved: 'Scene saved', deleteScene: 'Delete scene',
@@ -462,8 +466,11 @@ import * as DR from '/dayrhythm/src/index.js';
       popTitle: 'Manca un passaggio', popText: 'Android non ha ancora permesso a MidnightBeam di mostrarsi sopra le altre app, quindi il filtro non può comparire su questo telefono. Dai il permesso ora: bastano pochi secondi.',
       popA11yTitle: 'Per il buio totale', popA11yText: 'Su questa versione di Android il filtro si ferma all’80% di scuro e non copre la barra di stato, a meno che MidnightBeam sia attivo in Accessibilità. È facoltativo e non legge nulla sullo schermo.',
       setupNow: 'Configura ora', later: 'Più tardi', gotIt: 'OK', showWelcome: 'Mostra la schermata iniziale', source: 'Codice sorgente', support: 'Sostieni il progetto', version: 'Versione {v}',
-      addDevice: 'Aggiungi dispositivo', addSub: 'TV, proiettore o un altro telefono', addSteps: ['Sul TV apri MidnightBeam e attiva Telecomando dal telefono.', 'Inquadra il QR sul TV con la fotocamera di questo telefono.', 'Il link apre questa app e il TV viene salvato qui.'],
-      pasteLink: 'Oppure incolla il link mostrato sotto il QR', add: 'Aggiungi', badLink: 'Questo non è un link di abbinamento MidnightBeam',
+      addDevice: 'Aggiungi dispositivo', addSub: 'TV, proiettore o un altro telefono', scanQr: 'Scansiona il QR',
+      addSteps: ['Sul TV apri MidnightBeam: il QR è a destra (Telecomando dal telefono attivo).', 'Tocca Scansiona il QR e inquadralo con la fotocamera.', 'MidnightBeam si riapre con il TV salvato. Se la fotocamera mostra un link, toccalo e scegli MidnightBeam.'],
+      noCamera: 'Nessuna app fotocamera: incolla il link',
+      manual: 'Oppure aggiungilo a mano, con quello che il TV mostra sotto il QR', address: 'Indirizzo', code: 'Codice', add: 'Aggiungi',
+      badLink: 'Controlla indirizzo e codice mostrati sul TV', needCode: 'Inserisci il codice mostrato sul TV sotto il QR',
       added: 'Dispositivo aggiunto', rename: 'Nome', save: 'Salva', remove: 'Rimuovi dispositivo', removeAgain: 'Tocca di nuovo per rimuovere', removed: 'Dispositivo rimosso', cancel: 'Annulla',
       type: 'Tipo', types: { projector: 'Proiettore', tv: 'TV', tablet: 'Tablet', phone: 'Telefono', monitor: 'Monitor', other: 'Altro' },
       newScene: 'Nuova scena', custom: 'Personalizzata', customSub: 'Crea la tua scena.', sceneName: 'Nome della scena', sceneSaved: 'Scena salvata', deleteScene: 'Elimina scena',
@@ -693,6 +700,7 @@ import * as DR from '/dayrhythm/src/index.js';
     }).catch(function () {});
   }
   window.mbDevicesChanged = loadDevices;
+  window.mbNotice = function (k) { if (L[k]) toast(L[k]); };
   // Name and kind of a newly paired device, from its /api/info (older versions send no type: a TV).
   var identifying = {};
   function identify(x) {
@@ -747,12 +755,28 @@ import * as DR from '/dayrhythm/src/index.js';
     if (view === 'schedule') loadScheduleAll();
     else loadScheduleSummary();
   }
+  // Address as shown on the TV (IP, IP:port or the whole QR link) plus the code; the code may also be inside the link.
+  function pairingLink(addr, code) {
+    addr = addr.trim(); code = code.replace(/[^0-9a-fA-F]/g, '').toLowerCase();
+    if (!addr) return null;
+    if (/^midnightbeam:/i.test(addr)) return addr;
+    if (!/^https?:\/\//i.test(addr)) addr = 'http://' + addr;
+    var hasKey = /[#?&]k=[0-9a-f]+/i.test(addr);
+    if (!hasKey && !code) { toast(L.needCode); return null; }
+    var m = addr.match(/^https?:\/\/([^\/:#?]+)(?::(\d+))?/i);
+    if (!m) { toast(L.badLink); return null; }
+    if (hasKey) return addr;
+    return 'http://' + m[1] + ':' + (m[2] || '8765') + '/#k=' + code;
+  }
   function addSheet() {
-    openSheet('<h2>' + L.addDevice + '</h2><div class="stack"><ol class="steps">' + L.addSteps.map(function (s) { return '<li>' + s + '</li>'; }).join('') + '</ol>' +
-      '<label class="small muted" for="ad-link">' + L.pasteLink + '</label><input class="field" id="ad-link" inputmode="url" autocomplete="off" placeholder="http://192.168.1.20:8765/#k=…">' +
-      '<button class="btn btn-grad" type="button" id="ad-go">' + icon('link') + L.add + '</button></div>');
+    openSheet('<h2>' + L.addDevice + '</h2><div class="stack">' +
+      '<a class="btn btn-grad" href="midnightbeam-app://scan" id="ad-scan">' + icon('qr') + L.scanQr + '</a><ol class="steps">' + L.addSteps.map(function (s) { return '<li>' + s + '</li>'; }).join('') + '</ol>' +
+      '<div class="small muted">' + L.manual + '</div>' +
+      '<label class="small muted" for="ad-link">' + L.address + '</label><input class="field" id="ad-link" inputmode="url" autocomplete="off" autocapitalize="off" placeholder="192.168.1.20:8765">' +
+      '<label class="small muted" for="ad-code">' + L.code + '</label><input class="field" id="ad-code" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="a1b2 c3d4 e5f6 …">' +
+      '<button class="btn btn-soft" type="button" id="ad-go">' + icon('link') + L.add + '</button></div>');
     $('ad-go').onclick = function () {
-      var link = $('ad-link').value.trim();
+      var link = pairingLink($('ad-link').value, $('ad-code').value);
       if (!link) return;
       api('/api/devices', { op: 'add', link: link }, '').then(function (r) {
         closeSheet(); toast(L.added);
@@ -793,7 +817,8 @@ import * as DR from '/dayrhythm/src/index.js';
     $('sheet').innerHTML = '<div class="grab"></div>' + html;
     $('sheet-wrap').classList.remove('hidden');
     if (!sheetOpen) { sheetOpen = true; history.pushState({ v: 'sheet' }, ''); }
-    var f = $('sheet').querySelector('input'); if (f && f.type !== 'range') setTimeout(function () { f.focus(); }, 150);
+    // focus the first text field, except in Add device where scanning comes first (no keyboard over the button)
+    var f = $('sheet').querySelector('input'); if (f && f.type !== 'range' && !$('ad-scan')) setTimeout(function () { f.focus(); }, 150);
   }
   function closeSheet() { if (sheetOpen) history.back(); }
   function hideSheet() { sheetOpen = false; $('sheet-wrap').classList.add('hidden'); $('sheet').innerHTML = ''; }
