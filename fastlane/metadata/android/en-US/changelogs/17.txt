@@ -1,0 +1,1 @@
+* Fix: TVs added in the phone app were shown as not reachable

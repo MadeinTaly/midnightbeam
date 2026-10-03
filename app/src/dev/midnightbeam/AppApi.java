@@ -97,6 +97,11 @@ final class AppApi {
             throws IOException {
         int slash = path.indexOf('/', 3);
         String id = slash > 3 ? path.substring(3, slash) : "";
+        try {
+            id = java.net.URLDecoder.decode(id, "UTF-8"); // the page may send "host%3Aport"
+        } catch (IllegalArgumentException e) {
+            id = "";
+        }
         String rest = slash > 3 ? path.substring(slash) : "";
         JSONObject d = Devices.byId(p, id);
         boolean allowed = false;

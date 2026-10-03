@@ -501,7 +501,7 @@ import * as DR from '/dayrhythm/src/index.js';
 
   var devices = [], cur = store('mb_cur') || '', app = { overlay: true, accessibilityHint: false, version: '' };
   if (wanted) { cur = wanted; store('mb_cur', cur); store('mb_welcomed', '1'); }
-  function base(id) { return id ? '/d/' + encodeURIComponent(id) : ''; }
+  function base(id) { return id ? '/d/' + id : ''; } // id = host:port, plain path characters
   function api(path, body, id) {
     var ctl = window.AbortController ? new AbortController() : null, t = ctl && setTimeout(function () { ctl.abort(); }, 7000);
     return fetch(base(id === undefined ? cur : id) + path, {
