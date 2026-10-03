@@ -20,7 +20,7 @@ to be restarted to pick up new values from automation tools.
   for the many TV-box themes that show none
 - **Restores the last setting at boot**, early: the boot receiver has a high priority, because on some boxes
   `BOOT_COMPLETED` reaches apps one at a time and can take over a minute
-- **Small**: ~330 KB APK (most of it the artwork), plain Java, no tracking; no internet connections: the network is used only
+- **Small**: ~410 KB APK (most of it the artwork), plain Java, no tracking; no internet connections: the network is used only
   by the optional LAN remote (port 8765, pairing key, off unless enabled) and, in phone app mode, to reach your paired TVs
 - Android 8.0+ (API 26), phones work too
 
@@ -30,6 +30,8 @@ to be restarted to pick up new values from automation tools.
 ![Filter effect on a test pattern](docs/filter-simulation.png)
 <sub>Effect on a test pattern, simulated with the same colour and blending formula the app uses
 (real screen captures do not include overlays on many TV boxes).</sub>
+
+New in 1.6: a new phone app (welcome screen, Home, Devices, Scenes, Settings) and dayrhythm 0.3.0.
 
 New in 1.5: the app is now called **MidnightBeam** (new package id `dev.midnightbeam`, so the previous
 RedMoonBeam app has to be uninstalled and this one installed; settings are not carried over), with new artwork.
@@ -77,19 +79,25 @@ Open the app from the launcher:
 
 ### Phone app mode and saved devices
 
-On a phone or tablet, the launcher opens the remote page inside the app (a WebView):
+On a phone or tablet, the launcher opens the app's own screen (`app/assets/app.html` in a WebView, served by the
+app on `127.0.0.1:8765` only). The first time it asks whether to **use the filter on this device** or to
+**connect a TV or projector**. Then:
 
-- **This device** controls the phone's own overlay. While the app is open, the page is served on
-  `127.0.0.1:8765` only (other devices cannot reach it); it is served on the network only when *Phone remote* is
-  on (TV only, or `--ez remote true`). The pairing key is still checked. The app asks you to allow
-  *Display over other apps*, which the overlay needs.
-- **Saved devices**: tap the bar at the top to list them, switch between them, rename or delete them.
-- **Pairing a TV**: scan its QR code. The code is still the plain `http://IP:8765/#k=KEY` link, so without the app
-  it just opens the page in the browser. With the app installed the link opens the app (on older Android you may
-  need to allow it in *Settings → Apps → MidnightBeam → Open by default*, or use the button below) and saves the TV.
-- **Open in the app**: on an Android browser, the remote page shows this button, which hands the TV to the app
-  (`midnightbeam://add?host=…&port=…&k=…&name=…`) or, if the app is not installed, opens the download page.
-  Inside the app, it and *Add to Home screen* are hidden.
+- **Home**: the selected device with its power button, a preview of the filter, scenes, the warm filter /
+  brightness / colour temperature sliders and the schedule (with [dayrhythm](https://github.com/MadeinTaly/dayrhythm)).
+- **Devices**: this phone and every saved TV, with their state and a power button each; tap one to control it,
+  the pencil renames or removes it. The app forwards the requests to the TV with its saved pairing key
+  (the page never sees the keys).
+- **Scenes**: the built-in settings plus your own (saved on the phone).
+- **Settings**: language, the *Display over other apps* permission, the optional accessibility mode.
+
+Pairing a TV: scan its QR code. The code is still the plain `http://IP:8765/#k=KEY` link, so without the app
+it just opens the browser remote. With the app installed the link opens the app (on older Android you may
+need to allow it in *Settings → Apps → MidnightBeam → Open by default*) and saves the TV; the link can also be
+pasted in *Devices → Add device*. The browser remote has an **Open in the app** button that does the same
+(`midnightbeam://add?host=…&port=…&k=…&name=…`) or, if the app is not installed, opens the download page.
+
+The TV screen and the browser remote keep their own layout.
 
 The page is in English, or Italian on Italian phones (switchable with EN | IT); the TV app follows the
 device language.
@@ -190,7 +198,7 @@ update each other, so uninstall the release build before installing your own.
 - [QR Code generator library](https://www.nayuki.io/page/qr-code-generator-library) by Project Nayuki,
   MIT License (`app/src/io/nayuki/qrcodegen`, unmodified)
 - [Tailwind CSS](https://tailwindcss.com), MIT License (compiled into `app/assets/remote.css`)
-- [dayrhythm](https://github.com/MadeinTaly/dayrhythm), MIT License (git submodule `vendor/dayrhythm`, v0.2.0, used unminified from its `src/`; the schedule editor of the phone page)
+- [dayrhythm](https://github.com/MadeinTaly/dayrhythm), MIT License (git submodule `vendor/dayrhythm`, v0.3.0, used unminified from its `src/`; the schedule editor of the phone page)
 
 ## Support
 

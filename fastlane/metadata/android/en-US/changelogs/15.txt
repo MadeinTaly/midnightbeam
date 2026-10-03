@@ -1,0 +1,4 @@
+* New phone app: choose "use on this device" or "connect a TV" at the first start; Home, Devices, Scenes and Settings screens
+* Saved TVs are controlled through the app (power button and state for each), own scenes
+* Schedule editor updated to dayrhythm 0.3.0 (week bar with one focused day)
+* TV screen and browser remote unchanged

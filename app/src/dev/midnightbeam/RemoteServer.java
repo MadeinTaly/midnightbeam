@@ -32,19 +32,26 @@ import java.util.Locale;
  *   POST /api/schedule   {"enabled":bool,"value":..,"resolved":..}  (older {"enabled","slots":[..]} still accepted)
  *   GET  /api/days       saved days: [{"name":..,"slots":[..]}]
  *   POST /api/days       {"name":..,"slots":[..]} saves or replaces a day; {"name":..,"delete":true} deletes it
+ *
+ * Loopback connections (the phone app's WebView) also get the app page (/app.html, its artwork) and AppApi.
  */
 final class RemoteServer extends Thread {
     static final int PORT = 8765;
-    private static final int MAX_BODY = 4096;
+    private static final int MAX_BODY = 32768;
 
     /** Static files for "add to home screen" (manifest and icons) and the page's scripts. */
     private static final java.util.Map<String, String> STATIC = new java.util.HashMap<>();
+
+    /** The phone app's own page and artwork, served on loopback only. */
+    private static final java.util.Map<String, String> APP = new java.util.HashMap<>();
 
     static {
         STATIC.put("/manifest.webmanifest", "application/manifest+json");
         STATIC.put("/icon-192.png", "image/png");
         STATIC.put("/icon-512.png", "image/png");
         STATIC.put("/apple-touch-icon.png", "image/png");
+        APP.put("/app.html", "text/html; charset=utf-8");
+        APP.put("/art.jpg", "image/jpeg");
     }
 
     private final DimService service;
@@ -121,6 +128,7 @@ final class RemoteServer extends Thread {
             }
         }
         OutputStream out = c.getOutputStream();
+        boolean loopback = c.getInetAddress().isLoopbackAddress();
         if (length < 0 || length > MAX_BODY) {
             send(out, 413, "text/plain", "too large");
             return;
@@ -145,9 +153,26 @@ final class RemoteServer extends Thread {
             } catch (IOException e) {
                 send(out, 404, "text/plain", "not found");
             }
+        } else if (loopback && method.equals("GET") && APP.containsKey(path)) {
+            send(out, 200, APP.get(path), assetBytes(path.substring(1)));
+        } else if (loopback && path.startsWith("/d/")) {
+            if (!keyMatches(key)) send(out, 403, "application/json", "{\"error\":\"pairing key\"}");
+            else AppApi.forward(prefs(), path, method, body, read, out);
         } else if (path.startsWith("/api/")) {
             if (!keyMatches(key)) {
                 send(out, 403, "application/json", "{\"error\":\"pairing key\"}");
+            } else if (loopback && method.equals("GET") && path.equals("/api/app")) {
+                send(out, 200, "application/json", AppApi.app(service));
+            } else if (loopback && method.equals("GET") && path.equals("/api/devices")) {
+                send(out, 200, "application/json", AppApi.devices(prefs()));
+            } else if (loopback && method.equals("POST") && path.equals("/api/devices")) {
+                String r = null;
+                try {
+                    r = AppApi.changeDevices(prefs(), new JSONObject(AppApi.text(body, read)));
+                } catch (JSONException ignored) {
+                }
+                if (r == null) send(out, 400, "application/json", "{\"error\":\"bad request\"}");
+                else send(out, 200, "application/json", r);
             } else if (method.equals("GET") && path.equals("/api/info")) {
                 send(out, 200, "application/json", service.infoJson());
             } else if (method.equals("GET") && path.equals("/api/state")) {
@@ -195,6 +220,10 @@ final class RemoteServer extends Thread {
         }
     }
 
+    private android.content.SharedPreferences prefs() {
+        return service.getSharedPreferences(DimService.PREFS, android.content.Context.MODE_PRIVATE);
+    }
+
     private boolean keyMatches(String key) {
         String expected = service.pairingKey();
         if (key == null || expected == null) return false;
@@ -224,12 +253,12 @@ final class RemoteServer extends Thread {
         }
     }
 
-    private static void send(OutputStream out, int code, String type, String body) throws IOException {
+    static void send(OutputStream out, int code, String type, String body) throws IOException {
         send(out, code, type, body.getBytes(StandardCharsets.UTF_8));
     }
 
-    private static void send(OutputStream out, int code, String type, byte[] b) throws IOException {
-        String status = code == 200 ? "OK" : code == 403 ? "Forbidden" : code == 404 ? "Not Found" : "Error";
+    static void send(OutputStream out, int code, String type, byte[] b) throws IOException {
+        String status = code == 200 ? "OK" : code == 403 ? "Forbidden" : code == 404 ? "Not Found" : code == 400 ? "Bad Request" : code == 502 ? "Bad Gateway" : "Error";
         String head = "HTTP/1.1 " + code + " " + status + "\r\n"
                 + "Content-Type: " + type + "\r\n"
                 + "Content-Length: " + b.length + "\r\n"

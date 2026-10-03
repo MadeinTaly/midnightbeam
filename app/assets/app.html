@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0b0f1a">
+  <title>MidnightBeam</title>
+  <!-- The phone app's own page (served on loopback by the app only). The TV and the browser remote use remote.html. -->
+  <style>
+    :root {
+      --bg: #0b0f1a; --bg2: #101626; --card: #131b2c; --card2: #1a2438; --line: rgb(255 255 255 / 7%);
+      --ink: #f3f5f9; --muted: #8e98ac; --red: #ff4d4d; --red2: #ff6b4d; --blue: #4d7cff; --cream: #ffd9b3;
+      --green: #3ddc97; --radius: 22px;
+      color-scheme: dark;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: var(--bg); color: var(--ink); }
+    body {
+      font-family: "Google Sans", "Segoe UI", Roboto, system-ui, sans-serif; line-height: 1.4;
+      -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none;
+      min-height: 100vh;
+      background: radial-gradient(ellipse 80% 45% at 90% -5%, rgb(77 124 255 / 16%), transparent 70%),
+                  radial-gradient(ellipse 70% 40% at 0% 0%, rgb(255 77 77 / 14%), transparent 70%), var(--bg);
+    }
+    button, input, select { font: inherit; color: inherit; }
+    button { background: none; border: 0; padding: 0; cursor: pointer; }
+    a { color: inherit; }
+    :focus-visible { outline: 3px solid var(--red2); outline-offset: 3px; }
+    .hidden { display: none !important; }
+    svg.i { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+
+    .view { max-width: 560px; margin: 0 auto; padding: calc(env(safe-area-inset-top) + 18px) 16px calc(env(safe-area-inset-bottom) + 96px); }
+    .top { display: flex; align-items: center; gap: 12px; min-height: 48px; margin-bottom: 14px; }
+    .top h1 { flex: 1; margin: 0; font-size: 1.6rem; font-weight: 600; letter-spacing: -.02em; }
+    .icon-btn { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; color: var(--ink); }
+    .icon-btn:active { background: var(--card2); }
+    .wordmark { font-weight: 700; letter-spacing: -.03em;
+      background: linear-gradient(90deg, #ffe3d1 0%, #ff8a6b 38%, #ff5a5a 52%, #9db8ff 62%, #e8efff 100%);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+      filter: drop-shadow(0 0 14px rgb(255 77 77 / 35%)); }
+    .spark { color: var(--red); font-size: .8em; vertical-align: super; margin-left: 2px; text-shadow: 0 0 10px var(--red); }
+    .tagline { font-family: ui-monospace, "Roboto Mono", "DejaVu Sans Mono", monospace; color: #c9d2e3; font-size: .95rem; }
+
+    .card { background: linear-gradient(180deg, var(--card), var(--bg2)); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; }
+    .stack > * + * { margin-top: 12px; }
+    .muted { color: var(--muted); }
+    .small { font-size: .85rem; }
+    .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); margin-right: 6px; vertical-align: 1px; }
+    .dot.on { background: var(--green); box-shadow: 0 0 8px var(--green); }
+    .status-on { color: var(--green); }
+
+    /* power button */
+    .power { width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0;
+      background: #2a3347; color: #c8d0de; transition: background .2s, box-shadow .2s; }
+    .power.on { background: radial-gradient(circle at 35% 30%, #ff8080, var(--red) 60%); color: #fff; box-shadow: 0 0 22px rgb(255 77 77 / 55%); }
+    .power svg.i { width: 26px; height: 26px; stroke-width: 2.2; }
+
+    /* device card on home */
+    .device { display: flex; align-items: center; gap: 14px; }
+    .device-ic { width: 44px; height: 44px; display: grid; place-items: center; color: var(--red2); }
+    .device-ic svg.i { width: 32px; height: 32px; stroke-width: 1.6; }
+    .device-txt { flex: 1; min-width: 0; text-align: left; }
+    .device-name { font-size: 1.1rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .preview { position: relative; margin-top: 14px; border-radius: 16px; overflow: hidden; aspect-ratio: 16 / 9; background: #000; }
+    .preview img { display: block; width: 100%; height: 100%; object-fit: cover; }
+    .preview .tint, .preview .dim { position: absolute; inset: 0; transition: background .25s; pointer-events: none; }
+
+    /* scenes row */
+    .scenes { display: flex; gap: 10px; overflow-x: auto; padding: 4px 2px 6px; margin: 16px -2px 4px; scrollbar-width: none; }
+    .scenes::-webkit-scrollbar { display: none; }
+    .scene { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 72px; }
+    .scene .ring { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; background: var(--card2); border: 1px solid var(--line); color: #dfe5f0; transition: .2s; }
+    .scene span { font-size: .8rem; color: #c9d2e3; white-space: nowrap; }
+    .scene[aria-pressed="true"] .ring { background: radial-gradient(circle at 40% 30%, #6b2a33, #3a1720); border: 2px solid var(--red); color: #ffd0c4; box-shadow: 0 0 18px rgb(255 77 77 / 45%); }
+    .scene[aria-pressed="true"] span { color: var(--ink); font-weight: 600; }
+
+    /* sliders */
+    .slider-card { display: grid; grid-template-columns: 32px 1fr auto; align-items: center; gap: 4px 12px; }
+    .slider-card .lbl { font-weight: 600; }
+    .slider-card .val { color: #c9d2e3; font-variant-numeric: tabular-nums; }
+    .slider-card input { grid-column: 2 / 4; }
+    .slider-card .ic { grid-row: 1 / 3; align-self: center; }
+    .ic-red { color: var(--red); } .ic-cream { color: var(--cream); } .ic-amber { color: #ffb15c; }
+    input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 28px; background: transparent; margin: 0; --p: 50%; --c1: var(--red); --c2: var(--red2); }
+    input[type=range]::-webkit-slider-runnable-track { height: 6px; border-radius: 6px; background: linear-gradient(90deg, var(--c1), var(--c2) var(--p), #2a3347 var(--p)); }
+    input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 24px; height: 24px; margin-top: -9px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 5px rgb(255 255 255 / 12%), 0 2px 8px rgb(0 0 0 / 50%); }
+    input[type=range]::-moz-range-track { height: 6px; border-radius: 6px; background: #2a3347; }
+    input[type=range]::-moz-range-progress { height: 6px; border-radius: 6px; background: linear-gradient(90deg, var(--c1), var(--c2)); }
+    input[type=range]::-moz-range-thumb { width: 24px; height: 24px; border: 0; border-radius: 50%; background: #fff; }
+    #r-red { --c1: #ff3b3b; --c2: #ff7a5c; }
+    #r-bright { --c1: #b9a48e; --c2: #ffe2bd; }
+    #r-temp { --c1: #ff7a2e; --c2: #ffc98a; }
+
+    .row-link { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; }
+    .row-link .grow { flex: 1; min-width: 0; }
+    .row-link .t { font-weight: 600; }
+    .chev { color: var(--muted); }
+
+    .banner { display: flex; gap: 12px; align-items: center; text-decoration: none; border-color: rgb(255 77 77 / 45%); background: linear-gradient(180deg, #2a1418, #1a1016); }
+
+    /* lists (scenes, devices) */
+    .list > * + * { margin-top: 12px; }
+    .item { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; padding: 12px; border-radius: var(--radius); background: linear-gradient(180deg, var(--card), var(--bg2)); border: 1px solid var(--line); }
+    .item.active { border-color: rgb(255 77 77 / 55%); background: linear-gradient(180deg, #1d1a2c, #15121f); }
+    .thumb { width: 84px; height: 64px; border-radius: 14px; flex-shrink: 0; display: grid; place-items: center; color: #fff; position: relative; overflow: hidden; }
+    .thumb svg.i { width: 30px; height: 30px; filter: drop-shadow(0 1px 3px rgb(0 0 0 / 60%)); }
+    .thumb.dashed { background: transparent; border: 1.5px dashed #3a4560; color: var(--muted); }
+    .item .grow { flex: 1; min-width: 0; }
+    .item .t { font-weight: 600; font-size: 1.02rem; }
+    .item .d { color: var(--muted); font-size: .85rem; }
+    .radio { width: 24px; height: 24px; border-radius: 50%; border: 2px solid #4a5570; display: grid; place-items: center; flex-shrink: 0; }
+    .radio.on { background: var(--red); border-color: var(--red); color: #fff; }
+    .radio svg.i { width: 15px; height: 15px; stroke-width: 3; }
+    .dev-ic { width: 56px; height: 56px; display: grid; place-items: center; color: #c8d0de; flex-shrink: 0; }
+    .dev-ic svg.i { width: 36px; height: 36px; stroke-width: 1.5; }
+    .add-ic { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: #24304a; color: #dfe5f0; flex-shrink: 0; margin: 6px; }
+
+    /* buttons */
+    .btn { text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 54px; border-radius: 999px; font-weight: 600; font-size: 1.05rem; }
+    .btn-grad { background: linear-gradient(90deg, #ff4d4d, #c2408a 50%, #3d6dff); color: #fff; box-shadow: 0 8px 28px rgb(122 70 255 / 30%); }
+    .btn-soft { background: var(--card2); color: var(--ink); border: 1px solid var(--line); }
+    .btn-danger { background: transparent; color: #ff8a7a; border: 1px solid rgb(255 77 77 / 40%); }
+    .link-btn { color: #9db8ff; font-weight: 500; padding: 12px; display: inline-flex; gap: 8px; align-items: center; }
+    .seg { display: flex; gap: 6px; background: var(--card2); padding: 4px; border-radius: 999px; }
+    .seg button { flex: 1; min-height: 40px; border-radius: 999px; color: var(--muted); font-weight: 600; }
+    .seg button[aria-pressed="true"] { background: #2d3a56; color: var(--ink); }
+    .field { display: block; width: 100%; min-height: 50px; padding: 12px 16px; border-radius: 14px; border: 1px solid #2c3852; background: #0f1524; }
+    .switch { position: relative; width: 52px; height: 30px; flex-shrink: 0; }
+    .switch input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+    .switch span { position: absolute; inset: 0; border-radius: 99px; background: #2f3a52; transition: .2s; pointer-events: none; }
+    .switch span::before { content: ""; position: absolute; left: 3px; top: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; transition: .2s; }
+    .switch input:checked + span { background: var(--red); }
+    .switch input:checked + span::before { transform: translateX(22px); }
+
+    /* welcome */
+    #v-welcome { padding-bottom: calc(env(safe-area-inset-bottom) + 28px); display: flex; flex-direction: column; min-height: 100vh; }
+    .hero { position: relative; margin: -18px -16px 0; }
+    .hero img { display: block; width: 100%; aspect-ratio: 1 / 1; object-fit: cover; -webkit-mask-image: linear-gradient(180deg, #000 70%, transparent); mask-image: linear-gradient(180deg, #000 70%, transparent); }
+    .welcome-txt { text-align: center; margin-top: -12px; }
+    .welcome-txt h1 { font-size: 2.6rem; margin: 0 0 10px; }
+    .welcome-actions { margin-top: auto; padding-top: 26px; }
+    .choice { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; padding: 14px 16px; border-radius: 20px; background: var(--card); border: 1px solid var(--line); margin-top: 12px; }
+    .choice .grow { flex: 1; }
+    .choice .t { font-weight: 600; }
+
+    /* bottom navigation */
+    #tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; display: flex; justify-content: space-around;
+      padding: 8px 8px calc(env(safe-area-inset-bottom) + 8px); background: rgb(11 15 26 / 92%); border-top: 1px solid var(--line);
+      -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+    #tabs button { flex: 1; max-width: 120px; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 0; color: #9aa4b8; font-size: .78rem; }
+    #tabs button[aria-current="page"] { color: var(--red); }
+    #tabs button[aria-current="page"] svg.i { filter: drop-shadow(0 0 6px rgb(255 77 77 / 70%)); }
+
+    /* bottom sheet */
+    #sheet-wrap { position: fixed; inset: 0; z-index: 20; background: rgb(3 5 10 / 65%); display: flex; align-items: flex-end; justify-content: center; }
+    #sheet { width: 100%; max-width: 560px; max-height: 88vh; overflow-y: auto; background: #121a2b; border-radius: 26px 26px 0 0; border: 1px solid var(--line);
+      padding: 10px 18px calc(env(safe-area-inset-bottom) + 22px); }
+    #sheet .grab { width: 40px; height: 4px; border-radius: 4px; background: #3a4560; margin: 0 auto 14px; }
+    #sheet h2 { margin: 0 0 12px; font-size: 1.3rem; }
+    #toast { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 92px); transform: translateX(-50%); z-index: 30;
+      background: #26324a; color: var(--ink); padding: 10px 18px; border-radius: 999px; font-size: .9rem; box-shadow: 0 6px 20px rgb(0 0 0 / 40%); }
+    ol.steps { padding-left: 20px; margin: 0; color: #c9d2e3; } ol.steps li + li { margin-top: 6px; }
+
+    day-rhythm {
+      display: block;
+      --dr-bg: var(--bg); --dr-surface: var(--card); --dr-surface-soft: var(--card2);
+      --dr-ink: var(--ink); --dr-muted: var(--muted); --dr-accent: var(--red2);
+      --dr-accent-soft: #3a2433; --dr-accent-ink: #0b0f1a; --dr-focus: var(--red2);
+      --dr-danger: #ff8a7a; --dr-border: #2c3852; --dr-shadow: 0 12px 40px rgb(0 0 0 / 35%);
+      --dr-overlay: #0b0f1acc; --dr-now: var(--red);
+    }
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  </style>
+</head>
+<body>
+
+<!-- Welcome: shown on the first start -->
+<section id="v-welcome" class="view hidden">
+  <div class="hero"><img src="/icon-512.png" alt=""></div>
+  <div class="welcome-txt">
+    <h1><span class="wordmark">MidnightBeam</span><span class="spark">✦</span></h1>
+    <p class="tagline" data-t="tagline1"></p>
+  </div>
+  <div class="welcome-actions">
+    <button id="w-here" class="choice" type="button">
+      <span class="dev-ic" data-icon="phone"></span>
+      <span class="grow"><span class="t" data-t="useHere"></span><br><span class="muted small" data-t="useHereSub"></span></span>
+      <span class="chev" data-icon="chev"></span>
+    </button>
+    <button id="w-connect" class="choice" type="button">
+      <span class="dev-ic" data-icon="tv"></span>
+      <span class="grow"><span class="t" data-t="connectTv"></span><br><span class="muted small" data-t="connectTvSub"></span></span>
+      <span class="chev" data-icon="chev"></span>
+    </button>
+  </div>
+</section>
+
+<!-- Home -->
+<section id="v-home" class="view hidden">
+  <div class="top">
+    <h1><span class="wordmark">MidnightBeam</span><span class="spark">✦</span></h1>
+    <button class="icon-btn" type="button" data-go="settings" data-al="settings" data-icon="gear"></button>
+  </div>
+  <div class="stack">
+    <a id="perm-banner" class="card banner hidden" href="midnightbeam-app://overlay">
+      <span class="ic-red" data-icon="alert"></span><span class="small" data-t="permBanner"></span>
+    </a>
+    <div class="card">
+      <div class="device">
+        <button id="h-dev" class="device" type="button" style="flex:1;min-width:0">
+          <span class="device-ic" id="h-dev-ic"></span>
+          <span class="device-txt">
+            <span class="device-name" id="h-dev-name"></span><br>
+            <span class="small" id="h-dev-status"></span>
+          </span>
+        </button>
+        <button id="h-power" class="power" type="button" data-al="power" data-icon="power"></button>
+      </div>
+      <div class="preview" aria-hidden="true"><img src="/art.jpg" alt=""><div class="tint" id="pv-tint"></div><div class="dim" id="pv-dim"></div></div>
+      <div class="scenes" id="h-scenes" role="group"></div>
+    </div>
+    <div class="card slider-card">
+      <span class="ic ic-red" data-icon="sun"></span><label class="lbl" for="r-red" data-t="red"></label><span class="val" id="v-red"></span>
+      <input id="r-red" type="range" min="0" max="100" step="5">
+    </div>
+    <div class="card slider-card">
+      <span class="ic ic-cream" data-icon="bright"></span><label class="lbl" for="r-bright" data-t="bright"></label><span class="val" id="v-bright"></span>
+      <input id="r-bright" type="range" min="5" max="100" step="5">
+    </div>
+    <div class="card slider-card">
+      <span class="ic ic-amber" data-icon="thermo"></span><label class="lbl" for="r-temp" data-t="temp"></label><span class="val" id="v-temp"></span>
+      <input id="r-temp" type="range" min="1000" max="4000" step="100">
+    </div>
+    <button class="card row-link" type="button" data-go="schedule">
+      <span class="ic-amber" data-icon="clock"></span>
+      <span class="grow"><span class="t" data-t="schedTitle"></span><br><span class="small muted" id="h-sched"></span></span>
+      <span class="chev" data-icon="chev"></span>
+    </button>
+  </div>
+</section>
+
+<!-- Devices -->
+<section id="v-devices" class="view hidden">
+  <div class="top"><h1 data-t="devices"></h1><button class="icon-btn" type="button" id="d-add-top" data-al="addDevice" data-icon="plus"></button></div>
+  <div class="list" id="d-list"></div>
+</section>
+
+<!-- Scenes -->
+<section id="v-scenes" class="view hidden">
+  <div class="top"><h1 data-t="scenes"></h1><button class="icon-btn" type="button" id="s-add-top" data-al="newScene" data-icon="plus"></button></div>
+  <div class="list" id="s-list"></div>
+</section>
+
+<!-- Settings -->
+<section id="v-settings" class="view hidden">
+  <div class="top"><h1 data-t="settings"></h1></div>
+  <div class="stack">
+    <div class="card stack">
+      <div class="t" style="font-weight:600" data-t="language"></div>
+      <div class="seg" role="group"><button type="button" class="lang" data-lang="en">English</button><button type="button" class="lang" data-lang="it">Italiano</button></div>
+    </div>
+    <div class="card stack">
+      <div style="font-weight:600" data-t="thisDevice"></div>
+      <p class="small muted" style="margin:0" id="st-overlay"></p>
+      <a id="st-overlay-btn" class="btn btn-soft hidden" href="midnightbeam-app://overlay" data-t="permButton"></a>
+      <p class="small muted" style="margin:0" id="st-a11y" data-t="a11yText"></p>
+      <a id="st-a11y-btn" class="btn btn-soft hidden" href="midnightbeam-app://accessibility" data-t="a11yButton"></a>
+    </div>
+    <div class="card stack">
+      <button type="button" class="row-link" id="st-welcome"><span class="grow" data-t="showWelcome"></span><span class="chev" data-icon="chev"></span></button>
+      <a class="row-link" href="https://github.com/MadeinTaly/midnightbeam" style="text-decoration:none"><span class="grow" data-t="source"></span><span class="chev" data-icon="chev"></span></a>
+      <a class="row-link" href="https://gt.1471995.xyz" style="text-decoration:none"><span class="grow" data-t="support"></span><span class="chev" data-icon="chev"></span></a>
+      <p class="small muted" style="margin:0" id="st-version"></p>
+    </div>
+  </div>
+</section>
+
+<!-- Schedule (opened from Home) -->
+<section id="v-schedule" class="view hidden">
+  <div class="top">
+    <button class="icon-btn" type="button" id="sc-back" data-al="back" data-icon="back"></button>
+    <h1 data-t="schedTitle"></h1>
+  </div>
+  <div class="stack">
+    <p class="small muted" style="margin:0" data-t="schedSub"></p>
+    <div class="card stack">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <span style="font-weight:600" id="sc-dev"></span>
+        <label class="switch"><input id="sched-on" type="checkbox"><span></span></label>
+      </div>
+      <div>
+        <div class="small muted" style="margin-bottom:6px" data-t="weekMode"></div>
+        <div class="seg" role="group"><button id="wk-daily" type="button" data-t="weekDaily"></button><button id="wk-week" type="button" data-t="weekWeekly"></button></div>
+      </div>
+      <div>
+        <label class="small muted" for="transition" style="display:block;margin-bottom:6px" data-t="transition"></label>
+        <select id="transition" class="field">
+          <option value="0" data-t="trOff"></option><option value="15">15 min</option><option value="30">30 min</option><option value="60">60 min</option>
+        </select>
+        <p class="small muted" style="margin:8px 0 0" data-t="transitionHelp"></p>
+      </div>
+    </div>
+    <day-rhythm id="rhythm"></day-rhythm>
+    <p id="save-status" class="small muted" role="status" aria-live="polite"></p>
+  </div>
+</section>
+
+<nav id="tabs" class="hidden">
+  <button type="button" data-tab="home"><span data-icon="home"></span><span data-t="home"></span></button>
+  <button type="button" data-tab="devices"><span data-icon="tv"></span><span data-t="devices"></span></button>
+  <button type="button" data-tab="scenes"><span data-icon="star"></span><span data-t="scenes"></span></button>
+  <button type="button" data-tab="settings"><span data-icon="gear"></span><span data-t="settings"></span></button>
+</nav>
+
+<div id="sheet-wrap" class="hidden"><div id="sheet" role="dialog" aria-modal="true"></div></div>
+<div id="toast" class="hidden" role="status" aria-live="polite"></div>
+
+<script type="module">
+import * as DR from '/dayrhythm/src/index.js';
+(function () {
+  'use strict';
+  function $(id) { return document.getElementById(id); }
+  function el(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return '&#' + c.charCodeAt(0) + ';'; }); }
+
+  // ---- Icons (drawn for this app) ----
+  var P = {
+    home: '<path d="M3 11l9-7 9 7"/><path d="M5 9.5V20h5v-6h4v6h5V9.5"/>',
+    tv: '<rect x="2.5" y="4" width="19" height="12.5" rx="2"/><path d="M8 20.5h8M12 16.5v4"/>',
+    phone: '<rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M11 18.5h2"/>',
+    star: '<path d="M12 3.2l2.6 5.5 6 .8-4.4 4.2 1.1 6-5.3-2.9-5.3 2.9 1.1-6-4.4-4.2 6-.8z"/>',
+    gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.6M12 18.6v2.6M2.8 12h2.6M18.6 12h2.6M5.5 5.5l1.8 1.8M16.7 16.7l1.8 1.8M5.5 18.5l1.8-1.8M16.7 7.3l1.8-1.8"/><circle cx="12" cy="12" r="6.6"/>',
+    power: '<path d="M12 3v8.5"/><path d="M7.2 6.3a7.5 7.5 0 1 0 9.6 0"/>',
+    chev: '<path d="M9 5.5l6.5 6.5L9 18.5"/>',
+    back: '<path d="M15 5.5L8.5 12l6.5 6.5"/>',
+    plus: '<path d="M12 5v14M5 12h14"/>',
+    sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/>',
+    bright: '<circle cx="12" cy="12" r="4.5"/><path d="M12 7.5v9" /><path d="M12 7.5a4.5 4.5 0 0 1 0 9z" fill="currentColor"/><path d="M12 3v1.5M12 19.5V21M3 12h1.5M19.5 12H21"/>',
+    thermo: '<path d="M10 14.2V5a2 2 0 0 1 4 0v9.2a4 4 0 1 1-4 0z"/><path d="M12 10v6"/>',
+    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/>',
+    film: '<rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M7.5 4v16M16.5 4v16M3 9h4.5M3 15h4.5M16.5 9H21M16.5 15H21"/>',
+    cup: '<path d="M4.5 9h11v4.5a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5z"/><path d="M15.5 10.5h1.2a2.6 2.6 0 0 1 0 5.2h-1.5"/><path d="M8 3.5c-.8 1 .8 1.8 0 3M11.5 3.5c-.8 1 .8 1.8 0 3"/>',
+    soft: '<circle cx="12" cy="13" r="3.6"/><path d="M12 5.5v1.6M5.5 13H4M20 13h-1.5M7.2 8.2l1 1M16.8 8.2l-1 1"/><path d="M4 19h16"/>',
+    moon: '<path d="M19.5 14.6A8 8 0 1 1 9.4 4.5a6.4 6.4 0 0 0 10.1 10.1z"/>',
+    deep: '<path d="M17 15.6A7 7 0 1 1 8.4 7a5.6 5.6 0 0 0 8.6 8.6z"/><path d="M17.5 3.5l.8 1.9 1.9.8-1.9.8-.8 1.9-.8-1.9-1.9-.8 1.9-.8z"/>',
+    spark: '<path d="M12 3.5l1.9 5.6 5.6 1.9-5.6 1.9L12 18.5l-1.9-5.6L4.5 11l5.6-1.9z"/>',
+    check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+    pencil: '<path d="M4 20h4.2L19.4 8.8a2.1 2.1 0 0 0-3-3L5.2 17v3"/>',
+    trash: '<path d="M4 7h16M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13"/>',
+    alert: '<path d="M12 3.5l9.5 16.5h-19z"/><path d="M12 10v4.5M12 17.2v.3"/>',
+    link: '<path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1"/><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1"/>'
+  };
+  function icon(name) { return '<svg class="i" viewBox="0 0 24 24" aria-hidden="true">' + (P[name] || '') + '</svg>'; }
+  function paintIcons(root) {
+    Array.prototype.forEach.call((root || document).querySelectorAll('[data-icon]'), function (e) { e.innerHTML = icon(e.getAttribute('data-icon')); });
+  }
+
+  // ---- Texts ----
+  var T = {
+    en: { tagline1: 'Less blue light. More comfortable movie nights.', useHere: 'Use on this device', useHereSub: 'Warm filter and dimming for this phone',
+      connectTv: 'Connect a TV or projector', connectTvSub: 'Control the filter of your TV boxes from here',
+      home: 'Home', devices: 'Devices', scenes: 'Scenes', settings: 'Settings', back: 'Back', power: 'Filter on / off',
+      red: 'Warm filter', bright: 'Brightness', temp: 'Colour temperature', schedTitle: 'Schedule',
+      connected: 'Connected', offline: 'Offline', filterOn: 'filter on', filterOff: 'filter off', checking: 'Connecting…',
+      thisDevice: 'This device', local: 'This phone', schedOff: 'Off', schedOn: 'On', schedNext: 'next: {name} at {time}',
+      permBanner: 'Allow “Display over other apps” so the filter can be drawn on this phone. Tap here.',
+      permButton: 'Allow display over other apps', permOk: 'The filter can be drawn over other apps.', permMissing: 'The filter needs the “Display over other apps” permission.',
+      a11yText: 'Android 12+ limits overlays to 80% darkness. For full darkness and to cover the system bars, enable MidnightBeam in Accessibility (optional, it reads nothing).',
+      a11yButton: 'Open Accessibility settings', language: 'Language', showWelcome: 'Show the welcome screen', source: 'Source code', support: 'Support the project', version: 'Version {v}',
+      addDevice: 'Add device', addSub: 'TV, projector or another phone', addSteps: ['On the TV, open MidnightBeam and turn on Phone remote.', 'Scan the QR code on the TV with this phone’s camera.', 'The link opens this app and the TV is saved here.'],
+      pasteLink: 'Or paste the link shown under the QR code', add: 'Add', badLink: 'This link is not a MidnightBeam pairing link',
+      added: 'Device added', rename: 'Name', save: 'Save', remove: 'Remove device', removeAgain: 'Tap again to remove', removed: 'Device removed', cancel: 'Cancel',
+      newScene: 'New scene', custom: 'Custom', customSub: 'Create your own scene.', sceneName: 'Scene name', sceneSaved: 'Scene saved', deleteScene: 'Delete scene',
+      keyChanged: 'Pairing code changed: scan the TV’s QR code again', unreachable: 'Not reachable: is it on and on the same network?',
+      schedSub: 'The device changes setting by itself, even with the phone off. Changes are saved automatically.',
+      weekMode: 'Days', weekDaily: 'Same every day', weekWeekly: 'Per weekday', transition: 'Transition', trOff: 'Off',
+      transitionHelp: 'Values glide gradually into the next slot. A manual change lasts until the next slot.',
+      saving: 'Saving…', saved: 'Saved', error: 'Error, not saved',
+      models: { off: 'Off', soft: 'Soft', evening: 'Relax', cinema: 'Movie', night: 'Night', deep: 'Deep night', custom: 'Custom' },
+      desc: { soft: 'A light touch of warmth.', evening: 'Warm and calm, for the evening.', cinema: 'Reduced blue light, still bright enough for films.', night: 'Very warm and dim.', deep: 'Darkest and reddest.' },
+      fields: { red: 'Warm filter', bright: 'Brightness', temp: 'Colour' },
+      fasce: { morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening', film: 'Movie', night: 'Night' },
+      presets: { movie: 'Movie night', early: 'Early to bed', late: 'Night owl' } },
+    it: { tagline1: 'Meno luce blu. Serate film più rilassanti.', useHere: 'Usa su questo dispositivo', useHereSub: 'Filtro caldo e attenuazione per questo telefono',
+      connectTv: 'Collega un TV o proiettore', connectTvSub: 'Controlla da qui il filtro dei tuoi TV box',
+      home: 'Home', devices: 'Dispositivi', scenes: 'Scene', settings: 'Impostazioni', back: 'Indietro', power: 'Filtro acceso / spento',
+      red: 'Filtro caldo', bright: 'Luminosità', temp: 'Temperatura colore', schedTitle: 'Programmazione',
+      connected: 'Connesso', offline: 'Non raggiungibile', filterOn: 'filtro acceso', filterOff: 'filtro spento', checking: 'Connessione…',
+      thisDevice: 'Questo dispositivo', local: 'Questo telefono', schedOff: 'Spenta', schedOn: 'Attiva', schedNext: 'prossima: {name} alle {time}',
+      permBanner: 'Consenti “Mostra sopra altre app” per disegnare il filtro su questo telefono. Tocca qui.',
+      permButton: 'Consenti mostra sopra altre app', permOk: 'Il filtro può essere disegnato sopra le altre app.', permMissing: 'Il filtro ha bisogno del permesso “Mostra sopra altre app”.',
+      a11yText: 'Android 12+ limita gli overlay all’80% di scuro. Per il buio totale e per coprire le barre di sistema, attiva MidnightBeam in Accessibilità (facoltativo, non legge nulla).',
+      a11yButton: 'Apri impostazioni Accessibilità', language: 'Lingua', showWelcome: 'Mostra la schermata iniziale', source: 'Codice sorgente', support: 'Sostieni il progetto', version: 'Versione {v}',
+      addDevice: 'Aggiungi dispositivo', addSub: 'TV, proiettore o un altro telefono', addSteps: ['Sul TV apri MidnightBeam e attiva Telecomando dal telefono.', 'Inquadra il QR sul TV con la fotocamera di questo telefono.', 'Il link apre questa app e il TV viene salvato qui.'],
+      pasteLink: 'Oppure incolla il link mostrato sotto il QR', add: 'Aggiungi', badLink: 'Questo non è un link di abbinamento MidnightBeam',
+      added: 'Dispositivo aggiunto', rename: 'Nome', save: 'Salva', remove: 'Rimuovi dispositivo', removeAgain: 'Tocca di nuovo per rimuovere', removed: 'Dispositivo rimosso', cancel: 'Annulla',
+      newScene: 'Nuova scena', custom: 'Personalizzata', customSub: 'Crea la tua scena.', sceneName: 'Nome della scena', sceneSaved: 'Scena salvata', deleteScene: 'Elimina scena',
+      keyChanged: 'Codice di abbinamento cambiato: inquadra di nuovo il QR del TV', unreachable: 'Non raggiungibile: è acceso e sulla stessa rete?',
+      schedSub: 'Il dispositivo cambia impostazione da solo, anche col telefono spento. Le modifiche si salvano automaticamente.',
+      weekMode: 'Giorni', weekDaily: 'Uguale ogni giorno', weekWeekly: 'Per giorno', transition: 'Transizione', trOff: 'Nessuna',
+      transitionHelp: 'I valori scivolano gradualmente verso la fascia successiva. Una modifica manuale dura fino alla fascia successiva.',
+      saving: 'Salvataggio…', saved: 'Salvato', error: 'Errore, non salvato',
+      models: { off: 'Spento', soft: 'Tenue', evening: 'Relax', cinema: 'Film', night: 'Notte', deep: 'Notte fonda', custom: 'Personalizzato' },
+      desc: { soft: 'Un tocco di calore.', evening: 'Caldo e rilassante, per la sera.', cinema: 'Meno luce blu, ma luminoso abbastanza per i film.', night: 'Molto caldo e attenuato.', deep: 'Il più scuro e rosso.' },
+      fields: { red: 'Filtro caldo', bright: 'Luminosità', temp: 'Colore' },
+      fasce: { morning: 'Mattina', afternoon: 'Pomeriggio', evening: 'Sera', film: 'Film', night: 'Notte' },
+      presets: { movie: 'Serata film', early: 'A letto presto', late: 'Nottambulo' } }
+  };
+  function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { return null; } }
+  var phoneLang = (navigator.language || 'en').slice(0, 2);
+  var lang = T[store('mb_lang')] ? store('mb_lang') : (T[phoneLang] ? phoneLang : 'en');
+  var L = T[lang];
+  function fmt(s, o) { return s.replace(/\{(\w+)\}/g, function (_, k) { return o[k]; }); }
+
+  // ---- Pairing key of this app (from the URL fragment) and the device to show ----
+  var hash = location.hash.slice(1), key = (hash.match(/(?:^|&)k=([0-9a-f]+)/) || [])[1] || store('mb_key') || '';
+  var wanted = decodeURIComponent((hash.match(/(?:^|&)dev=([^&]+)/) || [])[1] || '');
+  if (key) store('mb_key', key);
+  history.replaceState({ v: 'root' }, '', location.pathname);
+
+  var devices = [], cur = store('mb_cur') || '', app = { overlay: true, accessibilityHint: false, version: '' };
+  if (wanted) { cur = wanted; store('mb_cur', cur); store('mb_welcomed', '1'); }
+  function base(id) { return id ? '/d/' + encodeURIComponent(id) : ''; }
+  function api(path, body, id) {
+    var ctl = window.AbortController ? new AbortController() : null, t = ctl && setTimeout(function () { ctl.abort(); }, 7000);
+    return fetch(base(id === undefined ? cur : id) + path, {
+      method: body ? 'POST' : 'GET', signal: ctl && ctl.signal,
+      headers: body ? { 'X-Key': key, 'Content-Type': 'application/json' } : { 'X-Key': key },
+      body: body ? JSON.stringify(body) : undefined
+    }).then(function (r) {
+      clearTimeout(t);
+      if (!r.ok) { var e = new Error(r.status); e.status = r.status; throw e; }
+      return r.json();
+    }, function (e) { clearTimeout(t); throw e; });
+  }
+  function devName(id) {
+    if (!id) return L.thisDevice;
+    for (var i = 0; i < devices.length; i++) if (devices[i].id === id) return devices[i].name;
+    return id;
+  }
+
+  var toastT = null;
+  function toast(s) { var t = $('toast'); t.textContent = s; t.classList.remove('hidden'); clearTimeout(toastT); toastT = setTimeout(function () { t.classList.add('hidden'); }, 2600); }
+
+  // ---- Scenes (filter settings) ----
+  var MODELS = [
+    { id: 'off',     on: false, red: 0,  bright: 100, temp: 1100 },
+    { id: 'soft',    on: true,  red: 10, bright: 70,  temp: 1800, icon: 'soft' },
+    { id: 'evening', on: true,  red: 20, bright: 40,  temp: 1100, icon: 'cup' },
+    { id: 'cinema',  on: true,  red: 15, bright: 55,  temp: 1500, icon: 'film' },
+    { id: 'night',   on: true,  red: 20, bright: 10,  temp: 1100, icon: 'moon' },
+    { id: 'deep',    on: true,  red: 40, bright: 5,   temp: 1000, icon: 'deep' },
+    { id: 'custom',  on: true,  red: 20, bright: 40,  temp: 1100 }
+  ];
+  var BUILTIN = ['cinema', 'evening', 'soft', 'night', 'deep'];
+  function custom() { try { var a = JSON.parse(store('mb_scenes') || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+  function allScenes() {
+    var out = BUILTIN.map(function (id) { var m = modelById(id); return { id: id, name: L.models[id], desc: L.desc[id], red: m.red, bright: m.bright, temp: m.temp, icon: m.icon }; });
+    custom().forEach(function (c) { out.push({ id: c.id, name: c.name, desc: c.red + '% · ' + c.bright + '% · ' + c.temp + ' K', red: c.red, bright: c.bright, temp: c.temp, icon: 'spark', custom: true }); });
+    return out;
+  }
+  function modelById(id) { for (var i = 0; i < MODELS.length; i++) if (MODELS[i].id === id) return MODELS[i]; return null; }
+  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+  // Same black-body colour as the app (DimService.java, Tanner Helland's approximation).
+  function kelvinRgb(k) {
+    var t = k / 100, r, g, b;
+    r = t <= 66 ? 255 : 329.698727446 * Math.pow(t - 60, -0.1332047592);
+    g = t <= 66 ? 99.4708025861 * Math.log(t) - 161.1195681661 : 288.1221695283 * Math.pow(t - 60, -0.0755148492);
+    b = t >= 66 ? 255 : t <= 19 ? 0 : 138.5177312231 * Math.log(t - 10) - 305.0447927307;
+    return [r, g, b].map(function (v) { return clamp(Math.round(v), 0, 255); });
+  }
+  function previewCss(v) {
+    if (v.on === false) return 'rgb(205,205,205)';
+    var tint = kelvinRgb(v.temp), tintA = v.red / 100 * 0.65, dimA = (100 - v.bright) / 100, b0 = 205;
+    return 'rgb(' + tint.map(function (x) { return ((b0 * (1 - tintA) + x * tintA) * (1 - dimA)) | 0; }).join(',') + ')';
+  }
+  function thumbCss(s) {
+    var c = kelvinRgb(s.temp), a = 0.35 + s.red / 100 * 0.6, d = (100 - s.bright) / 100 * 0.75;
+    return 'background: linear-gradient(rgba(0,0,0,' + d.toFixed(2) + '),rgba(0,0,0,' + d.toFixed(2) + ')), linear-gradient(135deg, rgba(' + c.join(',') + ',' + a.toFixed(2) + '), rgba(' + c.join(',') + ',.15)), url(/art.jpg) center/cover';
+  }
+  function same(s, st) { return st && st.on && st.red === s.red && st.bright === s.bright && st.temp === s.temp; }
+
+  // ---- State of the shown device ----
+  var state = null, reach = 'checking', pending = null;
+  function setRange(id, v) { var r = $(id); r.value = v; paintRange(r); }
+  function paintRange(r) { r.style.setProperty('--p', ((r.value - r.min) / (r.max - r.min) * 100) + '%'); }
+  function labels() { $('v-red').textContent = $('r-red').value + '%'; $('v-bright').textContent = $('r-bright').value + '%'; $('v-temp').textContent = $('r-temp').value + 'K'; }
+  function preview() {
+    var on = state && state.on, c = kelvinRgb(+$('r-temp').value);
+    $('pv-tint').style.background = on ? 'rgba(' + c.join(',') + ',' + (+$('r-red').value / 100 * 0.65 + 0.12).toFixed(2) + ')' : 'transparent';
+    $('pv-tint').style.mixBlendMode = 'multiply';
+    $('pv-dim').style.background = on ? 'rgba(0,0,0,' + ((100 - $('r-bright').value) / 100 * 0.9).toFixed(2) + ')' : 'transparent';
+  }
+  function renderDevice() {
+    $('h-dev-ic').innerHTML = icon(cur ? 'tv' : 'phone');
+    $('h-dev-name').textContent = devName(cur);
+    var st = $('h-dev-status');
+    if (reach === 'ok') st.innerHTML = '<span class="dot on"></span><span class="status-on">' + L.connected + '</span><span class="muted"> · ' + (state && state.on ? L.filterOn : L.filterOff) + '</span>';
+    else if (reach === 'key') st.innerHTML = '<span class="dot"></span><span class="muted">' + L.keyChanged + '</span>';
+    else if (reach === 'down') st.innerHTML = '<span class="dot"></span><span class="muted">' + L.offline + '</span>';
+    else st.innerHTML = '<span class="muted">' + L.checking + '</span>';
+    $('h-power').classList.toggle('on', !!(state && state.on && reach === 'ok'));
+    $('h-power').setAttribute('aria-pressed', String(!!(state && state.on)));
+    $('perm-banner').classList.toggle('hidden', !!cur || app.overlay);
+  }
+  function show(s) {
+    state = s; reach = 'ok';
+    if (typeof s.minute === 'number') {
+      var n = new Date(), off = s.minute - (n.getHours() * 60 + n.getMinutes() + n.getSeconds() / 60);
+      if (off > 720) off -= 1440; if (off < -720) off += 1440;
+      try { rhythm.clockOffset = Math.round(off * 10) / 10; } catch (e) {}
+    }
+    if (!pending) { setRange('r-red', s.red); setRange('r-bright', s.bright); setRange('r-temp', s.temp); labels(); }
+    renderDevice(); renderSceneRow(); preview(); if (view === 'scenes') renderScenes();
+  }
+  function fail(e) {
+    reach = e && e.status === 403 ? 'key' : 'down';
+    renderDevice();
+  }
+  function refresh() { var id = cur; return api('/api/state').then(function (s) { if (id === cur) show(s); }, function (e) { if (id === cur) fail(e); }); }
+  function setValues(v) { return api('/api/set', v).then(show, function (e) { fail(e); toast(e && e.status === 403 ? L.keyChanged : L.unreachable); }); }
+
+  ['r-red', 'r-bright', 'r-temp'].forEach(function (id) {
+    $(id).addEventListener('input', function () {
+      paintRange($(id)); labels();
+      if (state) state.on = true;
+      preview(); renderSceneRow();
+      clearTimeout(pending);
+      pending = setTimeout(function () {
+        pending = null;
+        setValues({ on: true, red: +$('r-red').value, bright: +$('r-bright').value, temp: +$('r-temp').value });
+      }, 120);
+    });
+  });
+  $('h-power').addEventListener('click', function () { setValues({ on: !(state && state.on) }); });
+  $('h-dev').addEventListener('click', function () { go('devices'); });
+
+  function sceneButton(s) {
+    var b = el('button', 'scene', '<span class="ring">' + icon(s.icon) + '</span><span>' + esc(s.name) + '</span>');
+    b.type = 'button';
+    b.setAttribute('aria-pressed', String(!!same(s, state)));
+    b.onclick = function () { applyScene(s); };
+    return b;
+  }
+  function applyScene(s) {
+    state = state || {}; state.on = true;
+    setRange('r-red', s.red); setRange('r-bright', s.bright); setRange('r-temp', s.temp); labels(); preview();
+    setValues({ on: true, red: s.red, bright: s.bright, temp: s.temp });
+  }
+  function renderSceneRow() {
+    var box = $('h-scenes'); box.innerHTML = '';
+    var live = state ? { on: state.on, red: +$('r-red').value, bright: +$('r-bright').value, temp: +$('r-temp').value } : null;
+    allScenes().forEach(function (s) { var b = sceneButton(s); b.setAttribute('aria-pressed', String(!!same(s, live))); box.appendChild(b); });
+  }
+
+  // ---- Scenes list ----
+  function renderScenes() {
+    var box = $('s-list'); box.innerHTML = '';
+    allScenes().forEach(function (s) {
+      var on = same(s, state), row = el('div', 'item' + (on ? ' active' : ''));
+      var main = el('button', '', '');
+      main.type = 'button'; main.style.cssText = 'display:flex;align-items:center;gap:14px;flex:1;min-width:0;text-align:left';
+      main.innerHTML = '<span class="thumb" style="' + thumbCss(s) + '">' + icon(s.icon) + '</span><span class="grow"><span class="t">' + esc(s.name) + '</span><br><span class="d">' + esc(s.desc) + '</span></span>';
+      main.onclick = function () { applyScene(s); };
+      row.appendChild(main);
+      if (s.custom) {
+        var del = el('button', 'icon-btn', icon('trash')); del.type = 'button'; del.setAttribute('aria-label', L.deleteScene);
+        del.onclick = function () { store('mb_scenes', JSON.stringify(custom().filter(function (c) { return c.id !== s.id; }))); renderScenes(); renderSceneRow(); };
+        row.appendChild(del);
+      }
+      row.appendChild(el('span', 'radio' + (on ? ' on' : ''), on ? icon('check') : ''));
+      box.appendChild(row);
+    });
+    var add = el('button', 'item', '<span class="thumb dashed">' + icon('plus') + '</span><span class="grow"><span class="t">' + L.custom + '</span><br><span class="d">' + L.customSub + '</span></span>');
+    add.type = 'button'; add.onclick = sceneSheet;
+    box.appendChild(add);
+  }
+  function sceneSheet() {
+    var s = openSheet('<h2>' + L.newScene + '</h2><div class="stack">' +
+      '<input class="field" id="sn-name" maxlength="24" placeholder="' + L.sceneName + '">' +
+      '<div class="card slider-card"><span class="ic ic-red">' + icon('sun') + '</span><span class="lbl">' + L.red + '</span><span class="val" id="sn-rv"></span><input id="sn-red" type="range" min="0" max="100" step="5" style="--c1:#ff3b3b;--c2:#ff7a5c"></div>' +
+      '<div class="card slider-card"><span class="ic ic-cream">' + icon('bright') + '</span><span class="lbl">' + L.bright + '</span><span class="val" id="sn-bv"></span><input id="sn-bright" type="range" min="5" max="100" step="5" style="--c1:#b9a48e;--c2:#ffe2bd"></div>' +
+      '<div class="card slider-card"><span class="ic ic-amber">' + icon('thermo') + '</span><span class="lbl">' + L.temp + '</span><span class="val" id="sn-tv"></span><input id="sn-temp" type="range" min="1000" max="4000" step="100" style="--c1:#ff7a2e;--c2:#ffc98a"></div>' +
+      '<button class="btn btn-grad" id="sn-save" type="button">' + L.save + '</button></div>');
+    var r = $('sn-red'), b = $('sn-bright'), t = $('sn-temp');
+    r.value = $('r-red').value; b.value = $('r-bright').value; t.value = $('r-temp').value;
+    function upd() { [r, b, t].forEach(paintRange); $('sn-rv').textContent = r.value + '%'; $('sn-bv').textContent = b.value + '%'; $('sn-tv').textContent = t.value + 'K'; }
+    [r, b, t].forEach(function (x) { x.addEventListener('input', upd); }); upd();
+    $('sn-save').onclick = function () {
+      var name = $('sn-name').value.trim() || L.custom;
+      var sc = { id: 'c' + Date.now(), name: name.slice(0, 24), red: +r.value, bright: +b.value, temp: +t.value };
+      var list = custom(); list.push(sc); store('mb_scenes', JSON.stringify(list));
+      closeSheet(); toast(L.sceneSaved); applyScene(sc); renderScenes();
+    };
+    return s;
+  }
+  $('s-add-top').onclick = sceneSheet;
+
+  // ---- Devices ----
+  var devState = {};
+  function loadDevices() {
+    return api('/api/devices', null, '').then(function (d) {
+      devices = Array.isArray(d) ? d : [];
+      if (cur && !devices.some(function (x) { return x.id === cur; })) selectDevice('');
+      renderDevice(); if (view === 'devices') renderDevices();
+      devices.forEach(function (x) { if (x.name === x.host) nameFromDevice(x); });
+    }).catch(function () {});
+  }
+  window.mbDevicesChanged = loadDevices;
+  function nameFromDevice(x) {
+    api('/api/info', null, x.id).then(function (i) {
+      if (i && i.name) return api('/api/devices', { op: 'rename', id: x.id, name: i.name }, '').then(loadDevices);
+    }).catch(function () {});
+  }
+  function probe(id) {
+    return api('/api/state', null, id).then(function (s) { devState[id] = { ok: true, s: s }; }, function (e) { devState[id] = { ok: false, key: e && e.status === 403 }; })
+      .then(function () { if (view === 'devices') renderDevices(); });
+  }
+  function renderDevices() {
+    var box = $('d-list'); box.innerHTML = '';
+    [{ id: '', name: L.thisDevice, sub: L.local }].concat(devices.map(function (d) { return { id: d.id, name: d.name, sub: d.host }; })).forEach(function (d) {
+      var ds = devState[d.id], on = ds && ds.ok && ds.s.on, row = el('div', 'item' + (d.id === cur ? ' active' : ''));
+      var status = !ds ? '<span class="muted">' + L.checking + '</span>' : ds.ok
+        ? '<span class="dot on"></span><span class="status-on">' + L.connected + '</span>'
+        : '<span class="dot"></span><span class="muted">' + (ds.key ? L.keyChanged : L.offline) + '</span>';
+      var main = el('button', '', '<span class="dev-ic">' + icon(d.id ? 'tv' : 'phone') + '</span><span class="grow"><span class="t">' + esc(d.name) + '</span><br><span class="small">' + status + '</span><br><span class="d">' + esc(d.sub) + '</span></span>');
+      main.type = 'button'; main.style.cssText = 'display:flex;align-items:center;gap:12px;flex:1;min-width:0;text-align:left';
+      main.onclick = function () { selectDevice(d.id); go('home'); };
+      row.appendChild(main);
+      if (d.id) {
+        var ed = el('button', 'icon-btn', icon('pencil')); ed.type = 'button'; ed.setAttribute('aria-label', L.rename);
+        ed.onclick = function () { deviceSheet(d); };
+        row.appendChild(ed);
+      }
+      var p = el('button', 'power' + (on ? ' on' : ''), icon('power')); p.type = 'button'; p.setAttribute('aria-label', L.power);
+      p.disabled = !(ds && ds.ok);
+      p.onclick = function () {
+        api('/api/set', { on: !on }, d.id).then(function (s) { devState[d.id] = { ok: true, s: s }; if (d.id === cur) show(s); renderDevices(); }, function () { toast(L.unreachable); });
+      };
+      row.appendChild(p);
+      box.appendChild(row);
+    });
+    var add = el('button', 'item', '<span class="add-ic">' + icon('plus') + '</span><span class="grow"><span class="t">' + L.addDevice + '</span><br><span class="d">' + L.addSub + '</span></span><span class="chev">' + icon('chev') + '</span>');
+    add.type = 'button'; add.onclick = addSheet;
+    box.appendChild(add);
+  }
+  function probeAll() { probe(''); devices.forEach(function (d) { probe(d.id); }); }
+  function selectDevice(id) {
+    if (id === cur) return;
+    cur = id; store('mb_cur', id); state = null; reach = 'checking';
+    renderDevice(); refresh(); scheduleLoaded = false;
+    if (view === 'schedule') loadScheduleAll();
+    else loadScheduleSummary();
+  }
+  function addSheet() {
+    openSheet('<h2>' + L.addDevice + '</h2><div class="stack"><ol class="steps">' + L.addSteps.map(function (s) { return '<li>' + s + '</li>'; }).join('') + '</ol>' +
+      '<label class="small muted" for="ad-link">' + L.pasteLink + '</label><input class="field" id="ad-link" inputmode="url" autocomplete="off" placeholder="http://192.168.1.20:8765/#k=…">' +
+      '<button class="btn btn-grad" type="button" id="ad-go">' + icon('link') + L.add + '</button></div>');
+    $('ad-go').onclick = function () {
+      var link = $('ad-link').value.trim();
+      if (!link) return;
+      api('/api/devices', { op: 'add', link: link }, '').then(function (r) {
+        closeSheet(); toast(L.added);
+        return loadDevices().then(function () { selectDevice(r.id); probeAll(); });
+      }, function () { toast(L.badLink); });
+    };
+  }
+  function deviceSheet(d) {
+    openSheet('<h2>' + esc(d.name) + '</h2><div class="stack"><label class="small muted" for="dv-name">' + L.rename + '</label><input class="field" id="dv-name" maxlength="40">' +
+      '<button class="btn btn-grad" type="button" id="dv-save">' + L.save + '</button><button class="btn btn-danger" type="button" id="dv-del">' + icon('trash') + L.remove + '</button></div>');
+    $('dv-name').value = d.name;
+    $('dv-save').onclick = function () {
+      var n = $('dv-name').value.trim(); if (!n) return;
+      api('/api/devices', { op: 'rename', id: d.id, name: n }, '').then(function () { closeSheet(); loadDevices(); }).catch(function () {});
+    };
+    var armed = false;
+    $('dv-del').onclick = function () {
+      if (!armed) { armed = true; $('dv-del').lastChild.textContent = L.removeAgain; return; }
+      api('/api/devices', { op: 'delete', id: d.id }, '').then(function () { closeSheet(); toast(L.removed); if (d.id === cur) selectDevice(''); loadDevices(); }).catch(function () {});
+    };
+  }
+  $('d-add-top').onclick = addSheet;
+
+  // ---- Bottom sheet (Android back closes it: it has its own history entry) ----
+  var sheetOpen = false;
+  function openSheet(html) {
+    $('sheet').innerHTML = '<div class="grab"></div>' + html;
+    $('sheet-wrap').classList.remove('hidden');
+    if (!sheetOpen) { sheetOpen = true; history.pushState({ v: 'sheet' }, ''); }
+    var f = $('sheet').querySelector('input'); if (f && f.type !== 'range') setTimeout(function () { f.focus(); }, 150);
+  }
+  function closeSheet() { if (sheetOpen) history.back(); }
+  function hideSheet() { sheetOpen = false; $('sheet-wrap').classList.add('hidden'); $('sheet').innerHTML = ''; }
+  $('sheet-wrap').addEventListener('click', function (e) { if (e.target === $('sheet-wrap')) closeSheet(); });
+
+  // ---- Navigation ----
+  var view = 'home', VIEWS = ['welcome', 'home', 'devices', 'scenes', 'settings', 'schedule'];
+  function showView(v) {
+    view = v;
+    VIEWS.forEach(function (x) { $('v-' + x).classList.toggle('hidden', x !== v); });
+    $('tabs').classList.toggle('hidden', v === 'welcome');
+    Array.prototype.forEach.call(document.querySelectorAll('#tabs button'), function (b) {
+      if (b.getAttribute('data-tab') === v) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+    });
+    window.scrollTo(0, 0);
+    if (v === 'devices') { renderDevices(); probeAll(); }
+    if (v === 'scenes') renderScenes();
+    if (v === 'settings') renderSettings();
+    if (v === 'schedule') { $('sc-dev').textContent = devName(cur); loadScheduleAll(); }
+  }
+  function go(v) {
+    if (v === 'schedule') { history.pushState({ v: 'schedule' }, ''); showView(v); return; }
+    if (view === 'schedule') { history.back(); setTimeout(function () { showView(v); }, 0); return; }
+    showView(v);
+  }
+  window.addEventListener('popstate', function () {
+    if (sheetOpen) { hideSheet(); return; }
+    if (view === 'schedule') { showView('home'); refresh(); loadScheduleSummary(); }
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('#tabs button'), function (b) { b.onclick = function () { go(b.getAttribute('data-tab')); }; });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-go]'), function (b) { b.onclick = function () { go(b.getAttribute('data-go')); }; });
+  $('sc-back').onclick = function () { history.back(); };
+  $('w-here').onclick = function () { store('mb_welcomed', '1'); selectDevice(''); showView('home'); };
+  $('w-connect').onclick = function () { store('mb_welcomed', '1'); showView('devices'); addSheet(); };
+  $('st-welcome').onclick = function () { showView('welcome'); };
+
+  // ---- Settings ----
+  function renderSettings() {
+    $('st-overlay').textContent = app.overlay ? L.permOk : L.permMissing;
+    $('st-overlay-btn').classList.toggle('hidden', app.overlay);
+    $('st-a11y').classList.toggle('hidden', !app.accessibilityHint);
+    $('st-a11y-btn').classList.toggle('hidden', !app.accessibilityHint);
+    $('st-version').textContent = app.version ? fmt(L.version, { v: app.version }) : '';
+    Array.prototype.forEach.call(document.querySelectorAll('.lang'), function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-lang') === lang)); });
+  }
+  function loadApp() { return api('/api/app', null, '').then(function (a) { app = a; renderDevice(); if (view === 'settings') renderSettings(); }).catch(function () {}); }
+  Array.prototype.forEach.call(document.querySelectorAll('.lang'), function (b) {
+    b.onclick = function () { lang = b.getAttribute('data-lang'); L = T[lang]; store('mb_lang', lang); applyTexts(); };
+  });
+
+  // ---- Schedule (<day-rhythm>, same data as the browser remote) ----
+  var core = DR.core, rhythm = $('rhythm');
+  var FASCE = [{ key: 'morning', time: '07:00' }, { key: 'afternoon', time: '14:00' }, { key: 'evening', time: '19:30' }, { key: 'film', time: '21:00' }, { key: 'night', time: '23:00' }];
+  var PRESETS = [
+    { id: 'movie', icon: '🎬', slots: [['07:00', 'off', 'morning'], ['14:00', 'off', 'afternoon'], ['19:30', 'evening', 'evening'], ['21:00', 'cinema', 'film'], ['23:30', 'night', 'night']] },
+    { id: 'early', icon: '😴', slots: [['07:00', 'off', 'morning'], ['16:00', 'soft', 'afternoon'], ['19:00', 'evening', 'evening'], ['21:00', 'night', 'film'], ['22:30', 'deep', 'night']] },
+    { id: 'late',  icon: '🦉', slots: [['08:30', 'off', 'morning'], ['15:00', 'off', 'afternoon'], ['20:30', 'soft', 'evening'], ['22:00', 'cinema', 'film'], ['01:00', 'night', 'night']] }
+  ];
+  function valuesOf(mo) { return { on: mo.on, red: mo.red, bright: mo.bright, temp: mo.temp }; }
+  function slot(time, modelId, label) { return { time: time, model: modelId, label: label, values: valuesOf(modelById(modelId)) }; }
+  function defaultValue() { return FASCE.map(function (f) { return slot(f.time, f.key === 'evening' ? 'evening' : f.key === 'film' ? 'cinema' : f.key === 'night' ? 'night' : 'off', L.fasce[f.key]); }); }
+  function fromFlat(s) {
+    if (s.values || !('red' in s)) return s;
+    var mo = modelById(s.model), id = mo ? mo.id : (s.on === false ? 'off' : 'custom');
+    var o = { time: s.time, model: id, values: { on: s.on !== false, red: s.red, bright: s.bright, temp: s.temp } };
+    if (s.label) o.label = s.label;
+    return o;
+  }
+  function normSlots(list) { return (list || []).map(fromFlat); }
+  function normValue(v) {
+    if (Array.isArray(v)) return normSlots(v);
+    if (v && v.week) { var w = {}; Object.keys(v.week).forEach(function (d) { var x = v.week[d]; w[d] = Array.isArray(x) ? normSlots(x) : x; }); return { week: w }; }
+    return null;
+  }
+  function iconUri(mo) {
+    var fill = mo.id === 'off' ? '#26324a' : mo.id === 'custom' ? 'url(#g)' : previewCss(mo);
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 24"><defs><linearGradient id="g"><stop offset="0" stop-color="#ff6b4d"/><stop offset=".55" stop-color="#6e2a24"/><stop offset="1" stop-color="#0b0f1a"/></linearGradient></defs>' +
+      '<rect x="2" y="2" width="28" height="17" rx="3" fill="' + fill + '" stroke="#e8edf6" stroke-width="2"/>' +
+      (mo.id === 'off' ? '<path d="M4 17L28 4M4 11L20 3M12 19L29 10" stroke="#8e98ac" stroke-width="1.5"/>' : '') +
+      '<rect x="11" y="21" width="10" height="2" rx="1" fill="#e8edf6"/></svg>';
+    return { src: 'data:image/svg+xml,' + encodeURIComponent(svg) };
+  }
+  var weekly = false, transition = 30, enabled = false, schedule = null, scheduleLoaded = false;
+  function config() {
+    return {
+      theme: 'organic', colorScheme: 'dark', locale: lang, credits: 'minimal', week: weekly ? 'top' : 'off',
+      maxSlots: 12, minGap: 30, snap: 5, timeFormat: '24h', editor: 'full',
+      messages: (function () {
+        var o = {}; MODELS.forEach(function (mo) { o['model.' + mo.id] = L.models[mo.id]; });
+        Object.keys(L.fields).forEach(function (k) { o['field.' + k] = L.fields[k]; });
+        return o;
+      })(),
+      models: MODELS.map(function (mo) {
+        var o = { id: mo.id, label: L.models[mo.id], icon: iconUri(mo), defaults: valuesOf(mo) };
+        if (mo.id === 'off') o.off = true;
+        else { o.preview = function (v) { return previewCss(v && v.temp != null ? v : mo); }; o.summary = '{bright}% · {temp} K'; }
+        if (mo.id === 'custom') o.fields = [
+          { key: 'red', type: 'range', label: L.fields.red, min: 0, max: 100, step: 5, unit: '%', default: 20, accent: '#ff4d4d' },
+          { key: 'bright', type: 'range', label: L.fields.bright, min: 5, max: 100, step: 5, unit: '%', default: 40, accent: '#ff6b4d' },
+          { key: 'temp', type: 'range', label: L.fields.temp, min: 1000, max: 4000, step: 100, format: '{value} K', default: 1100, accent: '#ffd9b3' }
+        ];
+        return o;
+      }),
+      presets: PRESETS.map(function (p) {
+        return { id: p.id, label: L.presets[p.id], icon: p.icon, slots: function () { return p.slots.map(function (s) { return slot(s[0], s[1], L.fasce[s[2]]); }); } };
+      })
+    };
+  }
+  function setWeekly(w) {
+    weekly = w;
+    $('wk-daily').setAttribute('aria-pressed', String(!w));
+    $('wk-week').setAttribute('aria-pressed', String(w));
+  }
+  function stripIds(slots) { return slots.map(function (s) { var c = JSON.parse(JSON.stringify(s)); delete c.id; return c; }); }
+  function setValue(v) { var isW = core.isWeek(v); setWeekly(isW); rhythm.week = isW ? 'top' : 'off'; rhythm.value = v; }
+  function toWeekly(on) {
+    if (on === weekly) return;
+    var v;
+    if (on) { var day = stripIds(rhythm.getValue()), w = {}; core.WEEKDAYS.forEach(function (d) { w[d] = JSON.parse(JSON.stringify(day)); }); v = { week: w }; }
+    else v = stripIds(rhythm.getDay());
+    setValue(v); scheduleSave();
+  }
+  $('wk-daily').onclick = function () { toWeekly(false); };
+  $('wk-week').onclick = function () { toWeekly(true); };
+  var status = $('save-status'), saveTimer = null, saving = 0, saveDev = null;
+  function payload() {
+    var v = rhythm.getValue();
+    return { enabled: enabled, value: v, resolved: core.isWeek(v) ? core.resolveWeek(v, rhythm.days) : v, transition: transition };
+  }
+  function scheduleSave() { clearTimeout(saveTimer); saveDev = cur; status.textContent = L.saving; saveTimer = setTimeout(save, 800); }
+  function save() {
+    saveTimer = null; saving++;
+    var p = payload(), id = saveDev;
+    return api('/api/schedule', p, id).then(function () {
+      if (!saveTimer) status.textContent = '✓ ' + L.saved;
+      schedule = p; summary();
+      setTimeout(refresh, 400);
+    }).catch(function () { status.textContent = '✕ ' + L.error; }).then(function () { saving--; });
+  }
+  function flushSave() { if (saveTimer) { clearTimeout(saveTimer); save(); } }
+  rhythm.addEventListener('change', scheduleSave);
+  $('sched-on').addEventListener('change', function () { enabled = $('sched-on').checked; scheduleSave(); });
+  $('transition').addEventListener('change', function () { transition = +$('transition').value; scheduleSave(); });
+  function loadDays() {
+    return api('/api/days').then(function (d) {
+      rhythm.days = (Array.isArray(d) ? d : []).map(function (x) { return { id: x.name, name: x.name, slots: normSlots(x.slots) }; });
+    }).catch(function () { rhythm.days = []; });
+  }
+  rhythm.addEventListener('daysave', function (e) { e.detail.waitUntil(api('/api/days', { name: e.detail.name, slots: e.detail.slots }).then(loadDays)); });
+  rhythm.addEventListener('daydelete', function (e) { e.detail.waitUntil(api('/api/days', { name: e.detail.day.name, delete: true }).then(loadDays)); });
+  rhythm.addEventListener('error', function () { status.textContent = '✕ ' + L.error; });
+  function loadScheduleSummary() {
+    var id = cur;
+    return api('/api/schedule').then(function (d) { if (id === cur) { schedule = d; summary(); } return d; }, function () { if (id === cur) { schedule = null; summary(); } return null; });
+  }
+  function loadScheduleAll() {
+    flushSave(); status.textContent = '';
+    loadScheduleSummary().then(function (d) {
+      if (!d) return;
+      var v = normValue(d.value) || normValue(d.resolved) || normValue(d.slots);
+      enabled = !!d.enabled; $('sched-on').checked = enabled;
+      transition = typeof d.transition === 'number' ? d.transition : 30;
+      $('transition').value = String(transition);
+      if (!v || (Array.isArray(v) && !v.length)) v = defaultValue();
+      rhythm.config = config(); setValue(v); scheduleLoaded = true;
+    });
+    loadDays();
+  }
+  // "On · next: Movie at 21:00" for the Home row, from the slots the device applies today.
+  function summary() {
+    var box = $('h-sched');
+    if (!schedule || !schedule.enabled) { box.textContent = L.schedOff; return; }
+    var r = schedule.resolved, now = new Date(), slots = r;
+    if (r && !Array.isArray(r)) slots = r[core.WEEKDAYS[(now.getDay() + 6) % 7]] || [];
+    var mins = now.getHours() * 60 + now.getMinutes(), next = null, first = null;
+    (slots || []).map(function (s) { var p = String(s.time).split(':'); return { m: +p[0] * 60 + +p[1], s: s }; })
+      .sort(function (a, b) { return a.m - b.m; })
+      .forEach(function (x) { if (!first) first = x; if (!next && x.m > mins) next = x; });
+    next = next || first;
+    if (!next) { box.textContent = L.schedOn; return; }
+    var name = next.s.label || (L.models[next.s.model] || '');
+    box.textContent = L.schedOn + ' · ' + fmt(L.schedNext, { name: name, time: next.s.time });
+  }
+
+  // ---- Texts ----
+  function applyTexts() {
+    document.documentElement.lang = lang;
+    Array.prototype.forEach.call(document.querySelectorAll('[data-t]'), function (e) { var v = L[e.getAttribute('data-t')]; if (typeof v === 'string') e.textContent = v; });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-al]'), function (e) { e.setAttribute('aria-label', L[e.getAttribute('data-al')]); });
+    $('sched-on').setAttribute('aria-label', L.schedTitle);
+    renderDevice(); renderSceneRow(); summary();
+    if (view === 'devices') renderDevices();
+    if (view === 'scenes') renderScenes();
+    if (view === 'settings') renderSettings();
+    if (scheduleLoaded) { var v = rhythm.getValue(), d = rhythm.days; rhythm.config = config(); setValue(v); rhythm.days = d; }
+  }
+
+  // ---- Start ----
+  paintIcons();
+  applyTexts(); labels();
+  ['r-red', 'r-bright', 'r-temp'].forEach(function (id) { paintRange($(id)); });
+  rhythm.config = config(); setValue(defaultValue());
+  showView(store('mb_welcomed') ? 'home' : 'welcome');
+  loadApp(); loadDevices(); refresh(); loadScheduleSummary();
+  setInterval(function () {
+    if (document.hidden) return;
+    if (!pending) refresh();
+    if (view === 'devices') probeAll();
+  }, 10000);
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) { flushSave(); return; }
+    // the app restarts its local server when it comes back: give it a moment
+    setTimeout(function () {
+      loadApp(); refresh(); loadDevices();
+      if (view === 'devices') probeAll();
+      if (view === 'schedule' && !saveTimer && !saving && !rhythm.editing) loadScheduleAll(); else loadScheduleSummary();
+    }, 600);
+  });
+})();
+</script>
+</body>
+</html>

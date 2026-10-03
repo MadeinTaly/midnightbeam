@@ -6,7 +6,7 @@ import android.net.Uri;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
-/** Keeps navigation inside the device page; any other link opens in the browser. A top-level class, see MainActivity. */
+/** Keeps navigation inside the app page, passes midnightbeam-app:// links to the activity; any other link opens in the browser. A top-level class, see MainActivity. */
 final class AppWebClient extends WebViewClient {
     private final PhoneActivity activity;
     String origin = "";
@@ -18,6 +18,10 @@ final class AppWebClient extends WebViewClient {
     @Override
     public boolean shouldOverrideUrlLoading(WebView view, String url) {
         if (url.equals(origin) || url.startsWith(origin + "/")) return false;
+        if (url.startsWith("midnightbeam-app://")) {
+            activity.appAction(Uri.parse(url).getHost());
+            return true;
+        }
         try {
             activity.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)).addCategory(Intent.CATEGORY_BROWSABLE));
         } catch (ActivityNotFoundException ignored) {
