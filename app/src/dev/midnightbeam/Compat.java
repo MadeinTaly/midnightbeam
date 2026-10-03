@@ -4,6 +4,8 @@ import android.app.UiModeManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
+import android.provider.Settings;
 import android.content.res.Configuration;
 import android.os.Build;
 
@@ -34,6 +36,37 @@ final class Compat {
 
     static Intent accessibilitySettings() {
         return new Intent("android.settings.ACCESSIBILITY_SETTINGS");
+    }
+
+    /**
+     * Turns on the accessibility service by itself when the app holds WRITE_SECURE_SETTINGS (granted once with
+     * adb shell pm grant dev.midnightbeam android.permission.WRITE_SECURE_SETTINGS). Returns false when it cannot:
+     * the caller then opens the Accessibility settings.
+     */
+    static boolean enableAccessibility(Context context) {
+        if (context.checkSelfPermission("android.permission.WRITE_SECURE_SETTINGS") != PackageManager.PERMISSION_GRANTED) {
+            return false;
+        }
+        try {
+            String me = context.getPackageName() + "/" + DimAccessibilityService.class.getName();
+            String list = Settings.Secure.getString(context.getContentResolver(), "enabled_accessibility_services");
+            if (list == null || list.isEmpty()) list = me;
+            else if (!(":" + list + ":").contains(":" + me + ":")) list = list + ":" + me;
+            Settings.Secure.putString(context.getContentResolver(), "enabled_accessibility_services", list);
+            Settings.Secure.putInt(context.getContentResolver(), "accessibility_enabled", 1);
+            return true;
+        } catch (SecurityException e) {
+            return false;
+        }
+    }
+
+    /** Enables the service by itself if allowed, else opens the Accessibility settings. */
+    static void enableOrOpenAccessibility(Context context) {
+        if (enableAccessibility(context)) return;
+        try {
+            context.startActivity(accessibilitySettings().addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        } catch (RuntimeException ignored) {
+        }
     }
 
     static boolean needsAccessibilityHint() {

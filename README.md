@@ -121,6 +121,16 @@ Android 12 blocks touches through an overlay of another app unless the overlay i
 
 For full darkness, covering the status and navigation bars, you can optionally enable MidnightBeam in Settings > Accessibility. The service only lends its window to draw the dimming overlay: it requests no access to window content, does not read the screen or your input, and sends nothing anywhere. Without it, everything works as described above.
 
+On TVs the accessibility mode also matters on any Android version: the **screensaver** (Daydream) is drawn above
+normal overlays, so without it the screensaver shows unfiltered. The TV screen keeps a hint with an **Enable**
+button until the service runs. The button turns it on by itself if the app was allowed once with
+
+```sh
+adb shell pm grant dev.midnightbeam android.permission.WRITE_SECURE_SETTINGS
+```
+
+otherwise it opens the Accessibility settings.
+
 ## ADB commands
 
 ```sh

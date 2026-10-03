@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="dev.midnightbeam"
-    android:versionCode="18"
-    android:versionName="1.6.3">
+    android:versionCode="19"
+    android:versionName="1.6.4">
 
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="28" />
 
@@ -11,6 +11,9 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- Phone remote: local HTTP server, only when enabled by the user. No outgoing connections. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Optional, only if granted with adb (pm grant): lets the Enable button turn on the accessibility service
+         by itself instead of sending the person to the Accessibility settings. -->
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" />
 
     <uses-feature android:name="android.software.leanback" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />

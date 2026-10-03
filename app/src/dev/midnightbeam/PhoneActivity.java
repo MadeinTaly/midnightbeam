@@ -156,7 +156,8 @@ public class PhoneActivity extends Activity implements View.OnClickListener, Run
             } else if ("overlay".equals(what)) {
                 startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName())));
             } else if ("accessibility".equals(what)) {
-                startActivity(Compat.accessibilitySettings());
+                Compat.enableOrOpenAccessibility(this);
+                web.evaluateJavascript("setTimeout(function(){document.dispatchEvent(new Event('visibilitychange'))},1500)", null);
             }
         } catch (RuntimeException ignored) {
         }

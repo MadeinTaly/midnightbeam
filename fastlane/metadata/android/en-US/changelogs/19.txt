@@ -1,0 +1,1 @@
+* TV: invites to enable the accessibility mode, which also covers the screensaver; the Enable button turns it on by itself when allowed (adb shell pm grant dev.midnightbeam android.permission.WRITE_SECURE_SETTINGS), otherwise it opens the Accessibility settings

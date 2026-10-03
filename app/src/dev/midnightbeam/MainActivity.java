@@ -99,11 +99,11 @@ public class MainActivity extends Activity
         TextView title = text("MidnightBeam", 28, ACCENT);
         root.addView(title);
 
-        accessibilityHint = text(t("For full darkness and to cover the system bars, enable MidnightBeam in Accessibility",
-                "Per un oscuramento totale e per coprire le barre di sistema, attiva MidnightBeam in Accessibilità"), 16, LIGHT);
+        accessibilityHint = text(t("To cover the screensaver and the system bars too (and for full darkness), enable MidnightBeam in Accessibility",
+                "Per coprire anche lo screensaver e le barre di sistema (e per il buio totale), attiva MidnightBeam in Accessibilità"), 16, LIGHT);
         accessibilityHint.setPadding(0, dp(12), 0, dp(4));
         accessibility = new Button(this);
-        accessibility.setText(t("Open Accessibility settings", "Apri impostazioni Accessibilità"));
+        accessibility.setText(t("Enable", "Attiva"));
         accessibility.setAllCaps(false);
         accessibility.setTextColor(LIGHT);
         accessibility.setBackgroundColor(BUTTON_BACKGROUND);
@@ -193,13 +193,34 @@ public class MainActivity extends Activity
         ready = true;
     }
 
+    /** On a TV the hint stays until the service runs: without it the screensaver is drawn above the filter. */
+    private void refreshAccessibility() {
+        int vis = DimAccessibilityService.instance == null ? View.VISIBLE : View.GONE;
+        accessibility.setVisibility(vis);
+        accessibilityHint.setVisibility(vis);
+    }
+
+    private final Runnable accessibilityCheck = new AccessibilityCheck(this);
+
+    /** Re-checks the service after the Enable button (a plain class, see the note on inner classes above). */
+    static final class AccessibilityCheck implements Runnable {
+        private final MainActivity activity;
+
+        AccessibilityCheck(MainActivity activity) {
+            this.activity = activity;
+        }
+
+        @Override
+        public void run() {
+            activity.refreshAccessibility();
+        }
+    }
+
     @Override
     protected void onResume() {
         super.onResume();
         if (accessibility != null) {
-            int vis = Compat.needsAccessibilityHint() ? View.VISIBLE : View.GONE;
-            accessibility.setVisibility(vis);
-            accessibilityHint.setVisibility(vis);
+            refreshAccessibility();
         }
         if (timeline != null) run();
         // the phone remote is on by default on TVs: make sure its server runs while the QR code is shown
@@ -280,7 +301,11 @@ public class MainActivity extends Activity
     @Override
     public void onClick(View v) {
         if (v == accessibility) {
-            startActivity(Compat.accessibilitySettings());
+            if (Compat.enableAccessibility(this)) {
+                main.postDelayed(accessibilityCheck, 1500); // the service connects a moment later
+            } else {
+                startActivity(Compat.accessibilitySettings());
+            }
         } else if (v == getApp) {
             showingApp = !showingApp;
             refreshRemote();
