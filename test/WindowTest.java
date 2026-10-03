@@ -1,4 +1,4 @@
-package dev.redmoonbeam;
+package dev.midnightbeam;
 public class WindowTest {
     static int f = 0;
     static void eq(String what, double got, double want) { if (Math.abs(got - want) > 1e-9) { f++; System.out.println("FAIL " + what + " got " + got + " want " + want); } }

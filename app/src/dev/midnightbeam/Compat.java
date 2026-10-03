@@ -1,4 +1,4 @@
-package dev.redmoonbeam;
+package dev.midnightbeam;
 
 import android.app.UiModeManager;
 import android.content.Context;

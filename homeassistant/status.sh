@@ -1,7 +1,7 @@
 #!/system/bin/sh
 # Optional: prints the dimmer state as one JSON line, for Home Assistant's androidtv.adb_command.
-# Copy to the device (e.g. /data/local/tmp/redmoonbeam-status.sh).
-s=$(dumpsys activity service dev.redmoonbeam/.DimService 2>/dev/null | grep -m1 "red=")
+# Copy to the device (e.g. /data/local/tmp/midnightbeam-status.sh).
+s=$(dumpsys activity service dev.midnightbeam/.DimService 2>/dev/null | grep -m1 "red=")
 red=$(echo "$s" | sed -n 's/.*red=\([0-9]*\).*/\1/p')
 bright=$(echo "$s" | sed -n 's/.*bright=\([0-9]*\).*/\1/p')
 temp=$(echo "$s" | sed -n 's/.*temp=\([0-9]*\).*/\1/p')

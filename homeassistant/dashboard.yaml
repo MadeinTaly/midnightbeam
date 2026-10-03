@@ -1,4 +1,4 @@
-# Example dashboard (YAML mode) for the redmoonbeam.yaml package.
+# Example dashboard (YAML mode) for the midnightbeam.yaml package.
 title: TV dimmer
 views:
   - title: Dimmer

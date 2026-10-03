@@ -1,4 +1,4 @@
-package dev.redmoonbeam;
+package dev.midnightbeam;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -28,12 +28,12 @@ import org.json.JSONObject;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static dev.redmoonbeam.MainActivity.ACCENT;
-import static dev.redmoonbeam.MainActivity.BG;
-import static dev.redmoonbeam.MainActivity.LIGHT;
-import static dev.redmoonbeam.MainActivity.PRIMARY;
-import static dev.redmoonbeam.MainActivity.SURFACE;
-import static dev.redmoonbeam.MainActivity.t;
+import static dev.midnightbeam.MainActivity.ACCENT;
+import static dev.midnightbeam.MainActivity.BG;
+import static dev.midnightbeam.MainActivity.LIGHT;
+import static dev.midnightbeam.MainActivity.PRIMARY;
+import static dev.midnightbeam.MainActivity.SURFACE;
+import static dev.midnightbeam.MainActivity.t;
 
 /**
  * Phone/tablet screen: the remote page in a WebView. "This device" is the app's own server on loopback
@@ -41,7 +41,7 @@ import static dev.redmoonbeam.MainActivity.t;
  * A top bar opens the device list (switch, rename, delete). No inner classes, see MainActivity.
  */
 public class PhoneActivity extends Activity implements View.OnClickListener, DialogInterface.OnClickListener, Runnable {
-    static final String UA_SUFFIX = " RedMoonBeamApp/1.4";
+    static final String UA_SUFFIX = " MidnightBeamApp/1.4";
     private static final int RENAME = 1, DELETE = 2, TOGGLE = 3, RETRY = 4, PERMISSION = 5, ACCESSIBILITY = 6;
     private static final Pattern HOST = Pattern.compile("[A-Za-z0-9.\\-]{1,253}");
     private static final Pattern KEY = Pattern.compile("[0-9a-f]{1,128}");
@@ -100,8 +100,8 @@ public class PhoneActivity extends Activity implements View.OnClickListener, Dia
         permission.setVisibility(View.GONE);
         root.addView(permission);
 
-        accessibility = label(t("For full darkness and to cover the system bars, enable RedMoonBeam in Accessibility",
-                "Per un oscuramento totale e per coprire le barre di sistema, attiva RedMoonBeam in Accessibilità")
+        accessibility = label(t("For full darkness and to cover the system bars, enable MidnightBeam in Accessibility",
+                "Per un oscuramento totale e per coprire le barre di sistema, attiva MidnightBeam in Accessibilità")
                 + " \u203a", 14, BG);
         accessibility.setBackgroundColor(ACCENT);
         accessibility.setPadding(dp(16), dp(10), dp(16), dp(10));
@@ -248,14 +248,14 @@ public class PhoneActivity extends Activity implements View.OnClickListener, Dia
         if (!failed) retries = 0;
     }
 
-    // ---- Adding a device from a link: redmoonbeam://add?host=..&port=..&k=..&name=.. or http://IP:8765/#k=.. ----
+    // ---- Adding a device from a link: midnightbeam://add?host=..&port=..&k=..&name=.. or http://IP:8765/#k=.. ----
 
     private void handleIntent(Intent intent) {
         Uri u = intent == null ? null : intent.getData();
         if (u == null) return;
         String host, key, name = null;
         int port = RemoteServer.PORT;
-        if ("redmoonbeam".equals(u.getScheme())) {
+        if ("midnightbeam".equals(u.getScheme())) {
             host = u.getQueryParameter("host");
             key = u.getQueryParameter("k");
             name = u.getQueryParameter("name");

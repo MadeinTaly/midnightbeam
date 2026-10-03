@@ -1,4 +1,4 @@
-package dev.redmoonbeam;
+package dev.midnightbeam;
 
 import android.content.ActivityNotFoundException;
 import android.content.Intent;

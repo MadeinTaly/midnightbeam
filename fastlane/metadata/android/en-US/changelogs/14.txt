@@ -1,0 +1,2 @@
+* Renamed to MidnightBeam (new package id dev.midnightbeam: uninstall the previous RedMoonBeam app and install this one)
+* New icon, TV banner and artwork

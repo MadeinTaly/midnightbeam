@@ -1,4 +1,4 @@
-# Home Assistant package example for redmoonbeam.
+# Home Assistant package example for midnightbeam.
 # Put it in <config>/packages/ (with `homeassistant: packages: !include_dir_named packages`),
 # and replace media_player.my_tv with your Android TV / ADB entity (integration "Android Debug Bridge").
 # The status script path must match where you copied homeassistant/status.sh on the device.
@@ -31,7 +31,7 @@ input_number:
 
 script:
   dimmer_apply:
-    alias: RedMoonBeam - apply
+    alias: MidnightBeam - apply
     mode: restart
     sequence:
       - delay: "00:00:01" # debounce while dragging a slider
@@ -42,25 +42,25 @@ script:
           entity_id: media_player.my_tv
         data:
           command: >-
-            am start-foreground-service -n dev.redmoonbeam/.DimService
+            am start-foreground-service -n dev.midnightbeam/.DimService
             --ei red {{ states('input_number.dimmer_red') | int(0) }}
             --ei bright {{ states('input_number.dimmer_brightness') | int(100) }}
             --ei temp {{ states('input_number.dimmer_temperature') | int(1100) }} >/dev/null;
-            sleep 1; sh /data/local/tmp/redmoonbeam-status.sh
+            sleep 1; sh /data/local/tmp/midnightbeam-status.sh
 
   dimmer_off:
-    alias: RedMoonBeam - off
+    alias: MidnightBeam - off
     sequence:
       - action: androidtv.adb_command
         target:
           entity_id: media_player.my_tv
         data:
           command: >-
-            am start-foreground-service -n dev.redmoonbeam/.DimService --ez off true >/dev/null;
-            sleep 1; sh /data/local/tmp/redmoonbeam-status.sh
+            am start-foreground-service -n dev.midnightbeam/.DimService --ez off true >/dev/null;
+            sleep 1; sh /data/local/tmp/midnightbeam-status.sh
 
   dimmer_preset_evening:
-    alias: RedMoonBeam - evening
+    alias: MidnightBeam - evening
     icon: mdi:weather-sunset-down
     sequence:
       - action: input_number.set_value
@@ -71,7 +71,7 @@ script:
         data: { value: 80 }
 
   dimmer_preset_night:
-    alias: RedMoonBeam - night
+    alias: MidnightBeam - night
     icon: mdi:weather-night
     sequence:
       - action: input_number.set_value
@@ -82,8 +82,8 @@ script:
         data: { value: 40 }
 
 automation:
-  - id: redmoonbeam_sliders
-    alias: RedMoonBeam - slider changed
+  - id: midnightbeam_sliders
+    alias: MidnightBeam - slider changed
     mode: restart
     triggers:
       - trigger: state
@@ -94,8 +94,8 @@ automation:
     actions:
       - action: script.dimmer_apply
 
-  - id: redmoonbeam_poll
-    alias: RedMoonBeam - poll state
+  - id: midnightbeam_poll
+    alias: MidnightBeam - poll state
     mode: single
     triggers:
       - trigger: time_pattern
@@ -108,7 +108,7 @@ automation:
         target:
           entity_id: media_player.my_tv
         data:
-          command: sh /data/local/tmp/redmoonbeam-status.sh
+          command: sh /data/local/tmp/midnightbeam-status.sh
 
 template:
   - triggers:
@@ -120,14 +120,14 @@ template:
         value_template: "{{ (trigger.to_state.attributes.adb_response or '') is string and (trigger.to_state.attributes.adb_response or '').startswith('{\"dimmer_red\"') }}"
     sensor:
       - name: Dimmer warm filter
-        unique_id: redmoonbeam_red
+        unique_id: midnightbeam_red
         unit_of_measurement: "%"
         state: "{{ (trigger.to_state.attributes.adb_response | from_json).dimmer_red }}"
       - name: Dimmer brightness
-        unique_id: redmoonbeam_brightness
+        unique_id: midnightbeam_brightness
         unit_of_measurement: "%"
         state: "{{ (trigger.to_state.attributes.adb_response | from_json).dimmer_bright }}"
     binary_sensor:
       - name: Dimmer active
-        unique_id: redmoonbeam_active
+        unique_id: midnightbeam_active
         state: "{{ (trigger.to_state.attributes.adb_response | from_json).dimmer_on }}"

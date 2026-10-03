@@ -1,4 +1,4 @@
-package dev.redmoonbeam;
+package dev.midnightbeam;
 
 import android.content.res.AssetManager;
 import android.os.Handler;
@@ -55,7 +55,7 @@ final class RemoteServer extends Thread {
     final boolean lan;
 
     RemoteServer(DimService service, boolean lan) {
-        super("redmoonbeam-remote");
+        super("midnightbeam-remote");
         this.service = service;
         this.lan = lan;
         this.assets = service.getAssets();
@@ -258,7 +258,7 @@ final class RemoteServer extends Thread {
         private final Socket socket;
 
         Connection(RemoteServer server, Socket socket) {
-            super("redmoonbeam-conn");
+            super("midnightbeam-conn");
             this.server = server;
             this.socket = socket;
             setDaemon(true);

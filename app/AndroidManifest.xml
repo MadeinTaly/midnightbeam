@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="dev.redmoonbeam"
-    android:versionCode="13"
-    android:versionName="1.4.1">
+    package="dev.midnightbeam"
+    android:versionCode="14"
+    android:versionName="1.5.0">
 
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="28" />
 
@@ -16,7 +16,7 @@
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
 
     <application
-        android:label="RedMoonBeam"
+        android:label="MidnightBeam"
         android:icon="@drawable/ic_launcher"
         android:banner="@drawable/banner"
         android:allowBackup="false"
@@ -41,7 +41,7 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="redmoonbeam" android:host="add" />
+                <data android:scheme="midnightbeam" android:host="add" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
