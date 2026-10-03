@@ -15,7 +15,6 @@
     document.documentElement.classList.add('dark');
   </script>
   <link rel="stylesheet" href="/remote.css">
-  <script src="/dayrhythm.min.js"></script>
 </head>
 <body class="app-shell">
   <div class="water-ambient" aria-hidden="true"><div class="water-glow"></div></div>
@@ -122,7 +121,8 @@
     <form method="dialog"><button class="btn-primary w-full" data-t="close"></button></form>
   </dialog>
 
-<script>
+<script type="module">
+import * as DR from '/dayrhythm/src/index.js';
 (function () {
   'use strict';
   var T = {
@@ -272,7 +272,7 @@
   function refresh() { return api('/api/state').then(show).catch(function () {}); }
 
   // ---- Schedule: <day-rhythm> ----
-  var core = window.DayRhythm.core;
+  var core = DR.core;
   var FASCE = [
     { key: 'morning', time: '07:00' }, { key: 'afternoon', time: '14:00' }, { key: 'evening', time: '19:30' },
     { key: 'film', time: '21:00' }, { key: 'night', time: '23:00' }

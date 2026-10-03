@@ -16,7 +16,15 @@ KEYSTORE=${KEYSTORE:-debug.keystore}
 SIGN=${SIGN:-1}   # SIGN=0: stop at the unsigned, aligned APK (build/aligned.apk), e.g. for F-Droid
 OUT=build
 
-rm -rf "$OUT" && mkdir -p "$OUT/classes"
+if [ ! -f vendor/dayrhythm/src/index.js ]; then
+    echo "vendor/dayrhythm is missing: run 'git submodule update --init' first" >&2
+    exit 1
+fi
+
+rm -rf "$OUT" && mkdir -p "$OUT/classes" "$OUT/assets/dayrhythm"
+# the page loads the library's plain ES modules (no build, nothing minified)
+cp app/assets/* "$OUT/assets/"
+cp -r vendor/dayrhythm/src "$OUT/assets/dayrhythm/src"
 
 javac -source 8 -target 8 -nowarn -Xlint:-options -bootclasspath "$ANDROID_JAR" -d "$OUT/classes" \
     $(find app/src -name '*.java')
@@ -27,7 +35,7 @@ else
     "$DX" --dex --output="$OUT/classes.dex" "$OUT/classes"
 fi
 
-"$AAPT" package -f -M app/AndroidManifest.xml -S app/res -A app/assets -I "$ANDROID_JAR" -F "$OUT/unsigned.apk"
+"$AAPT" package -f -M app/AndroidManifest.xml -S app/res -A "$OUT/assets" -I "$ANDROID_JAR" -F "$OUT/unsigned.apk"
 (cd "$OUT" && "$AAPT" add unsigned.apk classes.dex >/dev/null)
 "$ZIPALIGN" -f 4 "$OUT/unsigned.apk" "$OUT/aligned.apk"
 if [ "$SIGN" = 0 ]; then

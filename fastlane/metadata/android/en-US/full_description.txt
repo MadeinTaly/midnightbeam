@@ -11,6 +11,8 @@ A daily schedule (movie night, early to bed…) is applied by the TV itself, eve
 
 The last setting is restored early at boot. The service can only be controlled by the app itself and from adb shell, not by other apps.
 
-Plain Java, about 55 KB, no tracking. The network permission is used only by the optional phone remote, inside the home network, protected by a pairing key; the app makes no outgoing connections.
+Plain Java, about 55 KB, no trackers, no internet connections. The network permission is used only for the optional LAN remote (the app's HTTP server on port 8765, protected by a pairing key and off unless you enable it) and, in phone app mode, to connect to the TVs you paired on your local network.
+
+The optional accessibility service is used only to draw the dimming overlay above everything on Android 12+; it reads no content.
 
 The overlay permission can be granted with <i>adb shell appops set dev.redmoonbeam SYSTEM_ALERT_WINDOW allow</i>, or in Settings, Special app access, Display over other apps.

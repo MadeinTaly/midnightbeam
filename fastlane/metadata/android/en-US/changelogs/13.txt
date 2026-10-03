@@ -1,0 +1,2 @@
+* The schedule editor library (dayrhythm) is now built from its plain sources (git submodule), no prebuilt minified file
+* Store and README descriptions made more precise about network use and the optional accessibility service

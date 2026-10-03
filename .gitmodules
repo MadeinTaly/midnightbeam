@@ -1,0 +1,3 @@
+[submodule "vendor/dayrhythm"]
+	path = vendor/dayrhythm
+	url = https://github.com/MadeinTaly/dayrhythm.git

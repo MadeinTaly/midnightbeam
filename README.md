@@ -20,8 +20,8 @@ to be restarted to pick up new values from automation tools.
   for the many TV-box themes that show none
 - **Restores the last setting at boot**, early: the boot receiver has a high priority, because on some boxes
   `BOOT_COMPLETED` reaches apps one at a time and can take over a minute
-- **Small**: ~290 KB APK (most of it the artwork), plain Java, no tracking; the network is used only by the optional phone remote,
-  inside your home network (no outgoing connections)
+- **Small**: ~290 KB APK (most of it the artwork), plain Java, no tracking; no internet connections: the network is used only
+  by the optional LAN remote (port 8765, pairing key, off unless enabled) and, in phone app mode, to reach your paired TVs
 - Android 8.0+ (API 26), phones work too
 
 ![Settings screen, focused row highlighted](docs/settings-screen.png)
@@ -172,8 +172,13 @@ BUILD_TOOLS=$ANDROID_HOME/build-tools/34.0.0 ANDROID_JAR=$ANDROID_HOME/platforms
 
 The first build creates a local `debug.keystore` to sign the APK.
 
+The schedule editor library is the git submodule `vendor/dayrhythm`: run `git submodule update --init`
+(or clone with `--recurse-submodules`) before building. `build.sh` copies its plain ES module sources
+(`src/`, nothing minified) into the APK as `assets/dayrhythm/`, and the phone page imports them as modules.
+
 The phone remote page is `web/remote.html`, styled with Tailwind CSS compiled at development time
-(`web/build-css.sh`, needs Node). The generated `app/assets/remote.css` is committed, so building the APK
+(`web/build-css.sh`, needs Node; sources: `web/input.css`, `web/tailwind.config.js` and the classes used in `web/remote.html`;
+it also copies the page into `app/assets/`). The generated `app/assets/remote.css` is committed, so building the APK
 does not need Node and the page has no CDN dependency. APKs signed with different keys cannot
 update each other, so uninstall the release build before installing your own.
 
@@ -188,7 +193,7 @@ update each other, so uninstall the release build before installing your own.
 - [QR Code generator library](https://www.nayuki.io/page/qr-code-generator-library) by Project Nayuki,
   MIT License (`app/src/io/nayuki/qrcodegen`, unmodified)
 - [Tailwind CSS](https://tailwindcss.com), MIT License (compiled into `app/assets/remote.css`)
-- [dayrhythm](https://github.com/MadeinTaly/dayrhythm), MIT License (`app/assets/dayrhythm.min.js`, the schedule editor of the phone page)
+- [dayrhythm](https://github.com/MadeinTaly/dayrhythm), MIT License (git submodule `vendor/dayrhythm`, v0.2.0, used unminified from its `src/`; the schedule editor of the phone page)
 
 ## Support
 

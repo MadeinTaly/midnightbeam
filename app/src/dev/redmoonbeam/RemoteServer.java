@@ -45,7 +45,6 @@ final class RemoteServer extends Thread {
         STATIC.put("/icon-192.png", "image/png");
         STATIC.put("/icon-512.png", "image/png");
         STATIC.put("/apple-touch-icon.png", "image/png");
-        STATIC.put("/dayrhythm.min.js", "text/javascript; charset=utf-8");
     }
 
     private final DimService service;
@@ -140,6 +139,12 @@ final class RemoteServer extends Thread {
             send(out, 200, "text/css; charset=utf-8", asset("remote.css"));
         } else if (method.equals("GET") && STATIC.containsKey(path)) {
             send(out, 200, STATIC.get(path), assetBytes(path.substring(1)));
+        } else if (method.equals("GET") && dayrhythmType(path) != null) {
+            try {
+                send(out, 200, dayrhythmType(path), assetBytes(path.substring(1)));
+            } catch (IOException e) {
+                send(out, 404, "text/plain", "not found");
+            }
         } else if (path.startsWith("/api/")) {
             if (!keyMatches(key)) {
                 send(out, 403, "application/json", "{\"error\":\"pairing key\"}");
@@ -198,6 +203,15 @@ final class RemoteServer extends Thread {
 
     private String asset(String name) throws IOException {
         return new String(assetBytes(name), StandardCharsets.UTF_8);
+    }
+
+    /** MIME type of a library file under /dayrhythm/ (the library's own sources), null for any other path. */
+    private static String dayrhythmType(String path) {
+        if (!path.startsWith("/dayrhythm/") || path.contains("..") || path.contains("//") || path.contains("\\")) return null;
+        if (path.endsWith(".js")) return "text/javascript; charset=utf-8";
+        if (path.endsWith(".json")) return "application/json";
+        if (path.endsWith(".css")) return "text/css; charset=utf-8";
+        return null;
     }
 
     private byte[] assetBytes(String name) throws IOException {
