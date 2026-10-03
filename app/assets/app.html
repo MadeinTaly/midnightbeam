@@ -143,6 +143,24 @@
     .choice .grow { flex: 1; }
     .choice .t { font-weight: 600; }
 
+    .types { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .type-opt { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 4px; border-radius: 16px; background: var(--card2); border: 1px solid var(--line); color: #c9d2e3; font-size: .82rem; }
+    .type-opt svg.i { width: 28px; height: 28px; }
+    .type-opt[aria-pressed="true"] { border: 2px solid var(--red); color: var(--ink); background: #2a1a24; }
+
+    /* setup checklist */
+    .step { display: flex; gap: 14px; align-items: flex-start; }
+    .step-n { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0; font-weight: 700; background: #2a3347; color: var(--ink); }
+    .step-n.done { background: var(--green); color: #06231a; }
+    .step-n svg.i { width: 18px; height: 18px; stroke-width: 3; }
+    .step .grow { flex: 1; min-width: 0; }
+    .step .t { font-weight: 600; font-size: 1.05rem; }
+    .tag { display: inline-block; font-size: .72rem; font-weight: 700; padding: 2px 8px; border-radius: 99px; margin-left: 6px; vertical-align: 2px; }
+    .tag.req { background: rgb(255 77 77 / 18%); color: #ff9a8a; }
+    .tag.rec { background: rgb(77 124 255 / 18%); color: #9db8ff; }
+    .step .btn { margin-top: 10px; min-height: 46px; font-size: .95rem; }
+    .btn[disabled] { opacity: .45; }
+
     /* bottom navigation */
     #tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; display: flex; justify-content: space-around;
       padding: 8px 8px calc(env(safe-area-inset-bottom) + 8px); background: rgb(11 15 26 / 92%); border-top: 1px solid var(--line);
@@ -195,6 +213,36 @@
   </div>
 </section>
 
+<!-- Setup of this device: the permissions the filter needs -->
+<section id="v-setup" class="view hidden">
+  <div class="top">
+    <button class="icon-btn" type="button" id="su-back" data-al="back" data-icon="back"></button>
+    <h1 data-t="setupTitle"></h1>
+  </div>
+  <div class="stack">
+    <p class="muted" style="margin:0" data-t="setupIntro"></p>
+    <div class="card step">
+      <span class="step-n" id="su-n1">1</span>
+      <div class="grow">
+        <div class="t"><span data-t="stOverlay"></span><span class="tag req" data-t="required"></span></div>
+        <div class="small muted" id="su-t1"></div>
+        <a class="btn btn-grad" id="su-b1" href="midnightbeam-app://overlay" data-t="allow"></a>
+      </div>
+    </div>
+    <div class="card step" id="su-s2">
+      <span class="step-n" id="su-n2">2</span>
+      <div class="grow">
+        <div class="t"><span data-t="stA11y"></span><span class="tag rec" data-t="recommended"></span></div>
+        <div class="small muted" id="su-t2"></div>
+        <a class="btn btn-soft" id="su-b2" href="midnightbeam-app://accessibility" data-t="enable"></a>
+      </div>
+    </div>
+    <button class="btn btn-grad" type="button" id="su-done" data-t="setupDone"></button>
+    <p class="small muted" style="margin:0;text-align:center" id="su-hint"></p>
+    <button class="link-btn" type="button" id="su-tv" style="width:100%;justify-content:center"><span data-t="orConnect"></span></button>
+  </div>
+</section>
+
 <!-- Home -->
 <section id="v-home" class="view hidden">
   <div class="top">
@@ -202,7 +250,7 @@
     <button class="icon-btn" type="button" data-go="settings" data-al="settings" data-icon="gear"></button>
   </div>
   <div class="stack">
-    <a id="perm-banner" class="card banner hidden" href="midnightbeam-app://overlay">
+    <a id="perm-banner" class="card banner hidden" href="#" data-sub="setup">
       <span class="ic-red" data-icon="alert"></span><span class="small" data-t="permBanner"></span>
     </a>
     <div class="card">
@@ -257,15 +305,13 @@
   <div class="stack">
     <div class="card stack">
       <div class="t" style="font-weight:600" data-t="language"></div>
-      <div class="seg" role="group"><button type="button" class="lang" data-lang="en">English</button><button type="button" class="lang" data-lang="it">Italiano</button></div>
+      <div class="seg" role="group"><button type="button" class="lang" data-lang="auto" data-t="langAuto"></button><button type="button" class="lang" data-lang="en">English</button><button type="button" class="lang" data-lang="it">Italiano</button></div>
     </div>
-    <div class="card stack">
-      <div style="font-weight:600" data-t="thisDevice"></div>
-      <p class="small muted" style="margin:0" id="st-overlay"></p>
-      <a id="st-overlay-btn" class="btn btn-soft hidden" href="midnightbeam-app://overlay" data-t="permButton"></a>
-      <p class="small muted" style="margin:0" id="st-a11y" data-t="a11yText"></p>
-      <a id="st-a11y-btn" class="btn btn-soft hidden" href="midnightbeam-app://accessibility" data-t="a11yButton"></a>
-    </div>
+    <button class="card row-link" type="button" data-sub="setup">
+      <span class="ic-red" data-icon="phone"></span>
+      <span class="grow"><span class="t" data-t="setupTitle"></span><br><span class="small muted" id="st-setup"></span></span>
+      <span class="chev" data-icon="chev"></span>
+    </button>
     <div class="card stack">
       <button type="button" class="row-link" id="st-welcome"><span class="grow" data-t="showWelcome"></span><span class="chev" data-icon="chev"></span></button>
       <a class="row-link" href="https://github.com/MadeinTaly/midnightbeam" style="text-decoration:none"><span class="grow" data-t="source"></span><span class="chev" data-icon="chev"></span></a>
@@ -328,6 +374,10 @@ import * as DR from '/dayrhythm/src/index.js';
     home: '<path d="M3 11l9-7 9 7"/><path d="M5 9.5V20h5v-6h4v6h5V9.5"/>',
     tv: '<rect x="2.5" y="4" width="19" height="12.5" rx="2"/><path d="M8 20.5h8M12 16.5v4"/>',
     phone: '<rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M11 18.5h2"/>',
+    tablet: '<rect x="3.5" y="3" width="17" height="18" rx="2.5"/><path d="M11 18h2"/>',
+    projector: '<rect x="2.5" y="8" width="19" height="9" rx="2.5"/><circle cx="15.5" cy="12.5" r="2.6"/><path d="M6 11.5h3M6 14h3M5.5 17v2M18.5 17v2"/>',
+    monitor: '<rect x="2.5" y="3.5" width="19" height="13" rx="1.5"/><path d="M12 16.5v3M7.5 20.5h9"/>',
+    other: '<rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="15" cy="12" r="1"/>',
     star: '<path d="M12 3.2l2.6 5.5 6 .8-4.4 4.2 1.1 6-5.3-2.9-5.3 2.9 1.1-6-4.4-4.2 6-.8z"/>',
     gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.6M12 18.6v2.6M2.8 12h2.6M18.6 12h2.6M5.5 5.5l1.8 1.8M16.7 16.7l1.8 1.8M5.5 18.5l1.8-1.8M16.7 7.3l1.8-1.8"/><circle cx="12" cy="12" r="6.6"/>',
     power: '<path d="M12 3v8.5"/><path d="M7.2 6.3a7.5 7.5 0 1 0 9.6 0"/>',
@@ -362,14 +412,25 @@ import * as DR from '/dayrhythm/src/index.js';
       home: 'Home', devices: 'Devices', scenes: 'Scenes', settings: 'Settings', back: 'Back', power: 'Filter on / off',
       red: 'Warm filter', bright: 'Brightness', temp: 'Colour temperature', schedTitle: 'Schedule',
       connected: 'Connected', offline: 'Offline', filterOn: 'filter on', filterOff: 'filter off', checking: 'Connecting…',
-      thisDevice: 'This device', local: 'This phone', schedOff: 'Off', schedOn: 'On', schedNext: 'next: {name} at {time}',
+      thisDevice: 'This device', local: 'This phone', localTablet: 'This tablet', schedOff: 'Off', schedOn: 'On', schedNext: 'next: {name} at {time}',
       permBanner: 'Allow “Display over other apps” so the filter can be drawn on this phone. Tap here.',
       permButton: 'Allow display over other apps', permOk: 'The filter can be drawn over other apps.', permMissing: 'The filter needs the “Display over other apps” permission.',
       a11yText: 'Android 12+ limits overlays to 80% darkness. For full darkness and to cover the system bars, enable MidnightBeam in Accessibility (optional, it reads nothing).',
-      a11yButton: 'Open Accessibility settings', language: 'Language', showWelcome: 'Show the welcome screen', source: 'Source code', support: 'Support the project', version: 'Version {v}',
+      setupTitle: 'Set up this device', setupIntro: 'For the warm filter and the dimming to work on this phone, Android needs your permission. It takes a few seconds.',
+      stA11y: 'Accessibility (full darkness)', stOverlay: 'Display over other apps', required: 'Required', recommended: 'Recommended', allow: 'Allow', enable: 'Enable', done: 'Done',
+      stOverlayText: 'Lets MidnightBeam draw the filter over the screen. In the list, find MidnightBeam and turn the switch on, then come back here.',
+      stA11yText: 'Without it, Android 12 and later cap the filter at 80% darkness and leave the status bar uncovered. In Accessibility, open MidnightBeam (it may be under Installed apps or Downloaded apps) and turn it on. It reads nothing on the screen.',
+      stA11yOn: 'On: full darkness, system bars covered.', setupDone: 'Start using it', setupNeed: 'Allow “Display over other apps” first: without it nothing changes on the screen.',
+      orConnect: 'Or control a TV or projector instead', setupOk: 'Ready', setupMissing: 'Permission missing: the filter cannot be shown', setupA11y: 'Ready, full darkness not enabled',
+      needSetup: 'Set up this device first',
+      a11yButton: 'Open Accessibility settings', language: 'Language', langAuto: 'Automatic',
+      popTitle: 'One step before it works', popText: 'Android has not allowed MidnightBeam to draw over other apps yet, so the filter cannot appear on this phone. Give the permission now: it takes a few seconds.',
+      popA11yTitle: 'For full darkness', popA11yText: 'On this Android version the filter stops at 80% darkness and does not cover the status bar unless MidnightBeam is enabled in Accessibility. It is optional and it reads nothing on the screen.',
+      setupNow: 'Set up now', later: 'Later', gotIt: 'OK', showWelcome: 'Show the welcome screen', source: 'Source code', support: 'Support the project', version: 'Version {v}',
       addDevice: 'Add device', addSub: 'TV, projector or another phone', addSteps: ['On the TV, open MidnightBeam and turn on Phone remote.', 'Scan the QR code on the TV with this phone’s camera.', 'The link opens this app and the TV is saved here.'],
       pasteLink: 'Or paste the link shown under the QR code', add: 'Add', badLink: 'This link is not a MidnightBeam pairing link',
       added: 'Device added', rename: 'Name', save: 'Save', remove: 'Remove device', removeAgain: 'Tap again to remove', removed: 'Device removed', cancel: 'Cancel',
+      type: 'Type', types: { projector: 'Projector', tv: 'TV', tablet: 'Tablet', phone: 'Phone', monitor: 'Monitor', other: 'Other' },
       newScene: 'New scene', custom: 'Custom', customSub: 'Create your own scene.', sceneName: 'Scene name', sceneSaved: 'Scene saved', deleteScene: 'Delete scene',
       keyChanged: 'Pairing code changed: scan the TV’s QR code again', unreachable: 'Not reachable: is it on and on the same network?',
       schedSub: 'The device changes setting by itself, even with the phone off. Changes are saved automatically.',
@@ -386,14 +447,25 @@ import * as DR from '/dayrhythm/src/index.js';
       home: 'Home', devices: 'Dispositivi', scenes: 'Scene', settings: 'Impostazioni', back: 'Indietro', power: 'Filtro acceso / spento',
       red: 'Filtro caldo', bright: 'Luminosità', temp: 'Temperatura colore', schedTitle: 'Programmazione',
       connected: 'Connesso', offline: 'Non raggiungibile', filterOn: 'filtro acceso', filterOff: 'filtro spento', checking: 'Connessione…',
-      thisDevice: 'Questo dispositivo', local: 'Questo telefono', schedOff: 'Spenta', schedOn: 'Attiva', schedNext: 'prossima: {name} alle {time}',
+      thisDevice: 'Questo dispositivo', local: 'Questo telefono', localTablet: 'Questo tablet', schedOff: 'Spenta', schedOn: 'Attiva', schedNext: 'prossima: {name} alle {time}',
       permBanner: 'Consenti “Mostra sopra altre app” per disegnare il filtro su questo telefono. Tocca qui.',
       permButton: 'Consenti mostra sopra altre app', permOk: 'Il filtro può essere disegnato sopra le altre app.', permMissing: 'Il filtro ha bisogno del permesso “Mostra sopra altre app”.',
       a11yText: 'Android 12+ limita gli overlay all’80% di scuro. Per il buio totale e per coprire le barre di sistema, attiva MidnightBeam in Accessibilità (facoltativo, non legge nulla).',
-      a11yButton: 'Apri impostazioni Accessibilità', language: 'Lingua', showWelcome: 'Mostra la schermata iniziale', source: 'Codice sorgente', support: 'Sostieni il progetto', version: 'Versione {v}',
+      setupTitle: 'Configura questo dispositivo', setupIntro: 'Perché filtro caldo e attenuazione funzionino su questo telefono, Android ha bisogno del tuo permesso. Bastano pochi secondi.',
+      stA11y: 'Accessibilità (buio totale)', stOverlay: 'Mostra sopra altre app', required: 'Obbligatorio', recommended: 'Consigliato', allow: 'Consenti', enable: 'Attiva', done: 'Fatto',
+      stOverlayText: 'Permette a MidnightBeam di disegnare il filtro sopra lo schermo. Nell’elenco trova MidnightBeam e attiva l’interruttore, poi torna qui.',
+      stA11yText: 'Senza, da Android 12 il filtro si ferma all’80% di scuro e non copre la barra di stato. In Accessibilità apri MidnightBeam (può essere sotto App installate o App scaricate) e attivalo. Non legge niente sullo schermo.',
+      stA11yOn: 'Attivo: buio totale, barre di sistema coperte.', setupDone: 'Inizia a usarlo', setupNeed: 'Prima consenti “Mostra sopra altre app”: senza, sullo schermo non cambia nulla.',
+      orConnect: 'Oppure controlla un TV o proiettore', setupOk: 'Pronto', setupMissing: 'Permesso mancante: il filtro non può essere mostrato', setupA11y: 'Pronto, buio totale non attivo',
+      needSetup: 'Prima configura questo dispositivo',
+      a11yButton: 'Apri impostazioni Accessibilità', language: 'Lingua', langAuto: 'Automatica',
+      popTitle: 'Manca un passaggio', popText: 'Android non ha ancora permesso a MidnightBeam di mostrarsi sopra le altre app, quindi il filtro non può comparire su questo telefono. Dai il permesso ora: bastano pochi secondi.',
+      popA11yTitle: 'Per il buio totale', popA11yText: 'Su questa versione di Android il filtro si ferma all’80% di scuro e non copre la barra di stato, a meno che MidnightBeam sia attivo in Accessibilità. È facoltativo e non legge nulla sullo schermo.',
+      setupNow: 'Configura ora', later: 'Più tardi', gotIt: 'OK', showWelcome: 'Mostra la schermata iniziale', source: 'Codice sorgente', support: 'Sostieni il progetto', version: 'Versione {v}',
       addDevice: 'Aggiungi dispositivo', addSub: 'TV, proiettore o un altro telefono', addSteps: ['Sul TV apri MidnightBeam e attiva Telecomando dal telefono.', 'Inquadra il QR sul TV con la fotocamera di questo telefono.', 'Il link apre questa app e il TV viene salvato qui.'],
       pasteLink: 'Oppure incolla il link mostrato sotto il QR', add: 'Aggiungi', badLink: 'Questo non è un link di abbinamento MidnightBeam',
       added: 'Dispositivo aggiunto', rename: 'Nome', save: 'Salva', remove: 'Rimuovi dispositivo', removeAgain: 'Tocca di nuovo per rimuovere', removed: 'Dispositivo rimosso', cancel: 'Annulla',
+      type: 'Tipo', types: { projector: 'Proiettore', tv: 'TV', tablet: 'Tablet', phone: 'Telefono', monitor: 'Monitor', other: 'Altro' },
       newScene: 'Nuova scena', custom: 'Personalizzata', customSub: 'Crea la tua scena.', sceneName: 'Nome della scena', sceneSaved: 'Scena salvata', deleteScene: 'Elimina scena',
       keyChanged: 'Codice di abbinamento cambiato: inquadra di nuovo il QR del TV', unreachable: 'Non raggiungibile: è acceso e sulla stessa rete?',
       schedSub: 'Il dispositivo cambia impostazione da solo, anche col telefono spento. Le modifiche si salvano automaticamente.',
@@ -407,8 +479,10 @@ import * as DR from '/dayrhythm/src/index.js';
       presets: { movie: 'Serata film', early: 'A letto presto', late: 'Nottambulo' } }
   };
   function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { return null; } }
-  var phoneLang = (navigator.language || 'en').slice(0, 2);
-  var lang = T[store('mb_lang')] ? store('mb_lang') : (T[phoneLang] ? phoneLang : 'en');
+  // English by default; the system language when the app has it, unless the person picked one in Settings.
+  var phoneLang = (navigator.language || 'en').slice(0, 2).toLowerCase();
+  function autoLang() { return T[phoneLang] ? phoneLang : 'en'; }
+  var lang = T[store('mb_lang')] ? store('mb_lang') : autoLang();
   var L = T[lang];
   function fmt(s, o) { return s.replace(/\{(\w+)\}/g, function (_, k) { return o[k]; }); }
 
@@ -433,6 +507,13 @@ import * as DR from '/dayrhythm/src/index.js';
       return r.json();
     }, function (e) { clearTimeout(t); throw e; });
   }
+  var TYPES = ['projector', 'tv', 'tablet', 'phone', 'monitor', 'other'];
+  function devById(id) { for (var i = 0; i < devices.length; i++) if (devices[i].id === id) return devices[i]; return null; }
+  function devType(id) {
+    if (!id) return app.type === 'tablet' ? 'tablet' : 'phone';
+    var d = devById(id); return d && TYPES.indexOf(d.type) >= 0 ? d.type : 'tv';
+  }
+  function localLabel() { return app.type === 'tablet' ? L.localTablet : L.local; }
   function devName(id) {
     if (!id) return L.thisDevice;
     for (var i = 0; i < devices.length; i++) if (devices[i].id === id) return devices[i].name;
@@ -492,10 +573,11 @@ import * as DR from '/dayrhythm/src/index.js';
     $('pv-dim').style.background = on ? 'rgba(0,0,0,' + ((100 - $('r-bright').value) / 100 * 0.9).toFixed(2) + ')' : 'transparent';
   }
   function renderDevice() {
-    $('h-dev-ic').innerHTML = icon(cur ? 'tv' : 'phone');
+    $('h-dev-ic').innerHTML = icon(devType(cur));
     $('h-dev-name').textContent = devName(cur);
     var st = $('h-dev-status');
-    if (reach === 'ok') st.innerHTML = '<span class="dot on"></span><span class="status-on">' + L.connected + '</span><span class="muted"> · ' + (state && state.on ? L.filterOn : L.filterOff) + '</span>';
+    if (!cur) st.innerHTML = '<span class="muted">' + localLabel() + (state ? ' · ' + (state.on ? L.filterOn : L.filterOff) : '') + '</span>';
+    else if (reach === 'ok') st.innerHTML = '<span class="dot on"></span><span class="status-on">' + L.connected + '</span><span class="muted"> · ' + (state && state.on ? L.filterOn : L.filterOff) + '</span>';
     else if (reach === 'key') st.innerHTML = '<span class="dot"></span><span class="muted">' + L.keyChanged + '</span>';
     else if (reach === 'down') st.innerHTML = '<span class="dot"></span><span class="muted">' + L.offline + '</span>';
     else st.innerHTML = '<span class="muted">' + L.checking + '</span>';
@@ -505,6 +587,8 @@ import * as DR from '/dayrhythm/src/index.js';
   }
   function show(s) {
     state = s; reach = 'ok';
+    // this phone could not draw the filter: the permission was revoked or never given
+    if (!cur && s.blocked && app.overlay !== false) { app.overlay = false; loadApp(); }
     if (typeof s.minute === 'number') {
       var n = new Date(), off = s.minute - (n.getHours() * 60 + n.getMinutes() + n.getSeconds() / 60);
       if (off > 720) off -= 1440; if (off < -720) off += 1440;
@@ -522,6 +606,7 @@ import * as DR from '/dayrhythm/src/index.js';
 
   ['r-red', 'r-bright', 'r-temp'].forEach(function (id) {
     $(id).addEventListener('input', function () {
+      if (guard()) { if (state) { setRange('r-red', state.red); setRange('r-bright', state.bright); setRange('r-temp', state.temp); labels(); } return; }
       paintRange($(id)); labels();
       if (state) state.on = true;
       preview(); renderSceneRow();
@@ -532,7 +617,7 @@ import * as DR from '/dayrhythm/src/index.js';
       }, 120);
     });
   });
-  $('h-power').addEventListener('click', function () { setValues({ on: !(state && state.on) }); });
+  $('h-power').addEventListener('click', function () { if (!guard()) setValues({ on: !(state && state.on) }); });
   $('h-dev').addEventListener('click', function () { go('devices'); });
 
   function sceneButton(s) {
@@ -543,6 +628,7 @@ import * as DR from '/dayrhythm/src/index.js';
     return b;
   }
   function applyScene(s) {
+    if (guard()) return;
     state = state || {}; state.on = true;
     setRange('r-red', s.red); setRange('r-bright', s.bright); setRange('r-temp', s.temp); labels(); preview();
     setValues({ on: true, red: s.red, bright: s.bright, temp: s.temp });
@@ -603,14 +689,21 @@ import * as DR from '/dayrhythm/src/index.js';
       devices = Array.isArray(d) ? d : [];
       if (cur && !devices.some(function (x) { return x.id === cur; })) selectDevice('');
       renderDevice(); if (view === 'devices') renderDevices();
-      devices.forEach(function (x) { if (x.name === x.host) nameFromDevice(x); });
+      devices.forEach(function (x) { if (x.name === x.host || TYPES.indexOf(x.type) < 0) identify(x); });
     }).catch(function () {});
   }
   window.mbDevicesChanged = loadDevices;
-  function nameFromDevice(x) {
+  // Name and kind of a newly paired device, from its /api/info (older versions send no type: a TV).
+  var identifying = {};
+  function identify(x) {
+    if (identifying[x.id]) return;
+    identifying[x.id] = true;
     api('/api/info', null, x.id).then(function (i) {
-      if (i && i.name) return api('/api/devices', { op: 'rename', id: x.id, name: i.name }, '').then(loadDevices);
-    }).catch(function () {});
+      var body = { op: 'edit', id: x.id };
+      if (x.name === x.host && i && i.name) body.name = i.name;
+      if (TYPES.indexOf(x.type) < 0) body.type = i && TYPES.indexOf(i.type) >= 0 ? i.type : 'tv';
+      return api('/api/devices', body, '').then(loadDevices);
+    }).catch(function () { identifying[x.id] = false; });
   }
   function probe(id) {
     return api('/api/state', null, id).then(function (s) { devState[id] = { ok: true, s: s }; }, function (e) { devState[id] = { ok: false, key: e && e.status === 403 }; })
@@ -618,14 +711,15 @@ import * as DR from '/dayrhythm/src/index.js';
   }
   function renderDevices() {
     var box = $('d-list'); box.innerHTML = '';
-    [{ id: '', name: L.thisDevice, sub: L.local }].concat(devices.map(function (d) { return { id: d.id, name: d.name, sub: d.host }; })).forEach(function (d) {
+    [{ id: '', name: L.thisDevice, sub: localLabel() }].concat(devices.map(function (d) { return { id: d.id, name: d.name, sub: d.host }; })).forEach(function (d) {
       var ds = devState[d.id], on = ds && ds.ok && ds.s.on, row = el('div', 'item' + (d.id === cur ? ' active' : ''));
-      var status = !ds ? '<span class="muted">' + L.checking + '</span>' : ds.ok
+      var status = !d.id ? '<span class="muted">' + (ds && ds.ok ? (on ? L.filterOn : L.filterOff) : '') + '</span>'
+        : !ds ? '<span class="muted">' + L.checking + '</span>' : ds.ok
         ? '<span class="dot on"></span><span class="status-on">' + L.connected + '</span>'
         : '<span class="dot"></span><span class="muted">' + (ds.key ? L.keyChanged : L.offline) + '</span>';
-      var main = el('button', '', '<span class="dev-ic">' + icon(d.id ? 'tv' : 'phone') + '</span><span class="grow"><span class="t">' + esc(d.name) + '</span><br><span class="small">' + status + '</span><br><span class="d">' + esc(d.sub) + '</span></span>');
+      var main = el('button', '', '<span class="dev-ic">' + icon(devType(d.id)) + '</span><span class="grow"><span class="t">' + esc(d.name) + '</span><br><span class="small">' + status + '</span><br><span class="d">' + esc(d.sub) + '</span></span>');
       main.type = 'button'; main.style.cssText = 'display:flex;align-items:center;gap:12px;flex:1;min-width:0;text-align:left';
-      main.onclick = function () { selectDevice(d.id); go('home'); };
+      main.onclick = function () { selectDevice(d.id); go('home'); if (needsSetup()) setTimeout(permissionPopup, 60); };
       row.appendChild(main);
       if (d.id) {
         var ed = el('button', 'icon-btn', icon('pencil')); ed.type = 'button'; ed.setAttribute('aria-label', L.rename);
@@ -635,6 +729,7 @@ import * as DR from '/dayrhythm/src/index.js';
       var p = el('button', 'power' + (on ? ' on' : ''), icon('power')); p.type = 'button'; p.setAttribute('aria-label', L.power);
       p.disabled = !(ds && ds.ok);
       p.onclick = function () {
+        if (!d.id && needsSetup()) { permissionPopup(); return; }
         api('/api/set', { on: !on }, d.id).then(function (s) { devState[d.id] = { ok: true, s: s }; if (d.id === cur) show(s); renderDevices(); }, function () { toast(L.unreachable); });
       };
       row.appendChild(p);
@@ -666,12 +761,23 @@ import * as DR from '/dayrhythm/src/index.js';
     };
   }
   function deviceSheet(d) {
+    var type = devType(d.id);
     openSheet('<h2>' + esc(d.name) + '</h2><div class="stack"><label class="small muted" for="dv-name">' + L.rename + '</label><input class="field" id="dv-name" maxlength="40">' +
+      '<div class="small muted">' + L.type + '</div><div class="types" id="dv-types">' + TYPES.map(function (t) {
+        return '<button type="button" class="type-opt" data-type="' + t + '" aria-pressed="' + (t === type) + '">' + icon(t) + '<span>' + L.types[t] + '</span></button>';
+      }).join('') + '</div>' +
       '<button class="btn btn-grad" type="button" id="dv-save">' + L.save + '</button><button class="btn btn-danger" type="button" id="dv-del">' + icon('trash') + L.remove + '</button></div>');
     $('dv-name').value = d.name;
+    Array.prototype.forEach.call($('dv-types').children, function (b) {
+      b.onclick = function () {
+        type = b.getAttribute('data-type');
+        Array.prototype.forEach.call($('dv-types').children, function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+      };
+    });
     $('dv-save').onclick = function () {
-      var n = $('dv-name').value.trim(); if (!n) return;
-      api('/api/devices', { op: 'rename', id: d.id, name: n }, '').then(function () { closeSheet(); loadDevices(); }).catch(function () {});
+      var body = { op: 'edit', id: d.id, type: type }, n = $('dv-name').value.trim();
+      if (n) body.name = n;
+      api('/api/devices', body, '').then(function () { closeSheet(); loadDevices(); }).catch(function () {});
     };
     var armed = false;
     $('dv-del').onclick = function () {
@@ -694,7 +800,7 @@ import * as DR from '/dayrhythm/src/index.js';
   $('sheet-wrap').addEventListener('click', function (e) { if (e.target === $('sheet-wrap')) closeSheet(); });
 
   // ---- Navigation ----
-  var view = 'home', VIEWS = ['welcome', 'home', 'devices', 'scenes', 'settings', 'schedule'];
+  var view = 'home', VIEWS = ['welcome', 'setup', 'home', 'devices', 'scenes', 'settings', 'schedule'], SUBS = ['schedule', 'setup'];
   function showView(v) {
     view = v;
     VIEWS.forEach(function (x) { $('v-' + x).classList.toggle('hidden', x !== v); });
@@ -707,35 +813,88 @@ import * as DR from '/dayrhythm/src/index.js';
     if (v === 'scenes') renderScenes();
     if (v === 'settings') renderSettings();
     if (v === 'schedule') { $('sc-dev').textContent = devName(cur); loadScheduleAll(); }
+    if (v === 'setup') renderSetup();
   }
   function go(v) {
-    if (v === 'schedule') { history.pushState({ v: 'schedule' }, ''); showView(v); return; }
-    if (view === 'schedule') { history.back(); setTimeout(function () { showView(v); }, 0); return; }
+    if (SUBS.indexOf(v) >= 0) {
+      if (SUBS.indexOf(view) >= 0) history.replaceState({ v: v }, ''); else history.pushState({ v: v }, '');
+      showView(v); return;
+    }
+    if (SUBS.indexOf(view) >= 0) { history.back(); setTimeout(function () { showView(v); }, 0); return; }
     showView(v);
   }
   window.addEventListener('popstate', function () {
     if (sheetOpen) { hideSheet(); return; }
-    if (view === 'schedule') { showView('home'); refresh(); loadScheduleSummary(); }
+    if (SUBS.indexOf(view) >= 0) { showView('home'); refresh(); loadScheduleSummary(); }
   });
   Array.prototype.forEach.call(document.querySelectorAll('#tabs button'), function (b) { b.onclick = function () { go(b.getAttribute('data-tab')); }; });
   Array.prototype.forEach.call(document.querySelectorAll('[data-go]'), function (b) { b.onclick = function () { go(b.getAttribute('data-go')); }; });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-sub]'), function (b) { b.onclick = function (e) { e.preventDefault(); go(b.getAttribute('data-sub')); }; });
   $('sc-back').onclick = function () { history.back(); };
-  $('w-here').onclick = function () { store('mb_welcomed', '1'); selectDevice(''); showView('home'); };
+  $('w-here').onclick = function () { store('mb_welcomed', '1'); selectDevice(''); showView('home'); if (needsSetup()) go('setup'); };
   $('w-connect').onclick = function () { store('mb_welcomed', '1'); showView('devices'); addSheet(); };
   $('st-welcome').onclick = function () { showView('welcome'); };
 
+  // ---- Setup of this device (the filter does nothing without the overlay permission) ----
+  var appLoaded = false;
+  function needsSetup() { return appLoaded && !cur && !app.overlay; }
+  function renderSetup() {
+    var ok = !!app.overlay, a11yNeeded = (app.sdk || 0) >= 31;
+    $('su-n1').className = 'step-n' + (ok ? ' done' : ''); $('su-n1').innerHTML = ok ? icon('check') : '1';
+    $('su-t1').textContent = ok ? L.done : L.stOverlayText;
+    $('su-b1').classList.toggle('hidden', ok);
+    $('su-s2').classList.toggle('hidden', !a11yNeeded);
+    var a = !!app.accessibility;
+    $('su-n2').className = 'step-n' + (a ? ' done' : ''); $('su-n2').innerHTML = a ? icon('check') : '2';
+    $('su-t2').textContent = a ? L.stA11yOn : L.stA11yText;
+    $('su-b2').classList.toggle('hidden', a);
+    $('su-done').disabled = !ok;
+    $('su-hint').textContent = ok ? '' : L.setupNeed;
+  }
+  $('su-back').onclick = function () { history.back(); };
+  $('su-done').onclick = function () { if (app.overlay) { history.back(); setTimeout(function () { refresh(); }, 50); } };
+  $('su-tv').onclick = function () { go('devices'); setTimeout(addSheet, 50); };
+  // Popup on start when this phone is shown and cannot draw the filter (or, once, when full darkness needs Accessibility)
+  function permissionPopup() {
+    if (cur || sheetOpen) return;
+    if (!app.overlay) {
+      openSheet('<h2>' + L.popTitle + '</h2><div class="stack"><p class="muted" style="margin:0">' + L.popText + '</p>' +
+        '<button class="btn btn-grad" type="button" id="pp-go">' + L.setupNow + '</button><button class="btn btn-soft" type="button" id="pp-later">' + L.later + '</button></div>');
+      $('pp-go').onclick = function () { closeSheet(); setTimeout(function () { go('setup'); }, 60); };
+      $('pp-later').onclick = closeSheet;
+    } else if (app.sdk >= 31 && !app.accessibility && !store('mb_a11y_tip')) {
+      store('mb_a11y_tip', '1');
+      openSheet('<h2>' + L.popA11yTitle + '</h2><div class="stack"><p class="muted" style="margin:0">' + L.popA11yText + '</p>' +
+        '<a class="btn btn-grad" href="midnightbeam-app://accessibility" id="pp-a11y">' + L.enable + '</a><button class="btn btn-soft" type="button" id="pp-later">' + L.later + '</button></div>');
+      $('pp-a11y').addEventListener('click', function () { setTimeout(closeSheet, 300); });
+      $('pp-later').onclick = closeSheet;
+    }
+  }
+  // a change on this phone without the permission would do nothing: send the person to the setup instead
+  function guard() { if (needsSetup()) { permissionPopup(); return true; } return false; }
+
   // ---- Settings ----
   function renderSettings() {
-    $('st-overlay').textContent = app.overlay ? L.permOk : L.permMissing;
-    $('st-overlay-btn').classList.toggle('hidden', app.overlay);
-    $('st-a11y').classList.toggle('hidden', !app.accessibilityHint);
-    $('st-a11y-btn').classList.toggle('hidden', !app.accessibilityHint);
+    $('st-setup').textContent = !app.overlay ? L.setupMissing : (app.sdk >= 31 && !app.accessibility) ? L.setupA11y : L.setupOk;
     $('st-version').textContent = app.version ? fmt(L.version, { v: app.version }) : '';
-    Array.prototype.forEach.call(document.querySelectorAll('.lang'), function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-lang') === lang)); });
+    var picked = T[store('mb_lang')] ? store('mb_lang') : 'auto';
+    Array.prototype.forEach.call(document.querySelectorAll('.lang'), function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-lang') === picked)); });
   }
-  function loadApp() { return api('/api/app', null, '').then(function (a) { app = a; renderDevice(); if (view === 'settings') renderSettings(); }).catch(function () {}); }
+  function loadApp() {
+    return api('/api/app', null, '').then(function (a) {
+      var first = !appLoaded; app = a; appLoaded = true;
+      renderDevice();
+      if (view === 'settings') renderSettings();
+      if (view === 'setup') renderSetup();
+      if (first && view === 'home') permissionPopup();
+    }).catch(function () {});
+  }
   Array.prototype.forEach.call(document.querySelectorAll('.lang'), function (b) {
-    b.onclick = function () { lang = b.getAttribute('data-lang'); L = T[lang]; store('mb_lang', lang); applyTexts(); };
+    b.onclick = function () {
+      var v = b.getAttribute('data-lang');
+      store('mb_lang', v === 'auto' ? null : v);
+      lang = v === 'auto' ? autoLang() : v; L = T[lang]; applyTexts();
+    };
   });
 
   // ---- Schedule (<day-rhythm>, same data as the browser remote) ----
@@ -882,6 +1041,7 @@ import * as DR from '/dayrhythm/src/index.js';
     if (view === 'devices') renderDevices();
     if (view === 'scenes') renderScenes();
     if (view === 'settings') renderSettings();
+    if (view === 'setup') renderSetup();
     if (scheduleLoaded) { var v = rhythm.getValue(), d = rhythm.days; rhythm.config = config(); setValue(v); rhythm.days = d; }
   }
 

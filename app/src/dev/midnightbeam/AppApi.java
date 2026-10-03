@@ -20,12 +20,15 @@ import java.nio.charset.StandardCharsets;
 /**
  * API of the phone app's own page (assets/app.html), answered only on loopback connections:
  *
- *   GET  /api/app        {"overlay":bool,"accessibilityHint":bool,"version":..} for the settings screen
+ *   GET  /api/app        {"overlay":bool,"accessibilityHint":bool,"accessibility":bool,"sdk":n,"version":..}
+ *                        for the setup and settings screens
  *   GET  /api/devices    saved devices [{"id":"host:port","name":..,"host":..,"port":..}] (keys stay in the app)
- *   POST /api/devices    {"op":"add","link":..} | {"op":"rename","id":..,"name":..} | {"op":"delete","id":..}
+ *   POST /api/devices    {"op":"add","link":..} | {"op":"edit","id":..,"name":..,"type":..} (either) | {"op":"delete","id":..}
+ *                        type: projector, tv, tablet, phone, monitor or other (icon only)
  *   ANY  /d/{host:port}/api/...   forwarded to that saved device with its pairing key
  */
 final class AppApi {
+    private static final String[] TYPES = {"projector", "tv", "tablet", "phone", "monitor", "other"};
     private static final String[] FORWARDED = {"/api/info", "/api/state", "/api/set", "/api/schedule", "/api/days"};
 
     private AppApi() {
@@ -40,6 +43,9 @@ final class AppApi {
         try {
             return new JSONObject().put("overlay", Settings.canDrawOverlays(context))
                     .put("accessibilityHint", Compat.needsAccessibilityHint())
+                    .put("accessibility", DimAccessibilityService.instance != null)
+                    .put("sdk", android.os.Build.VERSION.SDK_INT)
+                    .put("type", Compat.deviceType(context))
                     .put("version", version).toString();
         } catch (JSONException e) {
             throw new IllegalStateException(e);
@@ -53,7 +59,8 @@ final class AppApi {
                 JSONObject d = a.optJSONObject(i);
                 if (d == null) continue;
                 out.put(new JSONObject().put("id", d.optString("host") + ":" + d.optInt("port"))
-                        .put("name", d.optString("name")).put("host", d.optString("host")).put("port", d.optInt("port")));
+                        .put("name", d.optString("name")).put("host", d.optString("host")).put("port", d.optInt("port"))
+                        .put("type", d.optString("type")));
             }
         } catch (JSONException e) {
             throw new IllegalStateException(e);
@@ -70,10 +77,13 @@ final class AppApi {
         }
         JSONObject d = Devices.byId(p, id);
         if (d == null) return null;
-        if (op.equals("rename")) {
-            String n = Devices.cleanName(j.optString("name"));
-            if (n == null || n.isEmpty()) return null;
-            Devices.rename(p, d.optString("host"), d.optInt("port"), n);
+        if (op.equals("edit")) {
+            String n = Devices.cleanName(j.optString("name", null)), t = j.optString("type", null);
+            boolean typeOk = false;
+            for (String x : TYPES) typeOk |= x.equals(t);
+            if ((n == null || n.isEmpty()) && !typeOk) return null;
+            if (n != null && !n.isEmpty()) Devices.rename(p, d.optString("host"), d.optInt("port"), n);
+            if (typeOk) Devices.setType(p, d.optString("host"), d.optInt("port"), t);
         } else if (op.equals("delete")) {
             Devices.delete(p, d.optString("host"), d.optInt("port"));
         } else {

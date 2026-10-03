@@ -58,6 +58,8 @@ public class DimService extends Service implements Runnable {
     private WindowManager viewWm;
     private boolean viewAccessibility;
     private volatile boolean clamped;
+    /** The overlay could not be added: the "Display over other apps" permission is missing. */
+    private volatile boolean blocked;
     private RemoteServer server;
 
     // Read by the server thread, so volatile.
@@ -308,7 +310,7 @@ public class DimService extends Service implements Runnable {
         String name = android.provider.Settings.Global.getString(getContentResolver(), "device_name");
         try {
             return new JSONObject().put("name", name != null && !name.isEmpty() ? name : android.os.Build.MODEL)
-                    .put("model", android.os.Build.MODEL).toString();
+                    .put("model", android.os.Build.MODEL).put("type", Compat.deviceType(this)).toString();
         } catch (JSONException e) {
             throw new IllegalStateException(e);
         }
@@ -348,6 +350,7 @@ public class DimService extends Service implements Runnable {
                     .put("schedule", scheduleOn)
                     .put("mode", DimAccessibilityService.instance != null ? "accessibility" : "overlay")
                     .put("clamped", clamped)
+                    .put("blocked", blocked)
                     // device clock, minutes since midnight: the page draws the "now" line with it
                     .put("minute", now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE)
                             + now.get(Calendar.SECOND) / 60.0);
@@ -527,7 +530,15 @@ public class DimService extends Service implements Runnable {
                     PixelFormat.TRANSLUCENT);
             lp.alpha = maxAlpha;
             view.setBackgroundColor(color);
-            viewWm.addView(view, lp);
+            try {
+                viewWm.addView(view, lp);
+                blocked = false;
+            } catch (RuntimeException e) {
+                // no "Display over other apps" permission (BadTokenException / SecurityException): do not crash,
+                // report it in the state; the next change tries again
+                view = null;
+                blocked = true;
+            }
         } else {
             view.setBackgroundColor(color);
         }
@@ -585,7 +596,7 @@ public class DimService extends Service implements Runnable {
     protected void dump(FileDescriptor fd, PrintWriter pw, String[] args) {
         pw.println("red=" + red + " bright=" + bright + " temp=" + temp + " visible=" + (view != null)
                 + " off=" + off + " mode=" + (DimAccessibilityService.instance != null ? "accessibility" : "overlay")
-                + " clamped=" + clamped + " remote=" + (server != null) + " schedule=" + scheduleOn);
+                + " clamped=" + clamped + " blocked=" + blocked + " remote=" + (server != null) + " schedule=" + scheduleOn);
     }
 
     private static int clamp(int v, int min, int max) {

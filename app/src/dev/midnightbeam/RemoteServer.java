@@ -25,7 +25,7 @@ import java.util.Locale;
  *
  *   GET  /               the remote page (the key travels in the URL fragment, never sent to the server by the browser)
  *   GET  /remote.css     its stylesheet (Tailwind, compiled at development time, see web/)
- *   GET  /api/info       {"name":..,"model":..} device name, to label the device in the phone app
+ *   GET  /api/info       {"name":..,"model":..,"type":"projector|tv|tablet|phone"} to label the device in the phone app
  *   GET  /api/state      current values
  *   POST /api/set        {"red":0-100,"bright":5-100,"temp":1000-6500,"on":true|false}, any subset
  *   GET  /api/schedule   {"enabled":bool,"value":<dayrhythm value>,"resolved":<Slot[] or {mon:[..],..}>}

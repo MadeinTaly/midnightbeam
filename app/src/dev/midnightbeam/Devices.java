@@ -10,7 +10,7 @@ import org.json.JSONObject;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/** Saved devices of the phone app: a JSON array [{name, host, port, key}] in the shared preferences. */
+/** Saved devices of the phone app: a JSON array [{name, host, port, key, type}] in the shared preferences. */
 final class Devices {
     private static final String PREF = "devices";
     private static final Pattern HOST = Pattern.compile("[A-Za-z0-9.\\-]{1,253}");
@@ -58,6 +58,19 @@ final class Devices {
         if (i < 0 || name.isEmpty()) return;
         try {
             a.getJSONObject(i).put("name", name);
+        } catch (JSONException e) {
+            throw new IllegalStateException(e);
+        }
+        p.edit().putString(PREF, a.toString()).apply();
+    }
+
+    /** Kind of device, for its icon only (see AppApi). */
+    static void setType(SharedPreferences p, String host, int port, String type) {
+        JSONArray a = load(p);
+        int i = find(a, host, port);
+        if (i < 0) return;
+        try {
+            a.getJSONObject(i).put("type", type);
         } catch (JSONException e) {
             throw new IllegalStateException(e);
         }
