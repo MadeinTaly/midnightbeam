@@ -1,0 +1,32 @@
+Meno luce blu, serate film più rilassanti. MidnightBeam è un filtro caldo (rosso) e un dimmer per TV box Android, proiettori, TV e telefoni.
+
+Stende un velo trasparente ai tocchi sopra tutto, video compresi. Intensità del filtro, luminosità e temperatura colore cambiano all'istante, senza lampi a piena luce. Pensato per i tanti proiettori LED e TV box che non permettono di abbassare la luce.
+
+<b>Sul TV</b>
+* una schermata di impostazioni che si usa con le sole frecce e OK, con un'evidenziazione ben visibile
+* un QR per comandarlo dal telefono (sui TV il telecomando è attivo di default, solo in rete locale, protetto da un codice di abbinamento)
+* un pulsante "App per Android" con un QR per scaricare l'app sul telefono
+* la programmazione mostrata come timeline in fondo allo schermo
+
+<b>Sul telefono o tablet</b>
+* usa il filtro sul telefono stesso, oppure comanda TV e proiettori
+* scene (Film, Relax, Notte…) e le tue, accensione e stato di ogni dispositivo
+* aggiungi un TV inquadrando il QR o a mano (indirizzo e codice); il tipo di dispositivo viene riconosciuto
+* configurazione guidata dei permessi che Android richiede
+* per una prova veloce non serve nessuna app: il QR apre gli stessi comandi nel browser del telefono
+
+<b>Programmazione</b>
+Fasce giornaliere o settimanali da trascinare su una timeline, con passaggi graduali; il TV le applica da solo, anche con il telefono spento. Una modifica manuale vale fino alla fascia successiva.
+
+<b>Automazioni</b>
+* adb shell: <i>am start-foreground-service -n dev.midnightbeam/.DimService --ei red 60 --ei bright 40 --ei temp 1100</i>
+* Home Assistant, con l'integrazione Android Debug Bridge (pacchetto e dashboard di esempio nel repository)
+* una piccola API HTTP in rete locale
+
+L'ultima impostazione viene ripristinata subito all'avvio. Il servizio può essere comandato solo dall'app stessa e da adb shell, non da altre app.
+
+Java puro, circa 420 KB (soprattutto grafica), niente tracker, niente pubblicità, nessun dato raccolto, nessuna connessione a internet: la rete serve solo in locale, per il telecomando dal telefono (porta 8765) e per raggiungere i TV abbinati.
+
+Il servizio di accessibilità, facoltativo, serve solo a disegnare il velo sopra tutto su Android 12 e successivi; non legge nessun contenuto.
+
+Su un TV box senza touch screen il permesso si può dare con <i>adb shell appops set dev.midnightbeam SYSTEM_ALERT_WINDOW allow</i>, oppure in Impostazioni, Accesso speciale app, Mostra sopra altre app.
