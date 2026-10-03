@@ -200,6 +200,10 @@ update each other, so uninstall the release build before installing your own.
 - [Tailwind CSS](https://tailwindcss.com), MIT License (compiled into `app/assets/remote.css`)
 - [dayrhythm](https://github.com/MadeinTaly/dayrhythm), MIT License (git submodule `vendor/dayrhythm`, v0.3.0, used unminified from its `src/`; the schedule editor of the phone page)
 
+## Privacy
+
+MidnightBeam collects no data and works only on your local network: see [PRIVACY.md](PRIVACY.md).
+
 ## Support
 
 If MidnightBeam is useful to you, you can support its development here: https://gt.1471995.xyz
