@@ -1,0 +1,2 @@
+* TV: "Android app" button that shows a QR code to download the app on a phone
+* Browser remote on Android: "Download the Android app" button

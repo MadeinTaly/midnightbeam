@@ -101,6 +101,7 @@
 
     <div class="pt-2 flex flex-wrap justify-center gap-2">
       <a id="open-app" class="btn-primary hidden" href="#" data-t="openApp"></a>
+      <a id="get-app" class="btn-secondary hidden" href="https://github.com/MadeinTaly/midnightbeam/releases/latest/download/midnightbeam.apk" data-t="getApp"></a>
       <button id="a2hs" class="btn-secondary hidden" type="button" data-t="a2hs"></button>
     </div>
   </main>
@@ -131,7 +132,7 @@ import * as DR from '/dayrhythm/src/index.js';
       weekMode: 'Days', weekDaily: 'Same every day', weekWeekly: 'Per weekday', transition: 'Transition', trOff: 'Off',
       transitionHelp: 'Values glide gradually into the next slot over the chosen time. A manual change lasts until the next slot.',
       saving: 'Saving…', saved: 'Saved', error: 'Error, not saved', note: 'Colours are a preview of a grey picture under the filter.',
-      a2hs: 'Add to Home screen', openApp: 'Open in the app', close: 'Close',
+      a2hs: 'Add to Home screen', openApp: 'Open in the app', getApp: 'Download the Android app', close: 'Close',
       a2hsIos: 'Tap Share, then Add to Home Screen.', a2hsOther: 'Open the browser menu ⋮, then Add to Home screen / Install app.',
       models: { off: 'Off', soft: 'Soft', evening: 'Evening', cinema: 'Cinema', night: 'Night', deep: 'Deep night', custom: 'Custom' },
       fields: { red: 'Warm filter', bright: 'Brightness', temp: 'Colour' },
@@ -142,7 +143,7 @@ import * as DR from '/dayrhythm/src/index.js';
       weekMode: 'Giorni', weekDaily: 'Uguale ogni giorno', weekWeekly: 'Per giorno', transition: 'Transizione', trOff: 'Nessuna',
       transitionHelp: 'I valori scivolano gradualmente verso la fascia successiva nel tempo scelto. Una modifica manuale dura fino alla fascia successiva.',
       saving: 'Salvataggio…', saved: 'Salvato', error: 'Errore, non salvato', note: 'I colori sono un’anteprima di un’immagine grigia sotto il filtro.',
-      a2hs: 'Aggiungi a schermata Home', openApp: 'Apri nell’app', close: 'Chiudi',
+      a2hs: 'Aggiungi a schermata Home', openApp: 'Apri nell’app', getApp: 'Scarica l’app Android', close: 'Chiudi',
       a2hsIos: 'Tocca Condividi, poi Aggiungi a schermata Home.', a2hsOther: 'Apri il menu del browser ⋮, poi Aggiungi a schermata Home / Installa app.',
       models: { off: 'Spento', soft: 'Tenue', evening: 'Sera', cinema: 'Cinema', night: 'Notte', deep: 'Notte fonda', custom: 'Personalizzato' },
       fields: { red: 'Filtro caldo', bright: 'Luminosità', temp: 'Colore' },
@@ -436,7 +437,7 @@ import * as DR from '/dayrhythm/src/index.js';
   // Android browser, not in the app: a link that hands this TV over to the app (pairing), or to the download page.
   var tvName = '';
   function openAppLink() {
-    var fallback = encodeURIComponent('https://github.com/MadeinTaly/midnightbeam/releases/latest');
+    var fallback = encodeURIComponent('https://github.com/MadeinTaly/midnightbeam/releases/latest/download/midnightbeam.apk');
     $('open-app').href = 'intent://add?host=' + encodeURIComponent(location.hostname) + '&port=' + (location.port || 80) +
       '&k=' + encodeURIComponent(key || '') + '&name=' + encodeURIComponent(tvName || location.hostname) +
       '#Intent;scheme=midnightbeam;package=dev.midnightbeam;S.browser_fallback_url=' + fallback + ';end';
@@ -444,6 +445,7 @@ import * as DR from '/dayrhythm/src/index.js';
   if (isAndroid && !inApp && key) {
     openAppLink();
     $('open-app').classList.remove('hidden');
+    $('get-app').classList.remove('hidden');
     api('/api/info').then(function (i) { tvName = i.name || ''; openAppLink(); }).catch(function () {});
   }
 

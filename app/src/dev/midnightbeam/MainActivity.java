@@ -43,6 +43,9 @@ public class MainActivity extends Activity
     private ImageView qr;
     private TextView remoteInfo;
     private Button newKey;
+    private Button getApp;
+    private boolean showingApp; // the QR code shows the Android app download instead of the phone remote
+    static final String APK_URL = "https://github.com/MadeinTaly/midnightbeam/releases/latest/download/midnightbeam.apk";
     private Button accessibility;
     private TextView accessibilityHint;
     private Slider red;
@@ -165,6 +168,19 @@ public class MainActivity extends Activity
         side.addView(newKey, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT));
 
+        getApp = new Button(this);
+        getApp.setAllCaps(false);
+        getApp.setTextColor(LIGHT);
+        getApp.setBackgroundColor(BUTTON_BACKGROUND);
+        getApp.setPadding(dp(20), dp(10), dp(20), dp(10));
+        getApp.setFocusable(true);
+        getApp.setOnClickListener(this);
+        getApp.setOnFocusChangeListener(this);
+        LinearLayout.LayoutParams appLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        appLp.topMargin = dp(10);
+        side.addView(getApp, appLp);
+
         timelineTitle = text("", 15, NORMAL);
         timelineTitle.setPadding(0, dp(12), 0, dp(6));
         screen.addView(timelineTitle);
@@ -214,6 +230,16 @@ public class MainActivity extends Activity
 
     /** Shows the QR code and the address of the phone remote when it is on. */
     private void refreshRemote() {
+        getApp.setText(showingApp ? t("Back to the phone remote", "Torna al telecomando")
+                : t("Android app", "App per Android"));
+        if (showingApp) { // QR code of the latest APK, for phones and tablets
+            qr.setVisibility(View.VISIBLE);
+            newKey.setVisibility(View.GONE);
+            qr.setImageBitmap(qrBitmap(APK_URL));
+            remoteInfo.setText(t("Scan with an Android phone to download the app",
+                    "Inquadra con un telefono Android per scaricare l'app") + "\ngithub.com/MadeinTaly/midnightbeam");
+            return;
+        }
         boolean on = remote.isChecked();
         qr.setVisibility(on ? View.VISIBLE : View.GONE);
         newKey.setVisibility(on ? View.VISIBLE : View.GONE);
@@ -255,6 +281,9 @@ public class MainActivity extends Activity
     public void onClick(View v) {
         if (v == accessibility) {
             startActivity(Compat.accessibilitySettings());
+        } else if (v == getApp) {
+            showingApp = !showingApp;
+            refreshRemote();
         } else if (v == newKey) {
             DimService.newPairingKey(prefs); // phones paired with the old code stop working
             refreshRemote();
@@ -265,7 +294,7 @@ public class MainActivity extends Activity
     @Override
     public void onFocusChange(View v, boolean hasFocus) {
         if (v instanceof TextView) ((TextView) v).setTextColor(hasFocus ? FOCUS : LIGHT);
-        v.setBackgroundColor(hasFocus ? FOCUS_BACKGROUND : v == newKey || v == accessibility ? BUTTON_BACKGROUND : Color.TRANSPARENT);
+        v.setBackgroundColor(hasFocus ? FOCUS_BACKGROUND : v == newKey || v == getApp || v == accessibility ? BUTTON_BACKGROUND : Color.TRANSPARENT);
     }
 
     @Override
