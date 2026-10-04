@@ -31,7 +31,7 @@ to be restarted to pick up new values from automation tools.
 <sub>Effect on a test pattern, simulated with the same colour and blending formula the app uses
 (real screen captures do not include overlays on many TV boxes).</sub>
 
-New in 1.6: a new phone app (welcome screen, Home, Devices, Scenes, Settings) and dayrhythm 0.3.0.
+New in 1.6: no blue anywhere in the interface (warm blacks, red and amber), a new phone app (welcome screen, Home, Devices, Scenes, Settings) and dayrhythm 0.3.0.
 
 New in 1.5: the app is now called **MidnightBeam** (new package id `dev.midnightbeam`, so the previous
 RedMoonBeam app has to be uninstalled and this one installed; settings are not carried over), with new artwork.
@@ -86,7 +86,8 @@ app on `127.0.0.1:8765` only). The first time it asks whether to **use the filte
 - **Home**: the selected device with its power button, a preview of the filter, scenes, the warm filter /
   brightness / colour temperature sliders and the schedule (with [dayrhythm](https://github.com/MadeinTaly/dayrhythm)).
 - **Devices**: this phone and every saved TV, with their state and a power button each; tap one to control it,
-  the pencil renames or removes it. The app forwards the requests to the TV with its saved pairing key
+  the ⋯ button renames or removes it, or **Apply to…** copies its filter settings and schedule (with saved days) to
+  the devices you choose. **Sync all devices** sends every change to all saved TVs at once (this phone excluded). The app forwards the requests to the TV with its saved pairing key
   (the page never sees the keys).
 - **Scenes**: the built-in settings plus your own (saved on the phone).
 - **Settings**: language, the *Display over other apps* permission, the optional accessibility mode.

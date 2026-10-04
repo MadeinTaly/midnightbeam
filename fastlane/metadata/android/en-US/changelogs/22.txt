@@ -1,0 +1,3 @@
+* "Apply to…" in the device menu: copy the filter settings and the schedule (with saved days) from one device to the ones you choose
+* "Sync all devices": every change goes to all saved TVs at once
+* No more blue in the interface: warm blacks with red and amber accents (phone app, browser remote, TV screen)

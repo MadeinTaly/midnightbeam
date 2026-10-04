@@ -2,18 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Theme: the app palette (primary #FF2B2B, accent #FF6B4D, light #FFD9B3, background #0B0B0F, surface #20304A).
+/* Theme: the app palette (primary #FF2B2B, accent #FF6B4D, light #FFD9B3, background #0B0B0F, surface #1C1513).
    The page is always dark; text colours keep WCAG AA contrast on their backgrounds. */
 :root, .dark {
   --app-primary: #ff2b2b;
   --app-bg: #0b0b0f;
-  --app-surface: #20304a;
-  --app-surface-soft: #2b3f5e;
+  --app-surface: #1c1513;
+  --app-surface-soft: #2a1f1b;
   --app-ink: #ffd9b3;
   --app-muted: #c9a88a;
   --app-accent: #ff6b4d;
   --app-on-accent: #0b0b0f;
-  --app-border: #3d5378;
+  --app-border: #3d2d27;
   --app-shadow: 0 12px 40px rgb(0 0 0 / 35%);
   --app-radius: 28px 28px 12px 28px;
   color-scheme: dark;
@@ -29,7 +29,7 @@
   line-height: 1.5;
 }
 .water-ambient { position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: -1; opacity: .3; }
-.water-glow { position: absolute; inset: -15%; background: radial-gradient(ellipse at 72% 20%, rgb(255 43 43 / .5), transparent 65%), radial-gradient(ellipse at 20% 85%, rgb(32 48 74 / .8), transparent 55%); filter: blur(30px); animation: water-drift 28s ease-in-out infinite alternate; }
+.water-glow { position: absolute; inset: -15%; background: radial-gradient(ellipse at 72% 20%, rgb(255 43 43 / .5), transparent 65%), radial-gradient(ellipse at 20% 85%, rgb(40 18 14 / .8), transparent 55%); filter: blur(30px); animation: water-drift 28s ease-in-out infinite alternate; }
 @keyframes water-drift { from { transform: translate3d(-1%, -1%, 0) rotate(-2deg) scale(1); } to { transform: translate3d(2%, 2%, 0) rotate(3deg) scale(1.04); } }
 @media (prefers-reduced-motion: reduce) { .water-ambient * { animation: none !important; } }
 .app-shell h1 { letter-spacing: -.045em; font-weight: 650; }
@@ -74,7 +74,7 @@ day-rhythm {
   display:block;
   --dr-bg: var(--app-bg); --dr-surface: var(--app-surface); --dr-surface-soft: var(--app-surface-soft);
   --dr-ink: var(--app-ink); --dr-muted: var(--app-muted); --dr-accent: var(--app-accent);
-  --dr-accent-soft: #4a3447; --dr-accent-ink: var(--app-on-accent); --dr-focus: var(--app-accent);
+  --dr-accent-soft: #4a2a22; --dr-accent-ink: var(--app-on-accent); --dr-focus: var(--app-accent);
   --dr-danger: #ff8a7a; --dr-border: var(--app-border); --dr-shadow: var(--app-shadow);
   --dr-overlay: #0b0b0fcc; --dr-now: var(--app-primary);
 }

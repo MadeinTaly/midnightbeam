@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#0b0f1a">
+  <meta name="theme-color" content="#0a0807">
   <title>MidnightBeam</title>
   <!-- The phone app's own page (served on loopback by the app only). The TV and the browser remote use remote.html. -->
   <style>
     :root {
-      --bg: #0b0f1a; --bg2: #101626; --card: #131b2c; --card2: #1a2438; --line: rgb(255 255 255 / 7%);
-      --ink: #f3f5f9; --muted: #8e98ac; --red: #ff4d4d; --red2: #ff6b4d; --blue: #4d7cff; --cream: #ffd9b3;
+      --bg: #0a0807; --bg2: #100c0b; --card: #161110; --card2: #1f1815; --line: rgb(255 255 255 / 7%);
+      --ink: #f6efe9; --muted: #a8978c; --red: #ff4d4d; --red2: #ff6b4d; --cream: #ffd9b3;
       --green: #3ddc97; --radius: 22px;
       color-scheme: dark;
     }
@@ -19,7 +19,7 @@
       font-family: "Google Sans", "Segoe UI", Roboto, system-ui, sans-serif; line-height: 1.4;
       -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none;
       min-height: 100vh;
-      background: radial-gradient(ellipse 80% 45% at 90% -5%, rgb(77 124 255 / 16%), transparent 70%),
+      background: radial-gradient(ellipse 80% 45% at 90% -5%, rgb(255 107 77 / 10%), transparent 70%),
                   radial-gradient(ellipse 70% 40% at 0% 0%, rgb(255 77 77 / 14%), transparent 70%), var(--bg);
     }
     button, input, select { font: inherit; color: inherit; }
@@ -35,11 +35,11 @@
     .icon-btn { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; color: var(--ink); }
     .icon-btn:active { background: var(--card2); }
     .wordmark { font-weight: 700; letter-spacing: -.03em;
-      background: linear-gradient(90deg, #ffe3d1 0%, #ff8a6b 38%, #ff5a5a 52%, #9db8ff 62%, #e8efff 100%);
+      background: linear-gradient(90deg, #ffe3d1 0%, #ff8a6b 38%, #ff5a5a 52%, #ffb38a 62%, #ffd9b3 100%);
       -webkit-background-clip: text; background-clip: text; color: transparent;
       filter: drop-shadow(0 0 14px rgb(255 77 77 / 35%)); }
     .spark { color: var(--red); font-size: .8em; vertical-align: super; margin-left: 2px; text-shadow: 0 0 10px var(--red); }
-    .tagline { font-family: ui-monospace, "Roboto Mono", "DejaVu Sans Mono", monospace; color: #c9d2e3; font-size: .95rem; }
+    .tagline { font-family: ui-monospace, "Roboto Mono", "DejaVu Sans Mono", monospace; color: #ddd0c7; font-size: .95rem; }
 
     .card { background: linear-gradient(180deg, var(--card), var(--bg2)); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; }
     .stack > * + * { margin-top: 12px; }
@@ -51,7 +51,7 @@
 
     /* power button */
     .power { width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0;
-      background: #2a3347; color: #c8d0de; transition: background .2s, box-shadow .2s; }
+      background: #2c221e; color: #d9ccc4; transition: background .2s, box-shadow .2s; }
     .power.on { background: radial-gradient(circle at 35% 30%, #ff8080, var(--red) 60%); color: #fff; box-shadow: 0 0 22px rgb(255 77 77 / 55%); }
     .power svg.i { width: 26px; height: 26px; stroke-width: 2.2; }
 
@@ -69,22 +69,22 @@
     .scenes { display: flex; gap: 10px; overflow-x: auto; padding: 4px 2px 6px; margin: 16px -2px 4px; scrollbar-width: none; }
     .scenes::-webkit-scrollbar { display: none; }
     .scene { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 72px; }
-    .scene .ring { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; background: var(--card2); border: 1px solid var(--line); color: #dfe5f0; transition: .2s; }
-    .scene span { font-size: .8rem; color: #c9d2e3; white-space: nowrap; }
+    .scene .ring { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; background: var(--card2); border: 1px solid var(--line); color: #eadfd8; transition: .2s; }
+    .scene span { font-size: .8rem; color: #ddd0c7; white-space: nowrap; }
     .scene[aria-pressed="true"] .ring { background: radial-gradient(circle at 40% 30%, #6b2a33, #3a1720); border: 2px solid var(--red); color: #ffd0c4; box-shadow: 0 0 18px rgb(255 77 77 / 45%); }
     .scene[aria-pressed="true"] span { color: var(--ink); font-weight: 600; }
 
     /* sliders */
     .slider-card { display: grid; grid-template-columns: 32px 1fr auto; align-items: center; gap: 4px 12px; }
     .slider-card .lbl { font-weight: 600; }
-    .slider-card .val { color: #c9d2e3; font-variant-numeric: tabular-nums; }
+    .slider-card .val { color: #ddd0c7; font-variant-numeric: tabular-nums; }
     .slider-card input { grid-column: 2 / 4; }
     .slider-card .ic { grid-row: 1 / 3; align-self: center; }
     .ic-red { color: var(--red); } .ic-cream { color: var(--cream); } .ic-amber { color: #ffb15c; }
     input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 28px; background: transparent; margin: 0; --p: 50%; --c1: var(--red); --c2: var(--red2); }
-    input[type=range]::-webkit-slider-runnable-track { height: 6px; border-radius: 6px; background: linear-gradient(90deg, var(--c1), var(--c2) var(--p), #2a3347 var(--p)); }
+    input[type=range]::-webkit-slider-runnable-track { height: 6px; border-radius: 6px; background: linear-gradient(90deg, var(--c1), var(--c2) var(--p), #2c221e var(--p)); }
     input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 24px; height: 24px; margin-top: -9px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 5px rgb(255 255 255 / 12%), 0 2px 8px rgb(0 0 0 / 50%); }
-    input[type=range]::-moz-range-track { height: 6px; border-radius: 6px; background: #2a3347; }
+    input[type=range]::-moz-range-track { height: 6px; border-radius: 6px; background: #2c221e; }
     input[type=range]::-moz-range-progress { height: 6px; border-radius: 6px; background: linear-gradient(90deg, var(--c1), var(--c2)); }
     input[type=range]::-moz-range-thumb { width: 24px; height: 24px; border: 0; border-radius: 50%; background: #fff; }
     #r-red { --c1: #ff3b3b; --c2: #ff7a5c; }
@@ -96,38 +96,38 @@
     .row-link .t { font-weight: 600; }
     .chev { color: var(--muted); }
 
-    .banner { display: flex; gap: 12px; align-items: center; text-decoration: none; border-color: rgb(255 77 77 / 45%); background: linear-gradient(180deg, #2a1418, #1a1016); }
+    .banner { display: flex; gap: 12px; align-items: center; text-decoration: none; border-color: rgb(255 77 77 / 45%); background: linear-gradient(180deg, #2a1418, #1a0f0d); }
 
     /* lists (scenes, devices) */
     .list > * + * { margin-top: 12px; }
     .item { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; padding: 12px; border-radius: var(--radius); background: linear-gradient(180deg, var(--card), var(--bg2)); border: 1px solid var(--line); }
-    .item.active { border-color: rgb(255 77 77 / 55%); background: linear-gradient(180deg, #1d1a2c, #15121f); }
+    .item.active { border-color: rgb(255 77 77 / 55%); background: linear-gradient(180deg, #221512, #170f0d); }
     .thumb { width: 84px; height: 64px; border-radius: 14px; flex-shrink: 0; display: grid; place-items: center; color: #fff; position: relative; overflow: hidden; }
     .thumb svg.i { width: 30px; height: 30px; filter: drop-shadow(0 1px 3px rgb(0 0 0 / 60%)); }
-    .thumb.dashed { background: transparent; border: 1.5px dashed #3a4560; color: var(--muted); }
+    .thumb.dashed { background: transparent; border: 1.5px dashed #4a3a34; color: var(--muted); }
     .item .grow { flex: 1; min-width: 0; }
     .item .t { font-weight: 600; font-size: 1.02rem; }
     .item .d { color: var(--muted); font-size: .85rem; }
-    .radio { width: 24px; height: 24px; border-radius: 50%; border: 2px solid #4a5570; display: grid; place-items: center; flex-shrink: 0; }
+    .radio { width: 24px; height: 24px; border-radius: 50%; border: 2px solid #5a4842; display: grid; place-items: center; flex-shrink: 0; }
     .radio.on { background: var(--red); border-color: var(--red); color: #fff; }
     .radio svg.i { width: 15px; height: 15px; stroke-width: 3; }
-    .dev-ic { width: 56px; height: 56px; display: grid; place-items: center; color: #c8d0de; flex-shrink: 0; }
+    .dev-ic { width: 56px; height: 56px; display: grid; place-items: center; color: #d9ccc4; flex-shrink: 0; }
     .dev-ic svg.i { width: 36px; height: 36px; stroke-width: 1.5; }
-    .add-ic { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: #24304a; color: #dfe5f0; flex-shrink: 0; margin: 6px; }
+    .add-ic { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: #2c211d; color: #eadfd8; flex-shrink: 0; margin: 6px; }
 
     /* buttons */
     .btn { text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 54px; border-radius: 999px; font-weight: 600; font-size: 1.05rem; }
-    .btn-grad { background: linear-gradient(90deg, #ff4d4d, #c2408a 50%, #3d6dff); color: #fff; box-shadow: 0 8px 28px rgb(122 70 255 / 30%); }
+    .btn-grad { background: linear-gradient(90deg, #ff4d4d, #ff6b4d 50%, #ffa53d); color: #fff; box-shadow: 0 8px 28px rgb(255 107 77 / 30%); }
     .btn-soft { background: var(--card2); color: var(--ink); border: 1px solid var(--line); }
     .btn-danger { background: transparent; color: #ff8a7a; border: 1px solid rgb(255 77 77 / 40%); }
-    .link-btn { color: #9db8ff; font-weight: 500; padding: 12px; display: inline-flex; gap: 8px; align-items: center; }
+    .link-btn { color: #ffb38a; font-weight: 500; padding: 12px; display: inline-flex; gap: 8px; align-items: center; }
     .seg { display: flex; gap: 6px; background: var(--card2); padding: 4px; border-radius: 999px; }
     .seg button { flex: 1; min-height: 40px; border-radius: 999px; color: var(--muted); font-weight: 600; }
-    .seg button[aria-pressed="true"] { background: #2d3a56; color: var(--ink); }
-    .field { display: block; width: 100%; min-height: 50px; padding: 12px 16px; border-radius: 14px; border: 1px solid #2c3852; background: #0f1524; }
+    .seg button[aria-pressed="true"] { background: #3d2b24; color: var(--ink); }
+    .field { display: block; width: 100%; min-height: 50px; padding: 12px 16px; border-radius: 14px; border: 1px solid #3a2d28; background: #0e0a09; }
     .switch { position: relative; width: 52px; height: 30px; flex-shrink: 0; }
     .switch input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
-    .switch span { position: absolute; inset: 0; border-radius: 99px; background: #2f3a52; transition: .2s; pointer-events: none; }
+    .switch span { position: absolute; inset: 0; border-radius: 99px; background: #3a2c27; transition: .2s; pointer-events: none; }
     .switch span::before { content: ""; position: absolute; left: 3px; top: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; transition: .2s; }
     .switch input:checked + span { background: var(--red); }
     .switch input:checked + span::before { transform: translateX(22px); }
@@ -143,49 +143,56 @@
     .choice .grow { flex: 1; }
     .choice .t { font-weight: 600; }
 
+    .check-row { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 10px 12px; border-radius: 16px; background: var(--card2); border: 1px solid var(--line); }
+    .check-row .grow { flex: 1; min-width: 0; }
+    .check-row .box { width: 24px; height: 24px; border-radius: 7px; border: 2px solid #5a4842; display: grid; place-items: center; flex-shrink: 0; color: #fff; }
+    .check-row[aria-checked="true"] .box { background: var(--red); border-color: var(--red); }
+    .check-row .box svg.i { width: 15px; height: 15px; stroke-width: 3; }
+    .check-row .dev-ic { width: 36px; height: 36px; } .check-row .dev-ic svg.i { width: 26px; height: 26px; }
+    .sync-card { display: flex; align-items: center; gap: 14px; }
     .types { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-    .type-opt { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 4px; border-radius: 16px; background: var(--card2); border: 1px solid var(--line); color: #c9d2e3; font-size: .82rem; }
+    .type-opt { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 4px; border-radius: 16px; background: var(--card2); border: 1px solid var(--line); color: #ddd0c7; font-size: .82rem; }
     .type-opt svg.i { width: 28px; height: 28px; }
-    .type-opt[aria-pressed="true"] { border: 2px solid var(--red); color: var(--ink); background: #2a1a24; }
+    .type-opt[aria-pressed="true"] { border: 2px solid var(--red); color: var(--ink); background: #2e1915; }
 
     /* setup checklist */
     .step { display: flex; gap: 14px; align-items: flex-start; }
-    .step-n { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0; font-weight: 700; background: #2a3347; color: var(--ink); }
+    .step-n { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0; font-weight: 700; background: #2c221e; color: var(--ink); }
     .step-n.done { background: var(--green); color: #06231a; }
     .step-n svg.i { width: 18px; height: 18px; stroke-width: 3; }
     .step .grow { flex: 1; min-width: 0; }
     .step .t { font-weight: 600; font-size: 1.05rem; }
     .tag { display: inline-block; font-size: .72rem; font-weight: 700; padding: 2px 8px; border-radius: 99px; margin-left: 6px; vertical-align: 2px; }
     .tag.req { background: rgb(255 77 77 / 18%); color: #ff9a8a; }
-    .tag.rec { background: rgb(77 124 255 / 18%); color: #9db8ff; }
+    .tag.rec { background: rgb(255 177 92 / 18%); color: #ffb38a; }
     .step .btn { margin-top: 10px; min-height: 46px; font-size: .95rem; }
     .btn[disabled] { opacity: .45; }
 
     /* bottom navigation */
     #tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; display: flex; justify-content: space-around;
-      padding: 8px 8px calc(env(safe-area-inset-bottom) + 8px); background: rgb(11 15 26 / 92%); border-top: 1px solid var(--line);
+      padding: 8px 8px calc(env(safe-area-inset-bottom) + 8px); background: rgb(10 8 7 / 94%); border-top: 1px solid var(--line);
       -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
-    #tabs button { flex: 1; max-width: 120px; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 0; color: #9aa4b8; font-size: .78rem; }
+    #tabs button { flex: 1; max-width: 120px; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 0; color: #a8978c; font-size: .78rem; }
     #tabs button[aria-current="page"] { color: var(--red); }
     #tabs button[aria-current="page"] svg.i { filter: drop-shadow(0 0 6px rgb(255 77 77 / 70%)); }
 
     /* bottom sheet */
-    #sheet-wrap { position: fixed; inset: 0; z-index: 20; background: rgb(3 5 10 / 65%); display: flex; align-items: flex-end; justify-content: center; }
-    #sheet { width: 100%; max-width: 560px; max-height: 88vh; overflow-y: auto; background: #121a2b; border-radius: 26px 26px 0 0; border: 1px solid var(--line);
+    #sheet-wrap { position: fixed; inset: 0; z-index: 20; background: rgb(0 0 0 / 70%); display: flex; align-items: flex-end; justify-content: center; }
+    #sheet { width: 100%; max-width: 560px; max-height: 88vh; overflow-y: auto; background: #15100e; border-radius: 26px 26px 0 0; border: 1px solid var(--line);
       padding: 10px 18px calc(env(safe-area-inset-bottom) + 22px); }
-    #sheet .grab { width: 40px; height: 4px; border-radius: 4px; background: #3a4560; margin: 0 auto 14px; }
+    #sheet .grab { width: 40px; height: 4px; border-radius: 4px; background: #4a3a34; margin: 0 auto 14px; }
     #sheet h2 { margin: 0 0 12px; font-size: 1.3rem; }
     #toast { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 92px); transform: translateX(-50%); z-index: 30;
-      background: #26324a; color: var(--ink); padding: 10px 18px; border-radius: 999px; font-size: .9rem; box-shadow: 0 6px 20px rgb(0 0 0 / 40%); }
-    ol.steps { padding-left: 20px; margin: 0; color: #c9d2e3; } ol.steps li + li { margin-top: 6px; }
+      background: #2a201c; color: var(--ink); padding: 10px 18px; border-radius: 999px; font-size: .9rem; box-shadow: 0 6px 20px rgb(0 0 0 / 40%); }
+    ol.steps { padding-left: 20px; margin: 0; color: #ddd0c7; } ol.steps li + li { margin-top: 6px; }
 
     day-rhythm {
       display: block;
       --dr-bg: var(--bg); --dr-surface: var(--card); --dr-surface-soft: var(--card2);
       --dr-ink: var(--ink); --dr-muted: var(--muted); --dr-accent: var(--red2);
-      --dr-accent-soft: #3a2433; --dr-accent-ink: #0b0f1a; --dr-focus: var(--red2);
-      --dr-danger: #ff8a7a; --dr-border: #2c3852; --dr-shadow: 0 12px 40px rgb(0 0 0 / 35%);
-      --dr-overlay: #0b0f1acc; --dr-now: var(--red);
+      --dr-accent-soft: #3a1f1a; --dr-accent-ink: #0a0807; --dr-focus: var(--red2);
+      --dr-danger: #ff8a7a; --dr-border: #3a2d28; --dr-shadow: 0 12px 40px rgb(0 0 0 / 35%);
+      --dr-overlay: #0a0807cc; --dr-now: var(--red);
     }
     @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
   </style>
@@ -398,6 +405,9 @@ import * as DR from '/dayrhythm/src/index.js';
     pencil: '<path d="M4 20h4.2L19.4 8.8a2.1 2.1 0 0 0-3-3L5.2 17v3"/>',
     trash: '<path d="M4 7h16M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13"/>',
     alert: '<path d="M12 3.5l9.5 16.5h-19z"/><path d="M12 10v4.5M12 17.2v.3"/>',
+    more: '<circle cx="5.5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18.5" cy="12" r="1.6"/>',
+    sync: '<path d="M4 12a8 8 0 0 1 13.7-5.6L20 8.7M20 4v4.7h-4.7"/><path d="M20 12a8 8 0 0 1-13.7 5.6L4 15.3M4 20v-4.7h4.7"/>',
+    copy: '<rect x="8.5" y="8.5" width="12" height="12" rx="2"/><path d="M15.5 8.5V5a1.5 1.5 0 0 0-1.5-1.5H5A1.5 1.5 0 0 0 3.5 5v9A1.5 1.5 0 0 0 5 15.5h3.5"/>',
     qr: '<path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4z"/><path d="M14 14h2.5v2.5H14zM17.5 17.5H20V20h-2.5zM14 19v1M20 14v1"/>',
     link: '<path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1"/><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1"/>'
   };
@@ -431,6 +441,10 @@ import * as DR from '/dayrhythm/src/index.js';
       addDevice: 'Add device', addSub: 'TV, projector or another phone', scanQr: 'Scan the QR code',
       addSteps: ['On the TV, open MidnightBeam: the QR code is on the right (Phone remote on).', 'Tap Scan the QR code and point the camera at it.', 'MidnightBeam opens again with the TV saved. If the camera shows a link instead, tap it and choose MidnightBeam.'],
       noCamera: 'No camera app found: paste the link instead',
+      options: 'Options', applyTo: 'Apply to…', applyTitle: 'Apply “{name}” to…', applyWhat: 'What to copy', applyFilter: 'Filter settings (warm filter, brightness, colour)',
+      applySched: 'Schedule and saved days', applyGo: 'Apply to {n} devices', applyGo1: 'Apply to 1 device', applyNone: 'Choose at least one device',
+      applied: 'Applied to {n} of {t}', appliedFail: 'not reachable: {names}', applying: 'Applying…', noOthers: 'There are no other devices yet: add one first.',
+      sync: 'Sync all devices', syncSub: 'Every change you make goes to all your saved TVs at once ({n}). This phone is not included.', syncOn: 'sync on', syncDone: 'All TVs now follow “{name}”',
       foundTitle: 'Found on your network', foundHint: 'Enter the code shown on its screen under the QR code', searching: 'Looking for TVs with MidnightBeam (Phone remote on)…', noneFound: 'None found yet: on the TV, open MidnightBeam and turn on Phone remote.',
       manual: 'Or add it by hand, with what the TV shows under the QR code', address: 'Address', code: 'Code', add: 'Add',
       badLink: 'Check the address and the code shown on the TV', needCode: 'Enter the code shown on the TV under the QR code',
@@ -470,6 +484,10 @@ import * as DR from '/dayrhythm/src/index.js';
       addDevice: 'Aggiungi dispositivo', addSub: 'TV, proiettore o un altro telefono', scanQr: 'Scansiona il QR',
       addSteps: ['Sul TV apri MidnightBeam: il QR è a destra (Telecomando dal telefono attivo).', 'Tocca Scansiona il QR e inquadralo con la fotocamera.', 'MidnightBeam si riapre con il TV salvato. Se la fotocamera mostra un link, toccalo e scegli MidnightBeam.'],
       noCamera: 'Nessuna app fotocamera: incolla il link',
+      options: 'Opzioni', applyTo: 'Applica anche a…', applyTitle: 'Applica “{name}” anche a…', applyWhat: 'Cosa copiare', applyFilter: 'Impostazioni del filtro (filtro caldo, luminosità, colore)',
+      applySched: 'Programmazione e giornate salvate', applyGo: 'Applica a {n} dispositivi', applyGo1: 'Applica a 1 dispositivo', applyNone: 'Scegli almeno un dispositivo',
+      applied: 'Applicato a {n} su {t}', appliedFail: 'non raggiungibili: {names}', applying: 'Applico…', noOthers: 'Non ci sono ancora altri dispositivi: aggiungine uno.',
+      sync: 'Sincronizza tutti i dispositivi', syncSub: 'Ogni modifica che fai va a tutti i TV salvati insieme ({n}). Questo telefono è escluso.', syncOn: 'sincronizzati', syncDone: 'Tutti i TV ora seguono “{name}”',
       foundTitle: 'Trovati in rete', foundHint: 'Inserisci il codice mostrato sul suo schermo sotto il QR', searching: 'Cerco TV con MidnightBeam (telecomando dal telefono attivo)…', noneFound: 'Nessuno ancora: sul TV apri MidnightBeam e attiva Telecomando dal telefono.',
       manual: 'Oppure aggiungilo a mano, con quello che il TV mostra sotto il QR', address: 'Indirizzo', code: 'Codice', add: 'Aggiungi',
       badLink: 'Controlla indirizzo e codice mostrati sul TV', needCode: 'Inserisci il codice mostrato sul TV sotto il QR',
@@ -600,6 +618,7 @@ import * as DR from '/dayrhythm/src/index.js';
     else if (reach === 'key') st.innerHTML = '<span class="dot"></span><span class="muted">' + L.keyChanged + '</span>';
     else if (reach === 'down') st.innerHTML = '<span class="dot"></span><span class="muted">' + L.offline + '</span>';
     else st.innerHTML = '<span class="muted">' + L.checking + '</span>';
+    if (syncOn() && devices.length) st.innerHTML += '<span class="muted"> · ' + L.syncOn + '</span>';
     $('h-power').classList.toggle('on', !!(state && state.on && reach === 'ok'));
     $('h-power').setAttribute('aria-pressed', String(!!(state && state.on)));
     $('perm-banner').classList.toggle('hidden', !!cur || app.overlay);
@@ -621,7 +640,10 @@ import * as DR from '/dayrhythm/src/index.js';
     renderDevice();
   }
   function refresh() { var id = cur; return api('/api/state').then(function (s) { if (id === cur) show(s); }, function (e) { if (id === cur) fail(e); }); }
-  function setValues(v) { return api('/api/set', v).then(show, function (e) { fail(e); toast(e && e.status === 403 ? L.keyChanged : L.unreachable); }); }
+  function setValues(v) {
+    broadcast('/api/set', v);
+    return api('/api/set', v).then(show, function (e) { fail(e); toast(e && e.status === 403 ? L.keyChanged : L.unreachable); });
+  }
 
   ['r-red', 'r-bright', 'r-temp'].forEach(function (id) {
     $(id).addEventListener('input', function () {
@@ -736,6 +758,10 @@ import * as DR from '/dayrhythm/src/index.js';
   }
   function renderDevices() {
     var box = $('d-list'); box.innerHTML = '';
+    var sc = el('div', 'card sync-card', '<span class="ic-red">' + icon('sync') + '</span><span class="grow" style="flex:1;min-width:0"><span class="t" style="font-weight:600">' + L.sync + '</span><br><span class="small muted">' + fmt(L.syncSub, { n: devices.length }) + '</span></span><label class="switch"><input id="sync-on" type="checkbox"' + (syncOn() ? ' checked' : '') + '><span></span></label>');
+    box.appendChild(sc);
+    $('sync-on').setAttribute('aria-label', L.sync);
+    $('sync-on').onchange = function () { setSync($('sync-on').checked); };
     [{ id: '', name: L.thisDevice, sub: localLabel() }].concat(devices.map(function (d) { return { id: d.id, name: d.name, sub: d.host }; })).forEach(function (d) {
       var ds = devState[d.id], on = ds && ds.ok && ds.s.on, row = el('div', 'item' + (d.id === cur ? ' active' : ''));
       var status = !d.id ? '<span class="muted">' + (ds && ds.ok ? (on ? L.filterOn : L.filterOff) : '') + '</span>'
@@ -746,11 +772,9 @@ import * as DR from '/dayrhythm/src/index.js';
       main.type = 'button'; main.style.cssText = 'display:flex;align-items:center;gap:12px;flex:1;min-width:0;text-align:left';
       main.onclick = function () { selectDevice(d.id); go('home'); if (needsSetup()) setTimeout(permissionPopup, 60); };
       row.appendChild(main);
-      if (d.id) {
-        var ed = el('button', 'icon-btn', icon('pencil')); ed.type = 'button'; ed.setAttribute('aria-label', L.rename);
-        ed.onclick = function () { deviceSheet(d); };
-        row.appendChild(ed);
-      }
+      var ed = el('button', 'icon-btn', icon('more')); ed.type = 'button'; ed.setAttribute('aria-label', L.options);
+      ed.onclick = function () { deviceSheet(d); };
+      row.appendChild(ed);
       var p = el('button', 'power' + (on ? ' on' : ''), icon('power')); p.type = 'button'; p.setAttribute('aria-label', L.power);
       p.disabled = !(ds && ds.ok);
       p.onclick = function () {
@@ -803,6 +827,86 @@ import * as DR from '/dayrhythm/src/index.js';
       }, function () { toast(L.badLink); });
     };
   }
+  // ---- Copy one device's settings to others ("Apply to…") ----
+  function allDevices() { return [{ id: '', name: L.thisDevice }].concat(devices.map(function (d) { return { id: d.id, name: d.name }; })); }
+  function checkRow(label, iconName, checked) {
+    var b = el('button', 'check-row', '<span class="box">' + icon('check') + '</span>' + (iconName ? '<span class="dev-ic">' + icon(iconName) + '</span>' : '') + '<span class="grow">' + esc(label) + '</span>');
+    b.type = 'button'; b.setAttribute('role', 'checkbox'); b.setAttribute('aria-checked', String(checked));
+    b.onclick = function () { b.setAttribute('aria-checked', String(b.getAttribute('aria-checked') !== 'true')); if (b.onchecked) b.onchecked(); };
+    return b;
+  }
+  function applySheet(src) {
+    var others = allDevices().filter(function (x) { return x.id !== src.id; });
+    var name = src.id ? src.name : L.thisDevice;
+    if (!devices.length && !src.id) { toast(L.noOthers); return; }
+    openSheet('<h2>' + esc(fmt(L.applyTitle, { name: name })) + '</h2><div class="stack"><div class="list" id="ap-devs"></div>' +
+      '<div class="small muted">' + L.applyWhat + '</div><div class="list" id="ap-what"></div>' +
+      '<button class="btn btn-grad" type="button" id="ap-go"></button></div>');
+    var rows = others.map(function (o) { var r = checkRow(o.name, devType(o.id), !!o.id); r.dataset.id = o.id; $('ap-devs').appendChild(r); return r; });
+    var wf = checkRow(L.applyFilter, null, true), ws = checkRow(L.applySched, null, true);
+    $('ap-what').appendChild(wf); $('ap-what').appendChild(ws);
+    function label() {
+      var n = rows.filter(function (r) { return r.getAttribute('aria-checked') === 'true'; }).length;
+      $('ap-go').textContent = n === 1 ? L.applyGo1 : fmt(L.applyGo, { n: n });
+    }
+    rows.forEach(function (r) { r.onchecked = label; }); label();
+    $('ap-go').onclick = function () {
+      var targets = rows.filter(function (r) { return r.getAttribute('aria-checked') === 'true'; }).map(function (r) { return r.dataset.id; });
+      if (!targets.length) { toast(L.applyNone); return; }
+      $('ap-go').disabled = true; $('ap-go').textContent = L.applying;
+      copyTo(src.id, targets, wf.getAttribute('aria-checked') === 'true', ws.getAttribute('aria-checked') === 'true').then(function (r) {
+        closeSheet(); reportCopy(r, targets.length);
+      });
+    };
+  }
+  function reportCopy(r, total) {
+    var msg = fmt(L.applied, { n: r.ok.length, t: total });
+    if (r.failed.length) msg += ' · ' + fmt(L.appliedFail, { names: r.failed.map(devName).join(', ') });
+    toast(msg);
+    if (r.ok.indexOf(cur) >= 0) { refresh(); loadScheduleSummary(); }
+    if (view === 'devices') probeAll();
+  }
+  // Reads the source device and writes the same values, schedule and saved days to every target.
+  function copyTo(srcId, targets, withFilter, withSched) {
+    return Promise.all([
+      withFilter ? api('/api/state', null, srcId) : null,
+      withSched ? api('/api/schedule', null, srcId) : null,
+      withSched ? api('/api/days', null, srcId).catch(function () { return []; }) : null
+    ]).then(function (src) {
+      var st = src[0], sc = src[1], days = src[2] || [];
+      return Promise.all(targets.map(function (t) {
+        var jobs = [];
+        if (st) jobs.push(api('/api/set', { on: st.on, red: st.red, bright: st.bright, temp: st.temp }, t));
+        if (sc) {
+          jobs.push(api('/api/schedule', { enabled: !!sc.enabled, value: sc.value, resolved: sc.resolved, transition: typeof sc.transition === 'number' ? sc.transition : 30 }, t));
+          days.forEach(function (d) { jobs.push(api('/api/days', { name: d.name, slots: d.slots }, t)); });
+        }
+        return Promise.all(jobs).then(function () { return { id: t, ok: true }; }, function () { return { id: t, ok: false }; });
+      }));
+    }, function () { return targets.map(function (t) { return { id: t, ok: false }; }); }).then(function (res) {
+      return { ok: res.filter(function (x) { return x.ok; }).map(function (x) { return x.id; }), failed: res.filter(function (x) { return !x.ok; }).map(function (x) { return x.id; }) };
+    });
+  }
+
+  // ---- Sync: every change goes to all saved TVs (this phone excluded) ----
+  function syncOn() { return store('mb_sync') === '1'; }
+  function syncTargets() { return devices.map(function (d) { return d.id; }).filter(function (id) { return id !== cur; }); }
+  function setSync(on) {
+    store('mb_sync', on ? '1' : null);
+    renderDevice();
+    if (!on) return;
+    var targets = syncTargets();
+    if (!targets.length) return;
+    copyTo(cur, targets, true, true).then(function (r) {
+      toast(fmt(L.syncDone, { name: devName(cur) }) + (r.failed.length ? ' · ' + fmt(L.appliedFail, { names: r.failed.map(devName).join(', ') }) : ''));
+      if (view === 'devices') probeAll();
+    });
+  }
+  function broadcast(path, body) {
+    if (!syncOn()) return;
+    syncTargets().forEach(function (t) { api(path, body, t).catch(function () {}); });
+  }
+
   // TVs announced on the network (mDNS) and not saved yet: tap one, then type its code.
   function listFound(round) {
     var box = $('ad-found');
@@ -822,13 +926,19 @@ import * as DR from '/dayrhythm/src/index.js';
     }).catch(function () {});
   }
   function deviceSheet(d) {
+    if (!d.id) { // this phone: nothing to rename or remove
+      openSheet('<h2>' + esc(d.name) + '</h2><div class="stack"><button class="btn btn-grad" type="button" id="dv-apply">' + icon('copy') + L.applyTo + '</button></div>');
+      $('dv-apply').onclick = function () { applySheet(d); };
+      return;
+    }
     var type = devType(d.id);
-    openSheet('<h2>' + esc(d.name) + '</h2><div class="stack"><label class="small muted" for="dv-name">' + L.rename + '</label><input class="field" id="dv-name" maxlength="40">' +
+    openSheet('<h2>' + esc(d.name) + '</h2><div class="stack"><button class="btn btn-soft" type="button" id="dv-apply">' + icon('copy') + L.applyTo + '</button><label class="small muted" for="dv-name">' + L.rename + '</label><input class="field" id="dv-name" maxlength="40">' +
       '<div class="small muted">' + L.type + '</div><div class="types" id="dv-types">' + TYPES.map(function (t) {
         return '<button type="button" class="type-opt" data-type="' + t + '" aria-pressed="' + (t === type) + '">' + icon(t) + '<span>' + L.types[t] + '</span></button>';
       }).join('') + '</div>' +
       '<button class="btn btn-grad" type="button" id="dv-save">' + L.save + '</button><button class="btn btn-danger" type="button" id="dv-del">' + icon('trash') + L.remove + '</button></div>');
     $('dv-name').value = d.name;
+    $('dv-apply').onclick = function () { applySheet(d); };
     Array.prototype.forEach.call($('dv-types').children, function (b) {
       b.onclick = function () {
         type = b.getAttribute('data-type');
@@ -984,11 +1094,11 @@ import * as DR from '/dayrhythm/src/index.js';
     return null;
   }
   function iconUri(mo) {
-    var fill = mo.id === 'off' ? '#26324a' : mo.id === 'custom' ? 'url(#g)' : previewCss(mo);
-    var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 24"><defs><linearGradient id="g"><stop offset="0" stop-color="#ff6b4d"/><stop offset=".55" stop-color="#6e2a24"/><stop offset="1" stop-color="#0b0f1a"/></linearGradient></defs>' +
-      '<rect x="2" y="2" width="28" height="17" rx="3" fill="' + fill + '" stroke="#e8edf6" stroke-width="2"/>' +
-      (mo.id === 'off' ? '<path d="M4 17L28 4M4 11L20 3M12 19L29 10" stroke="#8e98ac" stroke-width="1.5"/>' : '') +
-      '<rect x="11" y="21" width="10" height="2" rx="1" fill="#e8edf6"/></svg>';
+    var fill = mo.id === 'off' ? '#2a201c' : mo.id === 'custom' ? 'url(#g)' : previewCss(mo);
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 24"><defs><linearGradient id="g"><stop offset="0" stop-color="#ff6b4d"/><stop offset=".55" stop-color="#6e2a24"/><stop offset="1" stop-color="#0a0807"/></linearGradient></defs>' +
+      '<rect x="2" y="2" width="28" height="17" rx="3" fill="' + fill + '" stroke="#f2e9e3" stroke-width="2"/>' +
+      (mo.id === 'off' ? '<path d="M4 17L28 4M4 11L20 3M12 19L29 10" stroke="#a8978c" stroke-width="1.5"/>' : '') +
+      '<rect x="11" y="21" width="10" height="2" rx="1" fill="#f2e9e3"/></svg>';
     return { src: 'data:image/svg+xml,' + encodeURIComponent(svg) };
   }
   var weekly = false, transition = 30, enabled = false, schedule = null, scheduleLoaded = false;
@@ -1042,6 +1152,7 @@ import * as DR from '/dayrhythm/src/index.js';
   function save() {
     saveTimer = null; saving++;
     var p = payload(), id = saveDev;
+    if (id === cur) broadcast('/api/schedule', p);
     return api('/api/schedule', p, id).then(function () {
       if (!saveTimer) status.textContent = '✓ ' + L.saved;
       schedule = p; summary();
@@ -1057,8 +1168,14 @@ import * as DR from '/dayrhythm/src/index.js';
       rhythm.days = (Array.isArray(d) ? d : []).map(function (x) { return { id: x.name, name: x.name, slots: normSlots(x.slots) }; });
     }).catch(function () { rhythm.days = []; });
   }
-  rhythm.addEventListener('daysave', function (e) { e.detail.waitUntil(api('/api/days', { name: e.detail.name, slots: e.detail.slots }).then(loadDays)); });
-  rhythm.addEventListener('daydelete', function (e) { e.detail.waitUntil(api('/api/days', { name: e.detail.day.name, delete: true }).then(loadDays)); });
+  rhythm.addEventListener('daysave', function (e) {
+    broadcast('/api/days', { name: e.detail.name, slots: e.detail.slots });
+    e.detail.waitUntil(api('/api/days', { name: e.detail.name, slots: e.detail.slots }).then(loadDays));
+  });
+  rhythm.addEventListener('daydelete', function (e) {
+    broadcast('/api/days', { name: e.detail.day.name, delete: true });
+    e.detail.waitUntil(api('/api/days', { name: e.detail.day.name, delete: true }).then(loadDays));
+  });
   rhythm.addEventListener('error', function () { status.textContent = '✕ ' + L.error; });
   function loadScheduleSummary() {
     var id = cur;

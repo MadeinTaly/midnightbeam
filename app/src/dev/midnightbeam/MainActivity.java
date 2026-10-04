@@ -63,7 +63,7 @@ public class MainActivity extends Activity
     static final int ACCENT = Color.rgb(0xFF, 0x6B, 0x4D);
     static final int LIGHT = Color.rgb(0xFF, 0xD9, 0xB3);
     static final int BG = Color.rgb(0x0B, 0x0B, 0x0F);
-    static final int SURFACE = Color.rgb(0x20, 0x30, 0x4A);
+    static final int SURFACE = Color.rgb(0x2A, 0x1F, 0x1B); // warm dark, no blue: this app is against blue light
 
     static final int FOCUS = ACCENT;
     static final int NORMAL = LIGHT;
