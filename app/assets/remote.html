@@ -306,7 +306,7 @@ import * as DR from '/dayrhythm/src/index.js';
   function config() {
     return {
       theme: 'organic', colorScheme: 'dark', locale: lang, credits: 'minimal', week: weekly ? 'top' : 'off',
-      maxSlots: 12, minGap: 30, snap: 5, timeFormat: '24h', editor: 'full',
+      maxSlots: 12, minGap: 5, snap: 5, timeFormat: '24h', editor: 'full',
       messages: (function () {
         var o = {}; MODELS.forEach(function (mo) { o['model.' + mo.id] = L.models[mo.id]; });
         Object.keys(L.fields).forEach(function (k) { o['field.' + k] = L.fields[k]; });

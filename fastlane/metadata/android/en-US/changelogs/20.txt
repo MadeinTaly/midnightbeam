@@ -1,0 +1,2 @@
+* Phone app: a paired TV that changed address (e.g. after a reboot) is found again automatically
+* Schedule: smoother dragging, the edge follows the finger; slots can be as short as 5 minutes (dayrhythm 0.4.0)
