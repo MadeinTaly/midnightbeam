@@ -64,6 +64,21 @@ final class Devices {
         p.edit().putString(PREF, a.toString()).apply();
     }
 
+    /** The device answered at a new address: keep its name, key and type under the new host. */
+    static void move(SharedPreferences p, String oldHost, int port, String newHost) {
+        JSONArray a = load(p);
+        int dup = find(a, newHost, port);
+        if (dup >= 0) a.remove(dup); // an older entry for that address
+        int i = find(a, oldHost, port);
+        if (i < 0) return;
+        try {
+            a.getJSONObject(i).put("host", newHost);
+        } catch (JSONException e) {
+            throw new IllegalStateException(e);
+        }
+        p.edit().putString(PREF, a.toString()).apply();
+    }
+
     /** Kind of device, for its icon only (see AppApi). */
     static void setType(SharedPreferences p, String host, int port, String type) {
         JSONArray a = load(p);

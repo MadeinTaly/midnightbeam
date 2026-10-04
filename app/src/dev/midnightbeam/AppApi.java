@@ -25,9 +25,13 @@ import java.nio.charset.StandardCharsets;
  *   GET  /api/devices    saved devices [{"id":"host:port","name":..,"host":..,"port":..}] (keys stay in the app)
  *   POST /api/devices    {"op":"add","link":..} | {"op":"edit","id":..,"name":..,"type":..} (either) | {"op":"delete","id":..}
  *                        type: projector, tv, tablet, phone, monitor or other (icon only)
- *   ANY  /d/{host:port}/api/...   forwarded to that saved device with its pairing key
+ *   ANY  /d/{host:port}/api/...   forwarded to that saved device with its pairing key; if it does not answer it is
+ *                        searched on the local network (Finder) and, when found at a new address, the answer carries
+ *                        the header X-Moved-To: {newhost:port}
  */
 final class AppApi {
+    /** Old id -> new id of TVs found at a new address while the app runs, for pages still using the old id. */
+    private static final java.util.Map<String, String> MOVED = new java.util.concurrent.ConcurrentHashMap<>();
     private static final String[] TYPES = {"projector", "tv", "tablet", "phone", "monitor", "other"};
     private static final String[] FORWARDED = {"/api/info", "/api/state", "/api/set", "/api/schedule", "/api/days"};
 
@@ -104,36 +108,63 @@ final class AppApi {
         }
         String rest = slash > 3 ? path.substring(slash) : "";
         JSONObject d = Devices.byId(p, id);
+        String moved = null;
+        if (d == null && MOVED.containsKey(id)) {
+            moved = MOVED.get(id);
+            d = Devices.byId(p, moved);
+        }
         boolean allowed = false;
         for (String f : FORWARDED) allowed |= rest.equals(f);
         if (d == null || !allowed || !(method.equals("GET") || method.equals("POST"))) {
             RemoteServer.send(out, 404, "application/json", "{\"error\":\"not found\"}");
             return;
         }
-        int code;
-        byte[] answer;
+        String host = d.optString("host");
+        int port = d.optInt("port");
+        Object[] r;
         try {
-            HttpURLConnection c = (HttpURLConnection) new URL("http://" + d.optString("host") + ":" + d.optInt("port") + rest)
-                    .openConnection();
-            c.setConnectTimeout(2500);
-            c.setReadTimeout(4000);
-            c.setRequestMethod(method);
-            c.setRequestProperty("X-Key", d.optString("key"));
-            if (method.equals("POST")) {
-                c.setDoOutput(true);
-                c.setRequestProperty("Content-Type", "application/json");
-                try (OutputStream o = c.getOutputStream()) {
-                    o.write(body, 0, length);
-                }
-            }
-            code = c.getResponseCode();
-            InputStream in = code < 400 ? c.getInputStream() : c.getErrorStream();
-            answer = in == null ? new byte[0] : readAll(in);
+            r = call(host, port, d.optString("key"), rest, method, body, length);
         } catch (IOException e) {
-            RemoteServer.send(out, 502, "application/json", "{\"error\":\"unreachable\"}");
-            return;
+            // the TV may have got a new address (DHCP after a reboot): look for it with its pairing key
+            String found = Finder.find(id, host, port, d.optString("key"));
+            if (found == null) {
+                RemoteServer.send(out, 502, "application/json", "{\"error\":\"unreachable\"}");
+                return;
+            }
+            Devices.move(p, host, port, found);
+            moved = found + ":" + port;
+            MOVED.put(id, moved);
+            MOVED.put(host + ":" + port, moved);
+            try {
+                r = call(found, port, d.optString("key"), rest, method, body, length);
+            } catch (IOException e2) {
+                RemoteServer.send(out, 502, "application/json", "{\"error\":\"unreachable\"}", "X-Moved-To: " + moved);
+                return;
+            }
         }
-        RemoteServer.send(out, code, "application/json", answer);
+        RemoteServer.send(out, (Integer) r[0], "application/json", (byte[]) r[1], moved == null ? null : "X-Moved-To: " + moved);
+    }
+
+    /** One request to a TV: {status code, body}. */
+    private static Object[] call(String host, int port, String key, String rest, String method, byte[] body, int length)
+            throws IOException {
+        HttpURLConnection c = (HttpURLConnection) new URL("http://" + host + ":" + port + rest)
+                .openConnection();
+        c.setConnectTimeout(2500);
+        c.setReadTimeout(4000);
+        c.setRequestMethod(method);
+        c.setRequestProperty("X-Key", key);
+        if (method.equals("POST")) {
+            c.setDoOutput(true);
+            c.setRequestProperty("Content-Type", "application/json");
+            try (OutputStream o = c.getOutputStream()) {
+                o.write(body, 0, length);
+            }
+        }
+        int code = c.getResponseCode();
+        InputStream in = code < 400 ? c.getInputStream() : c.getErrorStream();
+        byte[] answer = in == null ? new byte[0] : readAll(in);
+        return new Object[] {code, answer};
     }
 
     private static byte[] readAll(InputStream in) throws IOException {

@@ -503,13 +503,17 @@ import * as DR from '/dayrhythm/src/index.js';
   if (wanted) { cur = wanted; store('mb_cur', cur); store('mb_welcomed', '1'); }
   function base(id) { return id ? '/d/' + id : ''; } // id = host:port, plain path characters
   function api(path, body, id) {
-    var ctl = window.AbortController ? new AbortController() : null, t = ctl && setTimeout(function () { ctl.abort(); }, 7000);
-    return fetch(base(id === undefined ? cur : id) + path, {
+    var dev = id === undefined ? cur : id;
+    // a TV that does not answer is searched on the network by the app, which takes a few seconds
+    var ctl = window.AbortController ? new AbortController() : null, t = ctl && setTimeout(function () { ctl.abort(); }, dev ? 15000 : 7000);
+    return fetch(base(dev) + path, {
       method: body ? 'POST' : 'GET', signal: ctl && ctl.signal,
       headers: body ? { 'X-Key': key, 'Content-Type': 'application/json' } : { 'X-Key': key },
       body: body ? JSON.stringify(body) : undefined
     }).then(function (r) {
       clearTimeout(t);
+      var moved = r.headers.get('X-Moved-To');
+      if (moved && dev) deviceMoved(dev, moved);
       if (!r.ok) { var e = new Error(r.status); e.status = r.status; throw e; }
       return r.json();
     }, function (e) { clearTimeout(t); throw e; });
@@ -521,6 +525,12 @@ import * as DR from '/dayrhythm/src/index.js';
     var d = devById(id); return d && TYPES.indexOf(d.type) >= 0 ? d.type : 'tv';
   }
   function localLabel() { return app.type === 'tablet' ? L.localTablet : L.local; }
+  // The app found a paired TV at a new address (it changed after a reboot): follow it.
+  function deviceMoved(oldId, newId) {
+    if (devState[oldId]) { devState[newId] = devState[oldId]; delete devState[oldId]; }
+    if (cur === oldId) { cur = newId; store('mb_cur', newId); setTimeout(refresh, 0); loadScheduleSummary(); }
+    loadDevices();
+  }
   function devName(id) {
     if (!id) return L.thisDevice;
     for (var i = 0; i < devices.length; i++) if (devices[i].id === id) return devices[i].name;
@@ -694,7 +704,11 @@ import * as DR from '/dayrhythm/src/index.js';
   function loadDevices() {
     return api('/api/devices', null, '').then(function (d) {
       devices = Array.isArray(d) ? d : [];
-      if (cur && !devices.some(function (x) { return x.id === cur; })) selectDevice('');
+      if (cur && !devById(cur)) {
+        // not in the list any more: deleted, or found at a new address (the answer then says where)
+        var missing = cur;
+        api('/api/info', null, missing).then(function () { if (cur === missing) selectDevice(''); }, function () { if (cur === missing) selectDevice(''); });
+      }
       renderDevice(); if (view === 'devices') renderDevices();
       devices.forEach(function (x) { if (x.name === x.host || TYPES.indexOf(x.type) < 0) identify(x); });
     }).catch(function () {});

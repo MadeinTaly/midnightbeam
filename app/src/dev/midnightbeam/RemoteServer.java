@@ -254,15 +254,25 @@ final class RemoteServer extends Thread {
     }
 
     static void send(OutputStream out, int code, String type, String body) throws IOException {
-        send(out, code, type, body.getBytes(StandardCharsets.UTF_8));
+        send(out, code, type, body.getBytes(StandardCharsets.UTF_8), null);
+    }
+
+    static void send(OutputStream out, int code, String type, String body, String extraHeader) throws IOException {
+        send(out, code, type, body.getBytes(StandardCharsets.UTF_8), extraHeader);
     }
 
     static void send(OutputStream out, int code, String type, byte[] b) throws IOException {
+        send(out, code, type, b, null);
+    }
+
+    /** extraHeader: one more "Name: value" header line, or null. */
+    static void send(OutputStream out, int code, String type, byte[] b, String extraHeader) throws IOException {
         String status = code == 200 ? "OK" : code == 403 ? "Forbidden" : code == 404 ? "Not Found" : code == 400 ? "Bad Request" : code == 502 ? "Bad Gateway" : "Error";
         String head = "HTTP/1.1 " + code + " " + status + "\r\n"
                 + "Content-Type: " + type + "\r\n"
                 + "Content-Length: " + b.length + "\r\n"
                 + "Cache-Control: no-store\r\n"
+                + (extraHeader != null ? extraHeader + "\r\n" : "")
                 + "Connection: close\r\n\r\n";
         out.write(head.getBytes(StandardCharsets.US_ASCII));
         out.write(b);
