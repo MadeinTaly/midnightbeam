@@ -22,6 +22,7 @@ import java.nio.charset.StandardCharsets;
  *
  *   GET  /api/app        {"overlay":bool,"accessibilityHint":bool,"accessibility":bool,"sdk":n,"version":..}
  *                        for the setup and settings screens
+ *   GET  /api/discovered TVs announced on the network (mDNS, see Discovery) and not saved yet
  *   GET  /api/devices    saved devices [{"id":"host:port","name":..,"host":..,"port":..}] (keys stay in the app)
  *   POST /api/devices    {"op":"add","link":..} | {"op":"edit","id":..,"name":..,"type":..} (either) | {"op":"delete","id":..}
  *                        type: projector, tv, tablet, phone, monitor or other (icon only)
@@ -32,6 +33,10 @@ import java.nio.charset.StandardCharsets;
 final class AppApi {
     /** Old id -> new id of TVs found at a new address while the app runs, for pages still using the old id. */
     private static final java.util.Map<String, String> MOVED = new java.util.concurrent.ConcurrentHashMap<>();
+
+    static void noteMoved(String oldId, String newId) {
+        MOVED.put(oldId, newId);
+    }
     private static final String[] TYPES = {"projector", "tv", "tablet", "phone", "monitor", "other"};
     private static final String[] FORWARDED = {"/api/info", "/api/state", "/api/set", "/api/schedule", "/api/days"};
 
@@ -64,7 +69,7 @@ final class AppApi {
                 if (d == null) continue;
                 out.put(new JSONObject().put("id", d.optString("host") + ":" + d.optInt("port"))
                         .put("name", d.optString("name")).put("host", d.optString("host")).put("port", d.optInt("port"))
-                        .put("type", d.optString("type")));
+                        .put("type", d.optString("type")).put("did", d.optString("did")));
             }
         } catch (JSONException e) {
             throw new IllegalStateException(e);
@@ -82,10 +87,12 @@ final class AppApi {
         JSONObject d = Devices.byId(p, id);
         if (d == null) return null;
         if (op.equals("edit")) {
-            String n = Devices.cleanName(j.optString("name", null)), t = j.optString("type", null);
+            String n = Devices.cleanName(j.optString("name", null)), t = j.optString("type", null), did = j.optString("did", null);
             boolean typeOk = false;
             for (String x : TYPES) typeOk |= x.equals(t);
-            if ((n == null || n.isEmpty()) && !typeOk) return null;
+            boolean didOk = did != null && did.matches("[0-9a-f]{1,32}");
+            if ((n == null || n.isEmpty()) && !typeOk && !didOk) return null;
+            if (didOk) Devices.setField(p, d.optString("host"), d.optInt("port"), "did", did);
             if (n != null && !n.isEmpty()) Devices.rename(p, d.optString("host"), d.optInt("port"), n);
             if (typeOk) Devices.setType(p, d.optString("host"), d.optInt("port"), t);
         } else if (op.equals("delete")) {

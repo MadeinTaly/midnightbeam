@@ -35,6 +35,7 @@ public class PhoneActivity extends Activity implements View.OnClickListener, Run
     private WebView web;
     private AppWebClient client;
     private TextView error;
+    private Discovery discovery;
     private String select = ""; // device to show after a pairing link, "" = the page's own choice
     private boolean needsLoad = true;
     private boolean failed;
@@ -73,6 +74,7 @@ public class PhoneActivity extends Activity implements View.OnClickListener, Run
         body.addView(error, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         setContentView(body);
 
+        discovery = new Discovery(this, prefs);
         handleIntent(getIntent());
     }
 
@@ -90,6 +92,7 @@ public class PhoneActivity extends Activity implements View.OnClickListener, Run
         Compat.startForegroundService(this, new Intent(this, DimService.class).putExtra("local", true));
         if (needsLoad) startLoad();
         web.onResume();
+        discovery.start(); // TVs on the network (mDNS), while this screen is open
     }
 
     @Override
@@ -97,6 +100,7 @@ public class PhoneActivity extends Activity implements View.OnClickListener, Run
         super.onPause();
         web.onPause();
         main.removeCallbacks(this);
+        discovery.stop();
         Compat.startForegroundService(this, new Intent(this, DimService.class).putExtra("local", false));
     }
 

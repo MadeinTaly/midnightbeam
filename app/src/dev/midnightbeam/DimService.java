@@ -61,6 +61,7 @@ public class DimService extends Service implements Runnable {
     /** The overlay could not be added: the "Display over other apps" permission is missing. */
     private volatile boolean blocked;
     private RemoteServer server;
+    private Advertiser advertiser;
 
     // Read by the server thread, so volatile.
     private volatile int red;
@@ -129,11 +130,16 @@ public class DimService extends Service implements Runnable {
         if (server != null && (!(remote || local) || server.lan != remote)) {
             server.shutdown();
             server = null;
+            if (advertiser != null) advertiser.stop();
         }
         if ((remote || local) && server == null) {
             pairingKey(prefs);
             server = new RemoteServer(this, remote);
             server.start();
+            if (remote) { // announced on the network only when it is reachable from it
+                if (advertiser == null) advertiser = new Advertiser(this);
+                advertiser.start(deviceName(), deviceId(prefs), Compat.deviceType(this));
+            }
         }
         if (!visible && !remote && !local && !scheduleOn) {
             stopForeground(true);
@@ -307,10 +313,9 @@ public class DimService extends Service implements Runnable {
 
     /** Device name and model, for naming this device in the phone app. */
     String infoJson() {
-        String name = android.provider.Settings.Global.getString(getContentResolver(), "device_name");
         try {
-            return new JSONObject().put("name", name != null && !name.isEmpty() ? name : android.os.Build.MODEL)
-                    .put("model", android.os.Build.MODEL).put("type", Compat.deviceType(this)).toString();
+            return new JSONObject().put("name", deviceName()).put("model", android.os.Build.MODEL)
+                    .put("type", Compat.deviceType(this)).put("id", deviceId(prefs)).toString();
         } catch (JSONException e) {
             throw new IllegalStateException(e);
         }
@@ -357,6 +362,23 @@ public class DimService extends Service implements Runnable {
         } catch (JSONException e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    String deviceName() {
+        String name = android.provider.Settings.Global.getString(getContentResolver(), "device_name");
+        return name != null && !name.isEmpty() ? name : android.os.Build.MODEL;
+    }
+
+    /** Random, stable id of this device: it names it on the network (mDNS), unlike the pairing key it is not secret. */
+    static String deviceId(SharedPreferences p) {
+        String id = p.getString("device_id", null);
+        if (id != null) return id;
+        byte[] b = new byte[8];
+        new SecureRandom().nextBytes(b);
+        StringBuilder sb = new StringBuilder();
+        for (byte x : b) sb.append(String.format("%02x", x & 0xff));
+        p.edit().putString("device_id", sb.toString()).apply();
+        return sb.toString();
     }
 
     static String pairingKey(SharedPreferences p) {
@@ -585,6 +607,7 @@ public class DimService extends Service implements Runnable {
             server.shutdown();
             server = null;
         }
+        if (advertiser != null) advertiser.stop();
     }
 
     @Override

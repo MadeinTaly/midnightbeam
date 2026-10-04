@@ -431,6 +431,7 @@ import * as DR from '/dayrhythm/src/index.js';
       addDevice: 'Add device', addSub: 'TV, projector or another phone', scanQr: 'Scan the QR code',
       addSteps: ['On the TV, open MidnightBeam: the QR code is on the right (Phone remote on).', 'Tap Scan the QR code and point the camera at it.', 'MidnightBeam opens again with the TV saved. If the camera shows a link instead, tap it and choose MidnightBeam.'],
       noCamera: 'No camera app found: paste the link instead',
+      foundTitle: 'Found on your network', foundHint: 'Enter the code shown on its screen under the QR code', searching: 'Looking for TVs with MidnightBeam (Phone remote on)…', noneFound: 'None found yet: on the TV, open MidnightBeam and turn on Phone remote.',
       manual: 'Or add it by hand, with what the TV shows under the QR code', address: 'Address', code: 'Code', add: 'Add',
       badLink: 'Check the address and the code shown on the TV', needCode: 'Enter the code shown on the TV under the QR code',
       added: 'Device added', rename: 'Name', save: 'Save', remove: 'Remove device', removeAgain: 'Tap again to remove', removed: 'Device removed', cancel: 'Cancel',
@@ -469,6 +470,7 @@ import * as DR from '/dayrhythm/src/index.js';
       addDevice: 'Aggiungi dispositivo', addSub: 'TV, proiettore o un altro telefono', scanQr: 'Scansiona il QR',
       addSteps: ['Sul TV apri MidnightBeam: il QR è a destra (Telecomando dal telefono attivo).', 'Tocca Scansiona il QR e inquadralo con la fotocamera.', 'MidnightBeam si riapre con il TV salvato. Se la fotocamera mostra un link, toccalo e scegli MidnightBeam.'],
       noCamera: 'Nessuna app fotocamera: incolla il link',
+      foundTitle: 'Trovati in rete', foundHint: 'Inserisci il codice mostrato sul suo schermo sotto il QR', searching: 'Cerco TV con MidnightBeam (telecomando dal telefono attivo)…', noneFound: 'Nessuno ancora: sul TV apri MidnightBeam e attiva Telecomando dal telefono.',
       manual: 'Oppure aggiungilo a mano, con quello che il TV mostra sotto il QR', address: 'Indirizzo', code: 'Codice', add: 'Aggiungi',
       badLink: 'Controlla indirizzo e codice mostrati sul TV', needCode: 'Inserisci il codice mostrato sul TV sotto il QR',
       added: 'Dispositivo aggiunto', rename: 'Nome', save: 'Salva', remove: 'Rimuovi dispositivo', removeAgain: 'Tocca di nuovo per rimuovere', removed: 'Dispositivo rimosso', cancel: 'Annulla',
@@ -710,7 +712,7 @@ import * as DR from '/dayrhythm/src/index.js';
         api('/api/info', null, missing).then(function () { if (cur === missing) selectDevice(''); }, function () { if (cur === missing) selectDevice(''); });
       }
       renderDevice(); if (view === 'devices') renderDevices();
-      devices.forEach(function (x) { if (x.name === x.host || TYPES.indexOf(x.type) < 0) identify(x); });
+      devices.forEach(function (x) { if (x.name === x.host || TYPES.indexOf(x.type) < 0 || !x.did) identify(x); });
     }).catch(function () {});
   }
   window.mbDevicesChanged = loadDevices;
@@ -724,6 +726,7 @@ import * as DR from '/dayrhythm/src/index.js';
       var body = { op: 'edit', id: x.id };
       if (x.name === x.host && i && i.name) body.name = i.name;
       if (TYPES.indexOf(x.type) < 0) body.type = i && TYPES.indexOf(i.type) >= 0 ? i.type : 'tv';
+      if (!x.did && i && /^[0-9a-f]{1,32}$/.test(i.id || '')) body.did = i.id; // its network id (mDNS), to follow it
       return api('/api/devices', body, '').then(loadDevices);
     }).catch(function () { identifying[x.id] = false; });
   }
@@ -784,11 +787,13 @@ import * as DR from '/dayrhythm/src/index.js';
   }
   function addSheet() {
     openSheet('<h2>' + L.addDevice + '</h2><div class="stack">' +
+      '<div class="small muted">' + L.foundTitle + '</div><div class="list" id="ad-found"><p class="small muted" style="margin:0">' + L.searching + '</p></div>' +
       '<a class="btn btn-grad" href="midnightbeam-app://scan" id="ad-scan">' + icon('qr') + L.scanQr + '</a><ol class="steps">' + L.addSteps.map(function (s) { return '<li>' + s + '</li>'; }).join('') + '</ol>' +
       '<div class="small muted">' + L.manual + '</div>' +
       '<label class="small muted" for="ad-link">' + L.address + '</label><input class="field" id="ad-link" inputmode="url" autocomplete="off" autocapitalize="off" placeholder="192.168.1.20:8765">' +
       '<label class="small muted" for="ad-code">' + L.code + '</label><input class="field" id="ad-code" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="a1b2 c3d4 e5f6 …">' +
       '<button class="btn btn-soft" type="button" id="ad-go">' + icon('link') + L.add + '</button></div>');
+    listFound(0);
     $('ad-go').onclick = function () {
       var link = pairingLink($('ad-link').value, $('ad-code').value);
       if (!link) return;
@@ -797,6 +802,24 @@ import * as DR from '/dayrhythm/src/index.js';
         return loadDevices().then(function () { selectDevice(r.id); probeAll(); });
       }, function () { toast(L.badLink); });
     };
+  }
+  // TVs announced on the network (mDNS) and not saved yet: tap one, then type its code.
+  function listFound(round) {
+    var box = $('ad-found');
+    if (!box) return;
+    api('/api/discovered', null, '').then(function (list) {
+      if (!$('ad-found')) return;
+      if (list.length) {
+        box.innerHTML = '';
+        list.forEach(function (d) {
+          var b = el('button', 'item', '<span class="dev-ic">' + icon(TYPES.indexOf(d.type) >= 0 ? d.type : 'tv') + '</span><span class="grow"><span class="t">' + esc(d.name || d.host) + '</span><br><span class="d">' + esc(d.host) + '</span></span><span class="chev">' + icon('chev') + '</span>');
+          b.type = 'button';
+          b.onclick = function () { $('ad-link').value = d.host + ':' + d.port; $('ad-code').focus(); toast(L.foundHint); };
+          box.appendChild(b);
+        });
+      } else if (round >= 3) box.innerHTML = '<p class="small muted" style="margin:0">' + L.noneFound + '</p>';
+      if (round < 20) setTimeout(function () { listFound(round + 1); }, 1500); // results keep arriving for a while
+    }).catch(function () {});
   }
   function deviceSheet(d) {
     var type = devType(d.id);

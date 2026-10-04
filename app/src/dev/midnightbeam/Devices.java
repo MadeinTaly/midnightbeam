@@ -79,6 +79,19 @@ final class Devices {
         p.edit().putString(PREF, a.toString()).apply();
     }
 
+    /** Sets one string field of a saved device (e.g. "did", its network id). */
+    static void setField(SharedPreferences p, String host, int port, String key, String value) {
+        JSONArray a = load(p);
+        int i = find(a, host, port);
+        if (i < 0) return;
+        try {
+            a.getJSONObject(i).put(key, value);
+        } catch (JSONException e) {
+            throw new IllegalStateException(e);
+        }
+        p.edit().putString(PREF, a.toString()).apply();
+    }
+
     /** Kind of device, for its icon only (see AppApi). */
     static void setType(SharedPreferences p, String host, int port, String type) {
         JSONArray a = load(p);

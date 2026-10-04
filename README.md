@@ -97,6 +97,12 @@ need to allow it in *Settings → Apps → MidnightBeam → Open by default*) an
 pasted in *Devices → Add device*. The browser remote has an **Open in the app** button that does the same
 (`midnightbeam://add?host=…&port=…&k=…&name=…`) or, if the app is not installed, opens the download page.
 
+**Finding the TVs** (like the WLED app): a TV with *Phone remote* on announces itself on the local network with
+mDNS / DNS-SD (`_midnightbeam._tcp`, with its name, its type and a random id; never the pairing code). While the
+phone app is open it listens for them: TVs not saved yet appear in *Add device → Found on your network* (tap one and
+type the code shown on its screen), and a saved TV that got a new address (DHCP after a reboot) is followed at once.
+Where mDNS is blocked, the app falls back to looking for the TV's port on the phone's /24 network with the saved code.
+
 The TV screen and the browser remote keep their own layout.
 
 The page is in English, or Italian on Italian phones (switchable with EN | IT); the TV app follows the

@@ -163,6 +163,8 @@ final class RemoteServer extends Thread {
                 send(out, 403, "application/json", "{\"error\":\"pairing key\"}");
             } else if (loopback && method.equals("GET") && path.equals("/api/app")) {
                 send(out, 200, "application/json", AppApi.app(service));
+            } else if (loopback && method.equals("GET") && path.equals("/api/discovered")) {
+                send(out, 200, "application/json", Discovery.unsaved(prefs()));
             } else if (loopback && method.equals("GET") && path.equals("/api/devices")) {
                 send(out, 200, "application/json", AppApi.devices(prefs()));
             } else if (loopback && method.equals("POST") && path.equals("/api/devices")) {

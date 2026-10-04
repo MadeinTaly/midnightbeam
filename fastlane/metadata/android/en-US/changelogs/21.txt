@@ -1,0 +1,1 @@
+* TVs with Phone remote on announce themselves on the local network (mDNS, like WLED): the phone app lists them in Add device and follows a saved TV when its address changes
