@@ -384,6 +384,7 @@
     <h1 data-t="audioTitle"></h1>
   </div>
   <div class="stack">
+    <div id="au-volbox"></div>
     <div class="card" id="au-main">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
         <span style="min-width:0"><span style="font-weight:600" id="au-dev"></span><br><span class="small muted" data-t="audioEffects"></span></span>
@@ -500,7 +501,7 @@ import * as DR from '/dayrhythm/src/index.js';
       presets: { movie: 'Movie night', early: 'Early to bed', late: 'Night owl' },
       audioTitle: 'Audio', audioSetting: 'Audio controls', audioSettingSub: 'Equalizer, bass and sound effects of the device, if its audio supports them',
       audioOff: 'Off', audioOn: 'On', audioCustom: 'Custom', audioFlat: 'Flat', audioNo: 'Not supported on this device',
-      audioEffects: 'Audio effects on this device', audioNoText: 'This device’s audio does not support global effects.', audioNeedOn: 'Turn on audio effects to use them',
+      audioEffects: 'Audio effects on this device', audioNoText: 'This device’s audio does not support global effects.', audioVolume: 'Volume', audioPause: 'Equalizer and effects pause while the playing app uses audio effects of its own (for example a video player’s volume boost): turn that option off in the app to hear them.', audioNeedOn: 'Turn on audio effects to use them',
       audioPresets: 'Presets', audioReset: 'Reset', audioEq: 'Equalizer', audioBass: 'Bass boost', audioVirt: 'Surround', audioLoud: 'Loudness', audioApply: 'Audio settings' },
     it: { tagline1: 'Meno luce blu. Serate film più rilassanti.', useHere: 'Usa su questo dispositivo', useHereSub: 'Filtro caldo e attenuazione per questo telefono',
       connectTv: 'Collega un TV o proiettore', connectTvSub: 'Controlla da qui il filtro dei tuoi TV box',
@@ -547,7 +548,7 @@ import * as DR from '/dayrhythm/src/index.js';
       presets: { movie: 'Serata film', early: 'A letto presto', late: 'Nottambulo' },
       audioTitle: 'Audio', audioSetting: 'Controlli audio', audioSettingSub: 'Equalizzatore, bassi ed effetti sonori del dispositivo, se il suo audio li supporta',
       audioOff: 'Spento', audioOn: 'Attivo', audioCustom: 'Personalizzato', audioFlat: 'Piatto', audioNo: 'Non supportato su questo dispositivo',
-      audioEffects: 'Effetti audio su questo dispositivo', audioNoText: 'L’audio di questo dispositivo non supporta gli effetti globali.', audioNeedOn: 'Attiva gli effetti audio per usarli',
+      audioEffects: 'Effetti audio su questo dispositivo', audioNoText: 'L’audio di questo dispositivo non supporta gli effetti globali.', audioVolume: 'Volume', audioPause: 'Equalizzatore ed effetti si fermano mentre l’app in riproduzione usa effetti audio propri (per esempio il “volume boost” di un lettore video): disattiva quell’opzione nell’app per sentirli.', audioNeedOn: 'Attiva gli effetti audio per usarli',
       audioPresets: 'Preset', audioReset: 'Azzera', audioEq: 'Equalizzatore', audioBass: 'Potenziamento bassi', audioVirt: 'Surround', audioLoud: 'Loudness', audioApply: 'Impostazioni audio' }
   };
   function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { return null; } }
@@ -1292,12 +1293,15 @@ import * as DR from '/dayrhythm/src/index.js';
     var on = audioOn(), row = $('h-audio-row');
     row.classList.toggle('hidden', !on);
     if (!on) return;
-    var t = auState === 'loading' ? '…' : auState !== 'ok' ? L.audioNo : !au.enabled ? L.audioOff
+    var vol = auState === 'ok' && au.volume ? L.audioVolume + ' ' + Math.round(au.volume.level / Math.max(1, au.volume.max) * 100) + '%' : '';
+    var fx = auState !== 'ok' || !au.supported ? '' : !au.enabled ? L.audioOff
       : L.audioOn + ' · ' + (auPresetName() || (auFlat() ? L.audioFlat : L.audioCustom));
+    var t = auState === 'loading' ? '…' : auState !== 'ok' ? L.audioNo : [vol, fx].filter(Boolean).join(' · ');
     $('h-audio').textContent = t;
   }
   function auGot(d) {
-    if (d && d.supported) { au = d; auState = 'ok'; } else { au = null; auState = 'unsupported'; }
+    // ok when the device has effects or at least a controllable volume
+    if (d && (d.supported || d.volume)) { au = d; auState = 'ok'; } else { au = null; auState = 'unsupported'; }
     renderAudioRow(); if (view === 'audio') renderAudio();
   }
   function loadAudioSummary() {
@@ -1331,19 +1335,29 @@ import * as DR from '/dayrhythm/src/index.js';
   }
   function renderAudio() {
     var box = $('au-body'), ok = auState === 'ok';
-    $('au-main').classList.toggle('hidden', !ok);
+    $('au-main').classList.toggle('hidden', !ok || !au.supported);
     if (!ok) {
-      auSig = '';
+      auSig = ''; $('au-volbox').innerHTML = '';
       box.innerHTML = '<div class="card muted">' + (auState === 'loading' ? L.checking : L.audioNoText) + '</div>';
       return;
     }
-    var eq = au.eq, sig = [lang, eq ? eq.bands.length + ':' + eq.min + ':' + eq.max + ':' + eq.presets.join('|') : '-', au.bass ? 1 : 0, au.virt ? 1 : 0, au.loud ? 1 : 0].join(';');
+    var eq = au.eq, sig = [lang, au.supported ? 1 : 0, au.volume ? au.volume.max : '-', eq ? eq.bands.length + ':' + eq.min + ':' + eq.max + ':' + eq.presets.join('|') : '-', au.bass ? 1 : 0, au.virt ? 1 : 0, au.loud ? 1 : 0].join(';');
     if (sig !== auSig) { auSig = sig; buildAudio(box); }
     updateAudio();
   }
   function buildAudio(box) {
-    box.innerHTML = '<p class="small muted hidden" id="au-hint">' + L.audioNeedOn + '</p><div class="stack au-ctl" id="au-ctl"></div>';
-    var ctl = $('au-ctl'), eq = au.eq, red = '#ff3b3b', amb = '#ffb15c';
+    var red = '#ff3b3b', amb = '#ffb15c';
+    box.innerHTML = ''; $('au-volbox').innerHTML = '';
+    if (au.volume) { // media volume: plain Android, independent of the effects
+      var vc = auSlider('au-vol', 'audio', 'ic-amber', L.audioVolume, 0, au.volume.max, 1, red, amb);
+      $('au-volbox').appendChild(vc);
+      vc.querySelector('input').addEventListener('input', function () {
+        au.volume.level = +this.value; updateAudio(true); auQueue('volume', +this.value);
+      });
+    }
+    if (!au.supported) { box.appendChild(el('div', 'card muted', esc(L.audioNoText))); return; }
+    box.appendChild(el('div', '', '<p class="small muted hidden" id="au-hint">' + L.audioNeedOn + '</p><p class="small muted" style="margin:0">' + L.audioPause + '</p><div class="stack au-ctl" id="au-ctl"></div>'));
+    var ctl = $('au-ctl'), eq = au.eq;
     if (eq) {
       ctl.appendChild(el('div', 'small muted', esc(L.audioPresets)));
       var chips = el('div', 'chips'); chips.id = 'au-pre'; chips.setAttribute('role', 'group');
@@ -1378,7 +1392,12 @@ import * as DR from '/dayrhythm/src/index.js';
   }
   // Puts the values in the controls; a slider being dragged is left alone
   function updateAudio(local) {
-    if (!$('au-ctl')) return;
+    if (au && au.volume && $('au-vol')) {
+      var vr = $('au-vol');
+      if (document.activeElement !== vr) vr.value = au.volume.level;
+      paintRange(vr); $('au-vol-v').textContent = Math.round(vr.value / Math.max(1, au.volume.max) * 100) + '%';
+    }
+    if (!$('au-ctl')) { renderAudioRow(); return; }
     var on = !!au.enabled, eq = au.eq;
     $('au-on').checked = on;
     $('au-ctl').classList.toggle('off', !on); $('au-hint').classList.toggle('hidden', on);

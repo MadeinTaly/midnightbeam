@@ -1,6 +1,8 @@
 package dev.midnightbeam;
 
+import android.content.Context;
 import android.content.SharedPreferences;
+import android.media.AudioManager;
 import android.media.audiofx.BassBoost;
 import android.media.audiofx.Equalizer;
 import android.media.audiofx.LoudnessEnhancer;
@@ -28,19 +30,50 @@ final class AudioFx {
     private BassBoost bass;
     private Virtualizer virt;
     private LoudnessEnhancer loud;
+    /**
+     * Output stage (-1) when the system lets us use it: unlike the output mix (0), Android does not suspend it when
+     * a playing app enables an effect of its own (e.g. a video player's loudness boost). Probed once.
+     */
+    private static int SESSION = -2;
 
-    AudioFx(SharedPreferences prefs) {
+    private final AudioManager audioManager;
+
+    AudioFx(Context context, SharedPreferences prefs) {
         this.prefs = prefs;
+        audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
     }
 
-    /** Whether this device accepts a global equalizer; probed once. */
+    /** Media volume of the device, {"level","max"}: plain Android, works on any device (null if unavailable). */
+    private Object volumeJson() throws JSONException {
+        if (audioManager == null) return JSONObject.NULL;
+        return new JSONObject().put("level", audioManager.getStreamVolume(AudioManager.STREAM_MUSIC))
+                .put("max", audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC));
+    }
+
+    private void setVolume(int level) {
+        if (audioManager == null) return;
+        try {
+            int max = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
+            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, clamp(level, 0, max), 0);
+        } catch (RuntimeException e) { // e.g. fixed volume or Do Not Disturb restrictions
+            log("volume", e);
+        }
+    }
+
+    /** Whether this device accepts a global equalizer; probed once (output stage first, then output mix). */
     static synchronized boolean supported() {
         if (supported == null) {
-            try {
-                new Equalizer(0, 0).release();
-                supported = true;
-            } catch (Throwable e) {
-                supported = false;
+            supported = false;
+            for (int session : new int[] {-1, 0}) {
+                try {
+                    new Equalizer(0, session).release();
+                    SESSION = session;
+                    supported = true;
+                    log("session", session);
+                    break;
+                } catch (Throwable e) {
+                    log("session " + session, e);
+                }
             }
         }
         return supported;
@@ -74,55 +107,83 @@ final class AudioFx {
     private void create() {
         if (eq == null) {
             try {
-                eq = new Equalizer(PRIORITY, 0);
+                eq = new Equalizer(PRIORITY, SESSION);
             } catch (Throwable ignored) {
             }
         }
         if (bass == null) {
             try {
-                bass = new BassBoost(PRIORITY, 0);
+                bass = new BassBoost(PRIORITY, SESSION);
             } catch (Throwable ignored) {
             }
         }
         if (virt == null) {
             try {
-                virt = new Virtualizer(PRIORITY, 0);
+                virt = new Virtualizer(PRIORITY, SESSION);
             } catch (Throwable ignored) {
             }
         }
         if (loud == null) {
             try {
-                loud = new LoudnessEnhancer(0);
+                loud = new LoudnessEnhancer(SESSION);
             } catch (Throwable ignored) {
             }
         }
     }
 
     private void applySaved() {
-        try {
-            if (eq != null) {
-                int[] levels = bands(eq);
-                for (int i = 0; i < levels.length; i++) eq.setBandLevel((short) i, (short) levels[i]);
-                eq.setEnabled(true);
+        // each effect on its own: one value refused by the driver must not leave the others off
+        if (eq != null) {
+            log("eq on", tryEnable(eq, true));
+            int[] levels = bands(eq);
+            for (int i = 0; i < levels.length; i++) {
+                try {
+                    eq.setBandLevel((short) i, (short) levels[i]);
+                } catch (RuntimeException e) {
+                    log("eq band " + i, e);
+                }
             }
-            if (bass != null) {
-                int s = prefs.getInt("audio_bass", 0);
-                if (s > 0) bass.setStrength((short) s);
-                bass.setEnabled(s > 0);
-            }
-            if (virt != null) {
-                int s = prefs.getInt("audio_virt", 0);
-                if (s > 0) virt.setStrength((short) s);
-                virt.setEnabled(s > 0);
-            }
-            if (loud != null) {
-                int g = prefs.getInt("audio_loud", 0);
-                if (g > 0) loud.setTargetGain(g);
-                loud.setEnabled(g > 0);
-            }
-        } catch (RuntimeException ignored) {
-            // the driver refused a value: keep going with what it accepted
         }
+        if (bass != null) {
+            int s = prefs.getInt("audio_bass", 0);
+            try {
+                if (s > 0) bass.setStrength((short) s);
+            } catch (RuntimeException e) {
+                log("bass", e);
+            }
+            log("bass on", tryEnable(bass, s > 0));
+        }
+        if (virt != null) {
+            int s = prefs.getInt("audio_virt", 0);
+            try {
+                if (s > 0) virt.setStrength((short) s);
+            } catch (RuntimeException e) {
+                log("virt", e);
+            }
+            log("virt on", tryEnable(virt, s > 0));
+        }
+        if (loud != null) {
+            int g = prefs.getInt("audio_loud", 0);
+            try {
+                if (g > 0) loud.setTargetGain(g);
+            } catch (RuntimeException e) {
+                log("loud", e);
+            }
+            log("loud on", tryEnable(loud, g > 0));
+        }
+    }
+
+    /** setEnabled's status (0 = success), or the exception it threw. */
+    private static Object tryEnable(android.media.audiofx.AudioEffect fx, boolean on) {
+        try {
+            return fx.setEnabled(on) + " enabled=" + fx.getEnabled() + " control=" + fx.hasControl();
+        } catch (RuntimeException e) {
+            return e;
+        }
+    }
+
+    private static void log(String what, Object result) {
+        android.util.Log.i("MidnightBeamAudio", what + ": " + result);
     }
 
     /** Saved band levels, one per band of the equalizer, clamped to its range (0 where nothing is saved). */
@@ -158,6 +219,7 @@ final class AudioFx {
                     if (temporary) release();
                 }
             }
+            o.put("volume", volumeJson());
             return o.put("eq", eqJson).put("bass", bassJson).put("virt", virtJson).put("loud", loudJson).toString();
         } catch (JSONException e) {
             throw new IllegalStateException(e);
@@ -177,10 +239,11 @@ final class AudioFx {
     }
 
     /**
-     * Applies any subset of {"enabled","bands":[mB..],"preset":index,"bass","virt","loud","reset":true},
+     * Applies any subset of {"volume":0..max,"enabled","bands":[mB..],"preset":index,"bass","virt","loud","reset":true},
      * clamped to what the device allows, and stores it.
      */
     synchronized void apply(JSONObject j) {
+        if (j.has("volume")) setVolume(j.optInt("volume"));
         SharedPreferences.Editor ed = prefs.edit();
         if (j.has("enabled")) ed.putBoolean("audio_on", j.optBoolean("enabled", false));
         if (j.optBoolean("reset", false)) {
@@ -193,7 +256,7 @@ final class AudioFx {
         if (supported() && (j.has("bands") || j.has("preset"))) {
             Equalizer e = eq;
             try {
-                if (e == null) e = new Equalizer(PRIORITY, 0);
+                if (e == null) e = new Equalizer(PRIORITY, SESSION);
                 short[] range = e.getBandLevelRange();
                 JSONArray arr = j.optJSONArray("bands");
                 if (arr != null) {

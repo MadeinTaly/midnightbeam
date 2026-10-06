@@ -79,7 +79,7 @@ public class DimService extends Service implements Runnable {
     public void onCreate() {
         super.onCreate();
         prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
-        audio = new AudioFx(prefs);
+        audio = new AudioFx(this, prefs);
     }
 
     @Override

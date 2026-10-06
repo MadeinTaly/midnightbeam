@@ -30,8 +30,8 @@ import java.util.Locale;
  *   POST /api/set        {"red":0-100,"bright":5-100,"temp":1000-6500,"on":true|false}, any subset
  *   GET  /api/schedule   {"enabled":bool,"value":<dayrhythm value>,"resolved":<Slot[] or {mon:[..],..}>}
  *   POST /api/schedule   {"enabled":bool,"value":..,"resolved":..}  (older {"enabled","slots":[..]} still accepted)
- *   GET  /api/audio      audio effects: {"supported":bool,"enabled":bool,"eq":..,"bass":..,"virt":..,"loud":..} (null = not available)
- *   POST /api/audio      {"enabled":bool,"bands":[mB..],"preset":n,"bass":0-1000,"virt":0-1000,"loud":0-1500,"reset":true}, any subset
+ *   GET  /api/audio      audio effects: {"supported":bool,"enabled":bool,"volume":{"level","max"},"eq":..,"bass":..,"virt":..,"loud":..} (null = not available)
+ *   POST /api/audio      {"enabled":bool,"volume":n,"bands":[mB..],"preset":n,"bass":0-1000,"virt":0-1000,"loud":0-1500,"reset":true}, any subset
  *   GET  /api/days       saved days: [{"name":..,"slots":[..]}]
  *   POST /api/days       {"name":..,"slots":[..]} saves or replaces a day; {"name":..,"delete":true} deletes it
  *
