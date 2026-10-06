@@ -1,0 +1,3 @@
+* Optional Audio section (Settings → Audio controls): volume, equalizer, presets, bass boost, surround and loudness of the device, on devices that support the standard Android effects
+* The effects also follow players that use effects of their own (announced sessions, or with adb shell pm grant dev.midnightbeam android.permission.DUMP)
+* On-screen display on the TV when an audio setting changes

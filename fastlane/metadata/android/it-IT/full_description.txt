@@ -15,6 +15,9 @@ Stende un velo trasparente ai tocchi sopra tutto, video compresi. Intensità del
 * configurazione guidata dei permessi che Android richiede
 * per una prova veloce non serve nessuna app: il QR apre gli stessi comandi nel browser del telefono
 
+<b>Audio (facoltativo)</b>
+Volume, equalizzatore, preset, bassi, effetto spaziale e volume percepito del dispositivo dal telefono, con un riquadro a schermo sul TV, sui dispositivi il cui audio supporta gli effetti standard di Android.
+
 <b>Programmazione</b>
 Fasce giornaliere o settimanali da trascinare su una timeline, con passaggi graduali; il TV le applica da solo, anche con il telefono spento. Una modifica manuale vale fino alla fascia successiva.
 

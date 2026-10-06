@@ -15,6 +15,9 @@ It draws a click-through overlay above everything, video included. Filter streng
 * a guided setup for the permissions Android needs
 * no app at all is needed for a quick try: the QR code opens the same controls in the phone browser
 
+<b>Audio (optional)</b>
+Volume, equalizer, presets, bass boost, surround and loudness of the device from the phone, with an on-screen display on the TV, on devices whose audio supports the standard Android effects.
+
 <b>Schedule</b>
 Daily or weekly time slots, dragged on a timeline, with gradual transitions between them; the TV applies them by itself, even with the phone off. A manual change lasts until the next slot.
 
