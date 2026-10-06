@@ -96,6 +96,15 @@
     .row-link .t { font-weight: 600; }
     .chev { color: var(--muted); }
 
+    .slider-card.nic { grid-template-columns: 1fr auto; }
+    .slider-card.nic input { grid-column: 1 / 3; }
+    input[type=range]:disabled { cursor: not-allowed; }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip { min-height: 40px; padding: 8px 14px; border-radius: 999px; background: var(--card2); border: 1px solid var(--line); color: #ddd0c7; font-weight: 500; font-size: .9rem; }
+    .chip[aria-pressed="true"] { border: 2px solid var(--red); padding: 7px 13px; color: var(--ink); background: #2e1915; }
+    .chip.reset { color: #ffb38a; }
+    .au-ctl.off { opacity: .45; pointer-events: none; }
+
     .banner { display: flex; gap: 12px; align-items: center; text-decoration: none; border-color: rgb(255 77 77 / 45%); background: linear-gradient(180deg, #2a1418, #1a0f0d); }
 
     /* lists (scenes, devices) */
@@ -291,6 +300,11 @@
       <span class="grow"><span class="t" data-t="schedTitle"></span><br><span class="small muted" id="h-sched"></span></span>
       <span class="chev" data-icon="chev"></span>
     </button>
+    <button class="card row-link hidden" type="button" id="h-audio-row" data-go="audio">
+      <span class="ic-red" data-icon="audio"></span>
+      <span class="grow"><span class="t" data-t="audioTitle"></span><br><span class="small muted" id="h-audio"></span></span>
+      <span class="chev" data-icon="chev"></span>
+    </button>
   </div>
 </section>
 
@@ -313,6 +327,11 @@
     <div class="card stack">
       <div class="t" style="font-weight:600" data-t="language"></div>
       <div class="seg" role="group"><button type="button" class="lang" data-lang="auto" data-t="langAuto"></button><button type="button" class="lang" data-lang="en">English</button><button type="button" class="lang" data-lang="it">Italiano</button></div>
+    </div>
+    <div class="card sync-card">
+      <span class="ic-red" data-icon="audio"></span>
+      <span class="grow" style="flex:1;min-width:0"><span class="t" style="font-weight:600" data-t="audioSetting"></span><br><span class="small muted" data-t="audioSettingSub"></span></span>
+      <label class="switch"><input id="st-audio" type="checkbox"><span></span></label>
     </div>
     <button class="card row-link" type="button" data-sub="setup">
       <span class="ic-red" data-icon="phone"></span>
@@ -355,6 +374,23 @@
     </div>
     <day-rhythm id="rhythm"></day-rhythm>
     <p id="save-status" class="small muted" role="status" aria-live="polite"></p>
+  </div>
+</section>
+
+<!-- Audio (opened from Home, only when enabled in Settings) -->
+<section id="v-audio" class="view hidden">
+  <div class="top">
+    <button class="icon-btn" type="button" id="au-back" data-al="back" data-icon="back"></button>
+    <h1 data-t="audioTitle"></h1>
+  </div>
+  <div class="stack">
+    <div class="card" id="au-main">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <span style="min-width:0"><span style="font-weight:600" id="au-dev"></span><br><span class="small muted" data-t="audioEffects"></span></span>
+        <label class="switch"><input id="au-on" type="checkbox"><span></span></label>
+      </div>
+    </div>
+    <div class="stack" id="au-body" role="status" aria-live="polite"></div>
   </div>
 </section>
 
@@ -409,6 +445,7 @@ import * as DR from '/dayrhythm/src/index.js';
     sync: '<path d="M4 12a8 8 0 0 1 13.7-5.6L20 8.7M20 4v4.7h-4.7"/><path d="M20 12a8 8 0 0 1-13.7 5.6L4 15.3M4 20v-4.7h4.7"/>',
     copy: '<rect x="8.5" y="8.5" width="12" height="12" rx="2"/><path d="M15.5 8.5V5a1.5 1.5 0 0 0-1.5-1.5H5A1.5 1.5 0 0 0 3.5 5v9A1.5 1.5 0 0 0 5 15.5h3.5"/>',
     qr: '<path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4z"/><path d="M14 14h2.5v2.5H14zM17.5 17.5H20V20h-2.5zM14 19v1M20 14v1"/>',
+    audio: '<path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4.2 4.2 0 0 1 0 6M18 6.5a8 8 0 0 1 0 11"/>',
     link: '<path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1"/><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1"/>'
   };
   function icon(name) { return '<svg class="i" viewBox="0 0 24 24" aria-hidden="true">' + (P[name] || '') + '</svg>'; }
@@ -460,7 +497,11 @@ import * as DR from '/dayrhythm/src/index.js';
       desc: { soft: 'A light touch of warmth.', evening: 'Warm and calm, for the evening.', cinema: 'Reduced blue light, still bright enough for films.', night: 'Very warm and dim.', deep: 'Darkest and reddest.' },
       fields: { red: 'Warm filter', bright: 'Brightness', temp: 'Colour' },
       fasce: { morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening', film: 'Movie', night: 'Night' },
-      presets: { movie: 'Movie night', early: 'Early to bed', late: 'Night owl' } },
+      presets: { movie: 'Movie night', early: 'Early to bed', late: 'Night owl' },
+      audioTitle: 'Audio', audioSetting: 'Audio controls', audioSettingSub: 'Equalizer, bass and sound effects of the device, if its audio supports them',
+      audioOff: 'Off', audioOn: 'On', audioCustom: 'Custom', audioFlat: 'Flat', audioNo: 'Not supported on this device',
+      audioEffects: 'Audio effects on this device', audioNoText: 'This device’s audio does not support global effects.', audioNeedOn: 'Turn on audio effects to use them',
+      audioPresets: 'Presets', audioReset: 'Reset', audioEq: 'Equalizer', audioBass: 'Bass boost', audioVirt: 'Surround', audioLoud: 'Loudness', audioApply: 'Audio settings' },
     it: { tagline1: 'Meno luce blu. Serate film più rilassanti.', useHere: 'Usa su questo dispositivo', useHereSub: 'Filtro caldo e attenuazione per questo telefono',
       connectTv: 'Collega un TV o proiettore', connectTvSub: 'Controlla da qui il filtro dei tuoi TV box',
       home: 'Home', devices: 'Dispositivi', scenes: 'Scene', settings: 'Impostazioni', back: 'Indietro', power: 'Filtro acceso / spento',
@@ -503,7 +544,11 @@ import * as DR from '/dayrhythm/src/index.js';
       desc: { soft: 'Un tocco di calore.', evening: 'Caldo e rilassante, per la sera.', cinema: 'Meno luce blu, ma luminoso abbastanza per i film.', night: 'Molto caldo e attenuato.', deep: 'Il più scuro e rosso.' },
       fields: { red: 'Filtro caldo', bright: 'Luminosità', temp: 'Colore' },
       fasce: { morning: 'Mattina', afternoon: 'Pomeriggio', evening: 'Sera', film: 'Film', night: 'Notte' },
-      presets: { movie: 'Serata film', early: 'A letto presto', late: 'Nottambulo' } }
+      presets: { movie: 'Serata film', early: 'A letto presto', late: 'Nottambulo' },
+      audioTitle: 'Audio', audioSetting: 'Controlli audio', audioSettingSub: 'Equalizzatore, bassi ed effetti sonori del dispositivo, se il suo audio li supporta',
+      audioOff: 'Spento', audioOn: 'Attivo', audioCustom: 'Personalizzato', audioFlat: 'Piatto', audioNo: 'Non supportato su questo dispositivo',
+      audioEffects: 'Effetti audio su questo dispositivo', audioNoText: 'L’audio di questo dispositivo non supporta gli effetti globali.', audioNeedOn: 'Attiva gli effetti audio per usarli',
+      audioPresets: 'Preset', audioReset: 'Azzera', audioEq: 'Equalizzatore', audioBass: 'Potenziamento bassi', audioVirt: 'Surround', audioLoud: 'Loudness', audioApply: 'Impostazioni audio' }
   };
   function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { return null; } }
   // English by default; the system language when the app has it, unless the person picked one in Settings.
@@ -548,7 +593,7 @@ import * as DR from '/dayrhythm/src/index.js';
   // The app found a paired TV at a new address (it changed after a reboot): follow it.
   function deviceMoved(oldId, newId) {
     if (devState[oldId]) { devState[newId] = devState[oldId]; delete devState[oldId]; }
-    if (cur === oldId) { cur = newId; store('mb_cur', newId); setTimeout(refresh, 0); loadScheduleSummary(); }
+    if (cur === oldId) { cur = newId; store('mb_cur', newId); setTimeout(refresh, 0); loadScheduleSummary(); loadAudioSummary(); }
     loadDevices();
   }
   function devName(id) {
@@ -793,6 +838,8 @@ import * as DR from '/dayrhythm/src/index.js';
     if (id === cur) return;
     cur = id; store('mb_cur', id); state = null; reach = 'checking';
     renderDevice(); refresh(); scheduleLoaded = false;
+    au = null; auState = 'loading'; renderAudioRow();
+    if (view === 'audio') { $('au-dev').textContent = devName(cur); loadAudio(); } else loadAudioSummary();
     if (view === 'schedule') loadScheduleAll();
     else loadScheduleSummary();
   }
@@ -843,8 +890,8 @@ import * as DR from '/dayrhythm/src/index.js';
       '<div class="small muted">' + L.applyWhat + '</div><div class="list" id="ap-what"></div>' +
       '<button class="btn btn-grad" type="button" id="ap-go"></button></div>');
     var rows = others.map(function (o) { var r = checkRow(o.name, devType(o.id), !!o.id); r.dataset.id = o.id; $('ap-devs').appendChild(r); return r; });
-    var wf = checkRow(L.applyFilter, null, true), ws = checkRow(L.applySched, null, true);
-    $('ap-what').appendChild(wf); $('ap-what').appendChild(ws);
+    var wf = checkRow(L.applyFilter, null, true), ws = checkRow(L.applySched, null, true), wa = checkRow(L.audioApply, null, audioOn());
+    $('ap-what').appendChild(wf); $('ap-what').appendChild(ws); $('ap-what').appendChild(wa);
     function label() {
       var n = rows.filter(function (r) { return r.getAttribute('aria-checked') === 'true'; }).length;
       $('ap-go').textContent = n === 1 ? L.applyGo1 : fmt(L.applyGo, { n: n });
@@ -854,7 +901,7 @@ import * as DR from '/dayrhythm/src/index.js';
       var targets = rows.filter(function (r) { return r.getAttribute('aria-checked') === 'true'; }).map(function (r) { return r.dataset.id; });
       if (!targets.length) { toast(L.applyNone); return; }
       $('ap-go').disabled = true; $('ap-go').textContent = L.applying;
-      copyTo(src.id, targets, wf.getAttribute('aria-checked') === 'true', ws.getAttribute('aria-checked') === 'true').then(function (r) {
+      copyTo(src.id, targets, wf.getAttribute('aria-checked') === 'true', ws.getAttribute('aria-checked') === 'true', wa.getAttribute('aria-checked') === 'true').then(function (r) {
         closeSheet(); reportCopy(r, targets.length);
       });
     };
@@ -867,13 +914,14 @@ import * as DR from '/dayrhythm/src/index.js';
     if (view === 'devices') probeAll();
   }
   // Reads the source device and writes the same values, schedule and saved days to every target.
-  function copyTo(srcId, targets, withFilter, withSched) {
+  function copyTo(srcId, targets, withFilter, withSched, withAudio) {
     return Promise.all([
       withFilter ? api('/api/state', null, srcId) : null,
       withSched ? api('/api/schedule', null, srcId) : null,
-      withSched ? api('/api/days', null, srcId).catch(function () { return []; }) : null
+      withSched ? api('/api/days', null, srcId).catch(function () { return []; }) : null,
+      withAudio ? api('/api/audio', null, srcId).catch(function () { return null; }) : null
     ]).then(function (src) {
-      var st = src[0], sc = src[1], days = src[2] || [];
+      var st = src[0], sc = src[1], days = src[2] || [], ab = audioBody(src[3]);
       return Promise.all(targets.map(function (t) {
         var jobs = [];
         if (st) jobs.push(api('/api/set', { on: st.on, red: st.red, bright: st.bright, temp: st.temp }, t));
@@ -881,6 +929,7 @@ import * as DR from '/dayrhythm/src/index.js';
           jobs.push(api('/api/schedule', { enabled: !!sc.enabled, value: sc.value, resolved: sc.resolved, transition: typeof sc.transition === 'number' ? sc.transition : 30 }, t));
           days.forEach(function (d) { jobs.push(api('/api/days', { name: d.name, slots: d.slots }, t)); });
         }
+        if (ab) jobs.push(api('/api/audio', ab, t).catch(function () {})); // a target without audio support is not a failure
         return Promise.all(jobs).then(function () { return { id: t, ok: true }; }, function () { return { id: t, ok: false }; });
       }));
     }, function () { return targets.map(function (t) { return { id: t, ok: false }; }); }).then(function (res) {
@@ -897,7 +946,7 @@ import * as DR from '/dayrhythm/src/index.js';
     if (!on) return;
     var targets = syncTargets();
     if (!targets.length) return;
-    copyTo(cur, targets, true, true).then(function (r) {
+    copyTo(cur, targets, true, true, audioOn()).then(function (r) {
       toast(fmt(L.syncDone, { name: devName(cur) }) + (r.failed.length ? ' · ' + fmt(L.appliedFail, { names: r.failed.map(devName).join(', ') }) : ''));
       if (view === 'devices') probeAll();
     });
@@ -972,7 +1021,7 @@ import * as DR from '/dayrhythm/src/index.js';
   $('sheet-wrap').addEventListener('click', function (e) { if (e.target === $('sheet-wrap')) closeSheet(); });
 
   // ---- Navigation ----
-  var view = 'home', VIEWS = ['welcome', 'setup', 'home', 'devices', 'scenes', 'settings', 'schedule'], SUBS = ['schedule', 'setup'];
+  var view = 'home', VIEWS = ['welcome', 'setup', 'home', 'devices', 'scenes', 'settings', 'schedule', 'audio'], SUBS = ['schedule', 'setup', 'audio'];
   function showView(v) {
     view = v;
     VIEWS.forEach(function (x) { $('v-' + x).classList.toggle('hidden', x !== v); });
@@ -986,6 +1035,8 @@ import * as DR from '/dayrhythm/src/index.js';
     if (v === 'settings') renderSettings();
     if (v === 'schedule') { $('sc-dev').textContent = devName(cur); loadScheduleAll(); }
     if (v === 'setup') renderSetup();
+    if (v === 'audio') { $('au-dev').textContent = devName(cur); loadAudio(); }
+    if (v === 'home') loadAudioSummary();
   }
   function go(v) {
     if (SUBS.indexOf(v) >= 0) {
@@ -1003,6 +1054,7 @@ import * as DR from '/dayrhythm/src/index.js';
   Array.prototype.forEach.call(document.querySelectorAll('[data-go]'), function (b) { b.onclick = function () { go(b.getAttribute('data-go')); }; });
   Array.prototype.forEach.call(document.querySelectorAll('[data-sub]'), function (b) { b.onclick = function (e) { e.preventDefault(); go(b.getAttribute('data-sub')); }; });
   $('sc-back').onclick = function () { history.back(); };
+  $('au-back').onclick = function () { history.back(); };
   $('w-here').onclick = function () { store('mb_welcomed', '1'); selectDevice(''); showView('home'); if (needsSetup()) go('setup'); };
   $('w-connect').onclick = function () { store('mb_welcomed', '1'); showView('devices'); addSheet(); };
   $('st-welcome').onclick = function () { showView('welcome'); };
@@ -1048,6 +1100,7 @@ import * as DR from '/dayrhythm/src/index.js';
   // ---- Settings ----
   function renderSettings() {
     $('st-setup').textContent = !app.overlay ? L.setupMissing : (app.sdk >= 31 && !app.accessibility) ? L.setupA11y : L.setupOk;
+    $('st-audio').checked = audioOn();
     $('st-version').textContent = app.version ? fmt(L.version, { v: app.version }) : '';
     var picked = T[store('mb_lang')] ? store('mb_lang') : 'auto';
     Array.prototype.forEach.call(document.querySelectorAll('.lang'), function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-lang') === picked)); });
@@ -1210,13 +1263,164 @@ import * as DR from '/dayrhythm/src/index.js';
     box.textContent = L.schedOn + ' · ' + fmt(L.schedNext, { name: name, time: next.s.time });
   }
 
+  // ---- Audio (optional: global equalizer and effects of the shown device, GET/POST /api/audio) ----
+  var au = null, auState = 'loading', auSig = '', auQ = {}, auTimer = null, auPre = {};
+  try { auPre = JSON.parse(store('mb_aupre') || '{}') || {}; } catch (e) { auPre = {}; }
+  function audioOn() { return store('mb_audio') === '1'; }
+  function fmtDb(mb) { var v = Math.round(mb / 10) / 10; return (v > 0 ? '+' : '') + v.toFixed(1) + ' dB'; }
+  function fmtHz(f) { return f < 1000 ? Math.round(f) + ' Hz' : (Math.round(f / 100) / 10) + ' kHz'; }
+  function bandLevels(d) { return d && d.eq ? d.eq.bands.map(function (b) { return b.level; }) : []; }
+  function sameArr(a, b) { if (a.length !== b.length) return false; for (var i = 0; i < a.length; i++) if (a[i] !== b[i]) return false; return true; }
+  // Name of the preset the bands still match (the device does not say which one is active), or null
+  function auPresetName() {
+    var r = auPre[cur || ''];
+    return r && au && au.eq && sameArr(r.bands, bandLevels(au)) ? r.name : null;
+  }
+  function auFlat() { return !!(au && au.eq) && bandLevels(au).every(function (v) { return v === 0; }); }
+  function rememberPreset(name, d) { auPre[cur || ''] = { name: name, bands: bandLevels(d) }; store('mb_aupre', JSON.stringify(auPre)); }
+  // The fields to copy to another device, only the ones this device has
+  function audioBody(d) {
+    if (!d || !d.supported) return null;
+    var b = { enabled: !!d.enabled };
+    if (d.eq) b.bands = bandLevels(d);
+    if (d.bass) b.bass = d.bass.strength;
+    if (d.virt) b.virt = d.virt.strength;
+    if (d.loud) b.loud = d.loud.gain;
+    return b;
+  }
+  function renderAudioRow() {
+    var on = audioOn(), row = $('h-audio-row');
+    row.classList.toggle('hidden', !on);
+    if (!on) return;
+    var t = auState === 'loading' ? '…' : auState !== 'ok' ? L.audioNo : !au.enabled ? L.audioOff
+      : L.audioOn + ' · ' + (auPresetName() || (auFlat() ? L.audioFlat : L.audioCustom));
+    $('h-audio').textContent = t;
+  }
+  function auGot(d) {
+    if (d && d.supported) { au = d; auState = 'ok'; } else { au = null; auState = 'unsupported'; }
+    renderAudioRow(); if (view === 'audio') renderAudio();
+  }
+  function loadAudioSummary() {
+    if (!audioOn()) return;
+    var id = cur;
+    return api('/api/audio').then(function (d) { if (id === cur) auGot(d); }, function () { if (id === cur) auGot(null); });
+  }
+  function loadAudio() {
+    if (!au) auState = 'loading';
+    renderAudio();
+    return loadAudioSummary();
+  }
+  function auPost(body, name) {
+    var id = cur;
+    broadcast('/api/audio', body);
+    return api('/api/audio', body).then(function (d) {
+      if (id !== cur) return;
+      if (name && d && d.supported) rememberPreset(name, d);
+      auGot(d);
+    }, function (e) { if (id === cur) { toast(e && e.status === 403 ? L.keyChanged : L.unreachable); loadAudioSummary(); } });
+  }
+  function auQueue(key, val) {
+    auQ[key] = val; clearTimeout(auTimer);
+    auTimer = setTimeout(function () { var b = auQ; auQ = {}; auTimer = null; auPost(b); }, 150);
+  }
+  function auSlider(id, icn, tone, label, min, max, step, c1, c2) {
+    var card = el('div', 'card slider-card' + (icn ? '' : ' nic'),
+      (icn ? '<span class="ic ' + tone + '">' + icon(icn) + '</span>' : '') + '<label class="lbl" for="' + id + '">' + esc(label) + '</label><span class="val" id="' + id + '-v"></span>' +
+      '<input id="' + id + '" type="range" min="' + min + '" max="' + max + '" step="' + step + '" style="--c1:' + c1 + ';--c2:' + c2 + '">');
+    return card;
+  }
+  function renderAudio() {
+    var box = $('au-body'), ok = auState === 'ok';
+    $('au-main').classList.toggle('hidden', !ok);
+    if (!ok) {
+      auSig = '';
+      box.innerHTML = '<div class="card muted">' + (auState === 'loading' ? L.checking : L.audioNoText) + '</div>';
+      return;
+    }
+    var eq = au.eq, sig = [lang, eq ? eq.bands.length + ':' + eq.min + ':' + eq.max + ':' + eq.presets.join('|') : '-', au.bass ? 1 : 0, au.virt ? 1 : 0, au.loud ? 1 : 0].join(';');
+    if (sig !== auSig) { auSig = sig; buildAudio(box); }
+    updateAudio();
+  }
+  function buildAudio(box) {
+    box.innerHTML = '<p class="small muted hidden" id="au-hint">' + L.audioNeedOn + '</p><div class="stack au-ctl" id="au-ctl"></div>';
+    var ctl = $('au-ctl'), eq = au.eq, red = '#ff3b3b', amb = '#ffb15c';
+    if (eq) {
+      ctl.appendChild(el('div', 'small muted', esc(L.audioPresets)));
+      var chips = el('div', 'chips'); chips.id = 'au-pre'; chips.setAttribute('role', 'group');
+      var flat = el('button', 'chip reset', esc(L.audioReset)); flat.type = 'button'; flat.id = 'au-flat';
+      flat.onclick = function () { delete auPre[cur || '']; store('mb_aupre', JSON.stringify(auPre)); auPost({ reset: true }); };
+      chips.appendChild(flat);
+      eq.presets.forEach(function (name, i) {
+        var c = el('button', 'chip', esc(name)); c.type = 'button'; c.setAttribute('data-i', i);
+        c.onclick = function () { auPost({ preset: i }, name); };
+        chips.appendChild(c);
+      });
+      ctl.appendChild(chips);
+      ctl.appendChild(el('div', 'small muted', esc(L.audioEq)));
+      eq.bands.forEach(function (b, i) {
+        var card = auSlider('au-b' + i, null, '', fmtHz(b.freq), eq.min, eq.max, 50, red, amb);
+        ctl.appendChild(card);
+        card.querySelector('input').addEventListener('input', function () {
+          var bands = eq.bands.map(function (x, j) { return +$('au-b' + j).value; });
+          bands.forEach(function (v, j) { au.eq.bands[j].level = v; });
+          updateAudio(true); auQueue('bands', bands);
+        });
+      });
+    }
+    [['bass', 'audio', 'ic-red', L.audioBass, 0, 1000, 'strength', true], ['virt', 'spark', 'ic-amber', L.audioVirt, 0, 1000, 'strength', true], ['loud', 'bright', 'ic-cream', L.audioLoud, 0, 1500, 'gain', false]].forEach(function (f) {
+      if (!au[f[0]]) return;
+      var card = auSlider('au-' + f[0], f[1], f[2], f[3], f[4], f[5], f[0] === 'loud' ? 50 : 10, red, amb);
+      ctl.appendChild(card);
+      card.querySelector('input').addEventListener('input', function () {
+        au[f[0]][f[6]] = +this.value; updateAudio(true); auQueue(f[0], +this.value);
+      });
+    });
+  }
+  // Puts the values in the controls; a slider being dragged is left alone
+  function updateAudio(local) {
+    if (!$('au-ctl')) return;
+    var on = !!au.enabled, eq = au.eq;
+    $('au-on').checked = on;
+    $('au-ctl').classList.toggle('off', !on); $('au-hint').classList.toggle('hidden', on);
+    function put(id, v, txt) {
+      var r = $(id); if (!r) return;
+      r.disabled = !on;
+      if (document.activeElement !== r) r.value = v;
+      paintRange(r); $(id + '-v').textContent = txt(+r.value);
+    }
+    if (eq) eq.bands.forEach(function (b, i) { put('au-b' + i, b.level, fmtDb); });
+    if (au.bass) put('au-bass', au.bass.strength, function (v) { return Math.round(v / 10) + '%'; });
+    if (au.virt) put('au-virt', au.virt.strength, function (v) { return Math.round(v / 10) + '%'; });
+    if (au.loud) put('au-loud', au.loud.gain, fmtDb);
+    if (eq) {
+      var nm = local ? null : auPresetName(), flat = !nm && auFlat();
+      Array.prototype.forEach.call($('au-pre').children, function (c) {
+        var i = c.getAttribute('data-i');
+        c.disabled = !on;
+        c.setAttribute('aria-pressed', String(i === null ? flat : eq.presets[+i] === nm));
+      });
+    }
+    renderAudioRow();
+  }
+  $('au-on').addEventListener('change', function () {
+    if (!au) return;
+    au.enabled = $('au-on').checked; updateAudio();
+    auPost({ enabled: au.enabled });
+  });
+  $('st-audio').addEventListener('change', function () {
+    store('mb_audio', $('st-audio').checked ? '1' : null);
+    renderAudioRow(); loadAudioSummary();
+  });
+
   // ---- Texts ----
   function applyTexts() {
     document.documentElement.lang = lang;
     Array.prototype.forEach.call(document.querySelectorAll('[data-t]'), function (e) { var v = L[e.getAttribute('data-t')]; if (typeof v === 'string') e.textContent = v; });
     Array.prototype.forEach.call(document.querySelectorAll('[data-al]'), function (e) { e.setAttribute('aria-label', L[e.getAttribute('data-al')]); });
     $('sched-on').setAttribute('aria-label', L.schedTitle);
-    renderDevice(); renderSceneRow(); summary();
+    $('st-audio').setAttribute('aria-label', L.audioSetting); $('au-on').setAttribute('aria-label', L.audioEffects);
+    renderDevice(); renderSceneRow(); summary(); renderAudioRow();
+    if (view === 'audio') { auSig = ''; renderAudio(); }
     if (view === 'devices') renderDevices();
     if (view === 'scenes') renderScenes();
     if (view === 'settings') renderSettings();
@@ -1230,7 +1434,7 @@ import * as DR from '/dayrhythm/src/index.js';
   ['r-red', 'r-bright', 'r-temp'].forEach(function (id) { paintRange($(id)); });
   rhythm.config = config(); setValue(defaultValue());
   showView(store('mb_welcomed') ? 'home' : 'welcome');
-  loadApp(); loadDevices(); refresh(); loadScheduleSummary();
+  loadApp(); loadDevices(); refresh(); loadScheduleSummary(); loadAudioSummary();
   setInterval(function () {
     if (document.hidden) return;
     if (!pending) refresh();
@@ -1242,6 +1446,7 @@ import * as DR from '/dayrhythm/src/index.js';
     setTimeout(function () {
       loadApp(); refresh(); loadDevices();
       if (view === 'devices') probeAll();
+      if (view === 'audio') loadAudio(); else loadAudioSummary();
       if (view === 'schedule' && !saveTimer && !saving && !rhythm.editing) loadScheduleAll(); else loadScheduleSummary();
     }, 600);
   });

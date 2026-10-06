@@ -30,6 +30,8 @@ import java.util.Locale;
  *   POST /api/set        {"red":0-100,"bright":5-100,"temp":1000-6500,"on":true|false}, any subset
  *   GET  /api/schedule   {"enabled":bool,"value":<dayrhythm value>,"resolved":<Slot[] or {mon:[..],..}>}
  *   POST /api/schedule   {"enabled":bool,"value":..,"resolved":..}  (older {"enabled","slots":[..]} still accepted)
+ *   GET  /api/audio      audio effects: {"supported":bool,"enabled":bool,"eq":..,"bass":..,"virt":..,"loud":..} (null = not available)
+ *   POST /api/audio      {"enabled":bool,"bands":[mB..],"preset":n,"bass":0-1000,"virt":0-1000,"loud":0-1500,"reset":true}, any subset
  *   GET  /api/days       saved days: [{"name":..,"slots":[..]}]
  *   POST /api/days       {"name":..,"slots":[..]} saves or replaces a day; {"name":..,"delete":true} deletes it
  *
@@ -202,6 +204,17 @@ final class RemoteServer extends Thread {
                 } catch (JSONException e) {
                     send(out, 400, "application/json", "{\"error\":\"bad json\"}");
                 }
+            } else if (method.equals("GET") && path.equals("/api/audio")) {
+                send(out, 200, "application/json", service.audioJson());
+            } else if (method.equals("POST") && path.equals("/api/audio")) {
+                try {
+                    AudioTask task = new AudioTask(service, new JSONObject(new String(body, 0, read, StandardCharsets.UTF_8)));
+                    main.post(task);
+                    task.await(); // answer with the state after the change
+                    send(out, 200, "application/json", service.audioJson());
+                } catch (JSONException e) {
+                    send(out, 400, "application/json", "{\"error\":\"bad json\"}");
+                }
             } else if (method.equals("GET") && path.equals("/api/days")) {
                 send(out, 200, "application/json", service.daysJson());
             } else if (method.equals("POST") && path.equals("/api/days")) {
@@ -351,6 +364,35 @@ final class RemoteServer extends Thread {
         @Override
         public void run() {
             service.applySchedule(enabled, body);
+        }
+    }
+
+    /** Applies audio effect changes on the main thread; the server thread can wait for it. */
+    static final class AudioTask implements Runnable {
+        private final DimService service;
+        private final JSONObject body;
+        private final java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+
+        AudioTask(DimService service, JSONObject body) {
+            this.service = service;
+            this.body = body;
+        }
+
+        @Override
+        public void run() {
+            try {
+                service.applyAudio(body);
+            } finally {
+                done.countDown();
+            }
+        }
+
+        void await() {
+            try {
+                done.await(3, java.util.concurrent.TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
         }
     }
 

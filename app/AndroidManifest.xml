@@ -17,6 +17,9 @@
          by itself instead of sending the person to the Accessibility settings. -->
     <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" />
 
+    <!-- Optional audio effects (equalizer, bass, virtualizer, loudness) on the output mix, where the device supports them. -->
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+
     <uses-feature android:name="android.software.leanback" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
 

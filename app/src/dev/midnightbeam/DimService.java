@@ -62,6 +62,7 @@ public class DimService extends Service implements Runnable {
     private volatile boolean blocked;
     private RemoteServer server;
     private Advertiser advertiser;
+    private AudioFx audio;
 
     // Read by the server thread, so volatile.
     private volatile int red;
@@ -78,6 +79,7 @@ public class DimService extends Service implements Runnable {
     public void onCreate() {
         super.onCreate();
         prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+        audio = new AudioFx(prefs);
     }
 
     @Override
@@ -113,6 +115,7 @@ public class DimService extends Service implements Runnable {
         scheduleOn = prefs.getBoolean("schedule_on", false);
         scheduleResolved = prefs.getString("schedule", "[]");
         scheduleValue = prefs.getString("schedule_value", scheduleResolved);
+        audio.refresh();
     }
 
     private void setValues(int r, int b, int t, boolean o) {
@@ -141,7 +144,7 @@ public class DimService extends Service implements Runnable {
                 advertiser.start(deviceName(), deviceId(prefs), Compat.deviceType(this));
             }
         }
-        if (!visible && !remote && !local && !scheduleOn) {
+        if (!visible && !remote && !local && !scheduleOn && !audio.enabled()) {
             stopForeground(true);
             stopSelf();
             return START_NOT_STICKY;
@@ -157,6 +160,16 @@ public class DimService extends Service implements Runnable {
         boolean o = t.on >= 0 ? t.on == 0 : (!newValues && off);
         setValues(t.red >= 0 ? t.red : red, t.bright >= 0 ? t.bright : bright, t.temp >= 0 ? t.temp : temp, o);
         holdManual();
+        render();
+    }
+
+    String audioJson() {
+        return audio.json();
+    }
+
+    /** Applies audio effect changes (called on the main thread by AudioTask). */
+    void applyAudio(JSONObject body) {
+        audio.apply(body);
         render();
     }
 
@@ -590,6 +603,7 @@ public class DimService extends Service implements Runnable {
             String text = off ? "off" : "filter " + red + "%, brightness " + bright + "%, " + temp + " K";
             if (remote) text += " · phone remote on";
             if (scheduleOn) text += " · schedule on";
+            if (audio.enabled()) text += " · audio effects on";
             return b.setSmallIcon(Icon.createWithResource("android", android.R.drawable.ic_menu_view))
                     .setContentTitle("MidnightBeam")
                     .setContentText(text)
@@ -603,6 +617,7 @@ public class DimService extends Service implements Runnable {
     public void onDestroy() {
         main.removeCallbacks(this);
         removeOverlay();
+        audio.release();
         if (server != null) {
             server.shutdown();
             server = null;

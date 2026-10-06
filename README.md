@@ -122,6 +122,10 @@ curl -H "X-Key: $KEY" http://TV-IP:8765/api/schedule
 curl -H "X-Key: $KEY" http://TV-IP:8765/api/days
 ```
 
+### Audio (optional)
+
+`GET /api/audio` returns `{"supported":bool,"enabled":bool,"eq":{"bands":[{"freq":Hz,"level":mB}],"min":mB,"max":mB,"presets":[..]},"bass":{"strength":0-1000},"virt":{"strength":0-1000},"loud":{"gain":0-1500}}`, where an effect the device cannot provide is `null`. `POST /api/audio` takes any subset of `{"enabled":bool,"bands":[mB,..],"preset":index,"bass":n,"virt":n,"loud":n,"reset":true}` and answers with the new state. The effects are applied to the whole audio output (global audio session), so this only works on devices whose audio driver supports global effects, mostly TVs and projectors; elsewhere `supported` is `false`. While enabled, the service keeps running and restores the settings after a reboot.
+
 ## Android 12 and later
 
 Android 12 blocks touches through an overlay of another app unless the overlay is at most 80% opaque (the system limit, `InputManager.getMaximumObscuringOpacityForTouch()`). MidnightBeam therefore caps the filter at that opacity, so the phone stays usable; `/api/state` and `dumpsys` report `clamped` when the requested darkness was limited.
