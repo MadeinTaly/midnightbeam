@@ -37,9 +37,11 @@ final class AudioFx {
     private static int SESSION = -2;
 
     private final AudioManager audioManager;
+    private final Context context;
 
     AudioFx(Context context, SharedPreferences prefs) {
         this.prefs = prefs;
+        this.context = context;
         audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
     }
 
@@ -87,6 +89,7 @@ final class AudioFx {
     synchronized void refresh() {
         if (enabled() && supported()) {
             create();
+            for (Integer id : open) if (!sessions.containsKey(id)) attach(id);
             applySaved();
         } else {
             release();
@@ -94,6 +97,7 @@ final class AudioFx {
     }
 
     synchronized void release() {
+        for (Integer id : new java.util.ArrayList<>(sessions.keySet())) detach(id);
         if (eq != null) eq.release();
         if (bass != null) bass.release();
         if (virt != null) virt.release();
@@ -132,7 +136,30 @@ final class AudioFx {
     }
 
     private void applySaved() {
-        // each effect on its own: one value refused by the driver must not leave the others off
+        applyTo(eq, bass, virt, loud);
+        int gain = prefs.getInt("audio_loud", 0);
+        for (java.util.Map.Entry<Integer, android.media.audiofx.AudioEffect[]> e : sessions.entrySet()) {
+            android.media.audiofx.AudioEffect[] fx = e.getValue();
+            // an app may use its own loudness boost on its session (same effect, shared): only take it over when
+            // our loudness is up, and let it go at 0 so the app's own setting stays as it was
+            if (gain > 0 && fx[3] == null) {
+                try {
+                    fx[3] = new LoudnessEnhancer(e.getKey());
+                } catch (Throwable ignored) {
+                }
+            } else if (gain == 0 && fx[3] != null) {
+                try {
+                    fx[3].release();
+                } catch (RuntimeException ignored) {
+                }
+                fx[3] = null;
+            }
+            applyTo((Equalizer) fx[0], (BassBoost) fx[1], (Virtualizer) fx[2], (LoudnessEnhancer) fx[3]);
+        }
+    }
+
+    /** Applies the saved values to one set of effects; each effect on its own, so one refused value never leaves the others off. */
+    private void applyTo(Equalizer eq, BassBoost bass, Virtualizer virt, LoudnessEnhancer loud) {
         if (eq != null) {
             log("eq on", tryEnable(eq, true));
             int[] levels = bands(eq);
@@ -170,6 +197,61 @@ final class AudioFx {
                 log("loud", e);
             }
             log("loud on", tryEnable(loud, g > 0));
+        }
+    }
+
+    // ---- Per-app sessions (announced by players, see SessionReceiver) ----
+
+    /** Effects attached to each open app session: {Equalizer, BassBoost, Virtualizer, LoudnessEnhancer}. */
+    private final java.util.Map<Integer, android.media.audiofx.AudioEffect[]> sessions = new java.util.HashMap<>();
+    /** Sessions announced as open, also while audio is off (attached when it is turned on). */
+    private final java.util.Set<Integer> open = new java.util.HashSet<>();
+
+    synchronized void session(int id, boolean opened) {
+        if (opened) {
+            open.add(id);
+            if (enabled() && supported() && !sessions.containsKey(id)) attach(id);
+        } else {
+            open.remove(id);
+            detach(id);
+        }
+    }
+
+    private void attach(int id) {
+        android.media.audiofx.AudioEffect[] fx = new android.media.audiofx.AudioEffect[4];
+        try {
+            fx[0] = new Equalizer(PRIORITY, id);
+        } catch (Throwable e) {
+            log("session " + id + " eq", e);
+        }
+        try {
+            fx[1] = new BassBoost(PRIORITY, id);
+        } catch (Throwable ignored) {
+        }
+        try {
+            fx[2] = new Virtualizer(PRIORITY, id);
+        } catch (Throwable ignored) {
+        }
+        if (prefs.getInt("audio_loud", 0) > 0) { // see applySaved: never switch off an app's own loudness boost
+            try {
+                fx[3] = new LoudnessEnhancer(id);
+            } catch (Throwable ignored) {
+            }
+        }
+        sessions.put(id, fx);
+        applyTo((Equalizer) fx[0], (BassBoost) fx[1], (Virtualizer) fx[2], (LoudnessEnhancer) fx[3]);
+    }
+
+    private void detach(int id) {
+        android.media.audiofx.AudioEffect[] fx = sessions.remove(id);
+        if (fx == null) return;
+        for (android.media.audiofx.AudioEffect e : fx) {
+            if (e != null) {
+                try {
+                    e.release();
+                } catch (RuntimeException ignored) {
+                }
+            }
         }
     }
 
@@ -220,6 +302,8 @@ final class AudioFx {
                 }
             }
             o.put("volume", volumeJson());
+            // can follow players that do not announce their session (SessionScanner, needs DUMP granted with adb)
+            o.put("follow", context.checkSelfPermission("android.permission.DUMP") == android.content.pm.PackageManager.PERMISSION_GRANTED);
             return o.put("eq", eqJson).put("bass", bassJson).put("virt", virtJson).put("loud", loudJson).toString();
         } catch (JSONException e) {
             throw new IllegalStateException(e);

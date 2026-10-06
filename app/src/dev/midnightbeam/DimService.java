@@ -62,6 +62,9 @@ public class DimService extends Service implements Runnable {
     private volatile boolean blocked;
     private RemoteServer server;
     private Advertiser advertiser;
+    private Osd osd;
+    private SessionReceiver sessionReceiver;
+    private SessionScanner scanner;
     private AudioFx audio;
 
     // Read by the server thread, so volatile.
@@ -80,6 +83,16 @@ public class DimService extends Service implements Runnable {
         super.onCreate();
         prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
         audio = new AudioFx(this, prefs);
+        sessionReceiver = new SessionReceiver(this);
+        android.content.IntentFilter f = new android.content.IntentFilter();
+        f.addAction(android.media.audiofx.AudioEffect.ACTION_OPEN_AUDIO_EFFECT_CONTROL_SESSION);
+        f.addAction(android.media.audiofx.AudioEffect.ACTION_CLOSE_AUDIO_EFFECT_CONTROL_SESSION);
+        registerReceiver(sessionReceiver, f);
+    }
+
+    /** A player opened or closed its audio session (SessionReceiver). */
+    void audioSession(int session, boolean open) {
+        audio.session(session, open);
     }
 
     @Override
@@ -144,6 +157,14 @@ public class DimService extends Service implements Runnable {
                 advertiser.start(deviceName(), deviceId(prefs), Compat.deviceType(this));
             }
         }
+        // players that do not announce their audio session: found by reading the audio service (needs DUMP)
+        if (audio.enabled() && scanner == null && SessionScanner.allowed(this)) {
+            scanner = new SessionScanner(this, audio);
+            scanner.start();
+        } else if (!audio.enabled() && scanner != null) {
+            scanner.finish();
+            scanner = null;
+        }
         if (!visible && !remote && !local && !scheduleOn && !audio.enabled()) {
             stopForeground(true);
             stopSelf();
@@ -169,8 +190,69 @@ public class DimService extends Service implements Runnable {
 
     /** Applies audio effect changes (called on the main thread by AudioTask). */
     void applyAudio(JSONObject body) {
+        String before = prefs.getString("audio_bands", "");
         audio.apply(body);
         render();
+        try {
+            audioOsd(body, before, new JSONObject(audio.json()));
+        } catch (JSONException ignored) {
+        }
+    }
+
+    /** On-screen display of the audio setting that just changed: name, value and a bar where it fits. */
+    private void audioOsd(JSONObject body, String before, JSONObject now) throws JSONException {
+        if (osd == null) osd = new Osd(this);
+        String t;
+        if (body.has("volume") && now.optJSONObject("volume") != null) {
+            JSONObject v = now.getJSONObject("volume");
+            int pct = Math.round(v.getInt("level") * 100f / Math.max(1, v.getInt("max")));
+            osd.show(MainActivity.t("Volume", "Volume"), pct + "%", pct);
+        } else if (body.has("enabled")) {
+            osd.show(MainActivity.t("Audio effects", "Effetti audio"),
+                    body.optBoolean("enabled") ? MainActivity.t("On", "Attivi") : MainActivity.t("Off", "Spenti"), -1);
+        } else if (body.optBoolean("reset", false)) {
+            osd.show(MainActivity.t("Equalizer", "Equalizzatore"), MainActivity.t("Reset", "Azzerato"), -1);
+        } else if (body.has("preset") && now.optJSONObject("eq") != null) {
+            org.json.JSONArray names = now.getJSONObject("eq").getJSONArray("presets");
+            int i = body.optInt("preset", -1);
+            if (i >= 0 && i < names.length()) osd.show(MainActivity.t("Preset", "Preset"), names.getString(i), -1);
+        } else if (body.has("bands") && now.optJSONObject("eq") != null) {
+            JSONObject eq = now.getJSONObject("eq");
+            org.json.JSONArray bands = eq.getJSONArray("bands");
+            String[] old = before.split(",");
+            int changed = 0;
+            for (int i = 0; i < bands.length(); i++) {
+                int was = 0;
+                try {
+                    was = i < old.length ? Integer.parseInt(old[i].trim()) : 0;
+                } catch (NumberFormatException ignored) {
+                }
+                if (bands.getJSONObject(i).getInt("level") != was) {
+                    changed = i;
+                    break;
+                }
+            }
+            JSONObject b = bands.getJSONObject(changed);
+            int min = eq.getInt("min"), max = eq.getInt("max"), level = b.getInt("level");
+            int hz = b.getInt("freq");
+            String freq = hz >= 1000 ? String.format(java.util.Locale.ROOT, "%.1f kHz", hz / 1000f).replace(".0 ", " ") : hz + " Hz";
+            osd.show(MainActivity.t("Equalizer ", "Equalizzatore ") + freq, decibel(level),
+                    Math.round((level - min) * 100f / Math.max(1, max - min)));
+        } else if (body.has("bass")) {
+            t = MainActivity.t("Bass boost", "Bassi");
+            osd.show(t, Math.round(body.optInt("bass") / 10f) + "%", Math.round(body.optInt("bass") / 10f));
+        } else if (body.has("virt")) {
+            t = MainActivity.t("Surround", "Effetto spaziale");
+            osd.show(t, Math.round(body.optInt("virt") / 10f) + "%", Math.round(body.optInt("virt") / 10f));
+        } else if (body.has("loud")) {
+            osd.show(MainActivity.t("Loudness", "Volume percepito"), decibel(body.optInt("loud")),
+                    Math.round(body.optInt("loud") * 100f / 1500));
+        }
+    }
+
+    /** Millibel as "+3.0 dB". */
+    private static String decibel(int mB) {
+        return String.format(java.util.Locale.ROOT, "%+.1f dB", mB / 100f);
     }
 
     /**
@@ -623,6 +705,12 @@ public class DimService extends Service implements Runnable {
             server = null;
         }
         if (advertiser != null) advertiser.stop();
+        if (osd != null) osd.hide();
+        if (scanner != null) scanner.finish();
+        try {
+            unregisterReceiver(sessionReceiver);
+        } catch (RuntimeException ignored) {
+        }
     }
 
     @Override

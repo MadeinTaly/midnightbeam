@@ -501,7 +501,7 @@ import * as DR from '/dayrhythm/src/index.js';
       presets: { movie: 'Movie night', early: 'Early to bed', late: 'Night owl' },
       audioTitle: 'Audio', audioSetting: 'Audio controls', audioSettingSub: 'Equalizer, bass and sound effects of the device, if its audio supports them',
       audioOff: 'Off', audioOn: 'On', audioCustom: 'Custom', audioFlat: 'Flat', audioNo: 'Not supported on this device',
-      audioEffects: 'Audio effects on this device', audioNoText: 'This device’s audio does not support global effects.', audioVolume: 'Volume', audioPause: 'Equalizer and effects pause while the playing app uses audio effects of its own (for example a video player’s volume boost): turn that option off in the app to hear them.', audioNeedOn: 'Turn on audio effects to use them',
+      audioEffects: 'Audio effects on this device', audioNoText: 'This device’s audio does not support global effects.', audioVolume: 'Volume', audioPause: 'Equalizer and effects pause while the playing app uses audio effects of its own (for example a video player’s volume boost). To apply them to that app anyway, allow it once from a computer:', audioFollow: 'The effects follow the app that is playing.', audioNeedOn: 'Turn on audio effects to use them',
       audioPresets: 'Presets', audioReset: 'Reset', audioEq: 'Equalizer', audioBass: 'Bass boost', audioVirt: 'Surround', audioLoud: 'Loudness', audioApply: 'Audio settings' },
     it: { tagline1: 'Meno luce blu. Serate film più rilassanti.', useHere: 'Usa su questo dispositivo', useHereSub: 'Filtro caldo e attenuazione per questo telefono',
       connectTv: 'Collega un TV o proiettore', connectTvSub: 'Controlla da qui il filtro dei tuoi TV box',
@@ -548,7 +548,7 @@ import * as DR from '/dayrhythm/src/index.js';
       presets: { movie: 'Serata film', early: 'A letto presto', late: 'Nottambulo' },
       audioTitle: 'Audio', audioSetting: 'Controlli audio', audioSettingSub: 'Equalizzatore, bassi ed effetti sonori del dispositivo, se il suo audio li supporta',
       audioOff: 'Spento', audioOn: 'Attivo', audioCustom: 'Personalizzato', audioFlat: 'Piatto', audioNo: 'Non supportato su questo dispositivo',
-      audioEffects: 'Effetti audio su questo dispositivo', audioNoText: 'L’audio di questo dispositivo non supporta gli effetti globali.', audioVolume: 'Volume', audioPause: 'Equalizzatore ed effetti si fermano mentre l’app in riproduzione usa effetti audio propri (per esempio il “volume boost” di un lettore video): disattiva quell’opzione nell’app per sentirli.', audioNeedOn: 'Attiva gli effetti audio per usarli',
+      audioEffects: 'Effetti audio su questo dispositivo', audioNoText: 'L’audio di questo dispositivo non supporta gli effetti globali.', audioVolume: 'Volume', audioPause: 'Equalizzatore ed effetti si fermano mentre l’app in riproduzione usa effetti audio propri (per esempio il “volume boost” di un lettore video). Per applicarli comunque a quell’app, consentilo una volta da un computer:', audioFollow: 'Gli effetti seguono l’app in riproduzione.', audioNeedOn: 'Attiva gli effetti audio per usarli',
       audioPresets: 'Preset', audioReset: 'Azzera', audioEq: 'Equalizzatore', audioBass: 'Potenziamento bassi', audioVirt: 'Surround', audioLoud: 'Loudness', audioApply: 'Impostazioni audio' }
   };
   function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { return null; } }
@@ -1356,7 +1356,9 @@ import * as DR from '/dayrhythm/src/index.js';
       });
     }
     if (!au.supported) { box.appendChild(el('div', 'card muted', esc(L.audioNoText))); return; }
-    box.appendChild(el('div', '', '<p class="small muted hidden" id="au-hint">' + L.audioNeedOn + '</p><p class="small muted" style="margin:0">' + L.audioPause + '</p><div class="stack au-ctl" id="au-ctl"></div>'));
+    box.appendChild(el('div', '', '<p class="small muted hidden" id="au-hint">' + L.audioNeedOn + '</p><p class="small muted" style="margin:0">' + (au.follow ? L.audioFollow : L.audioPause) + '</p>' +
+      (au.follow ? '' : '<p class="small muted" style="margin:6px 0 0;font-family:ui-monospace,monospace;word-break:break-all">adb shell pm grant dev.midnightbeam android.permission.DUMP</p>') +
+      '<div class="stack au-ctl" id="au-ctl"></div>'));
     var ctl = $('au-ctl'), eq = au.eq;
     if (eq) {
       ctl.appendChild(el('div', 'small muted', esc(L.audioPresets)));

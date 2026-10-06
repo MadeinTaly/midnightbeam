@@ -16,6 +16,9 @@
     <!-- Optional, only if granted with adb (pm grant): lets the Enable button turn on the accessibility service
          by itself instead of sending the person to the Accessibility settings. -->
     <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" />
+    <!-- Optional, only if granted with adb (pm grant): lets the audio effects follow players that do not announce their
+         audio session, by reading which sessions are playing from the audio service. -->
+    <uses-permission android:name="android.permission.DUMP" />
 
     <!-- Optional audio effects (equalizer, bass, virtualizer, loudness) on the output mix, where the device supports them. -->
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
