@@ -227,6 +227,8 @@ update each other, so uninstall the release build before installing your own.
 
 ## Third-party
 
+- [Chakra Petch](https://github.com/m4rc1e/Chakra-Petch) and [Inconsolata](https://github.com/googlefonts/Inconsolata), SIL Open Font License 1.1 (`app/assets/fonts`, subset to Latin; the license texts are next to them)
+
 - [QR Code generator library](https://www.nayuki.io/page/qr-code-generator-library) by Project Nayuki,
   MIT License (`app/src/io/nayuki/qrcodegen`, unmodified)
 - [Tailwind CSS](https://tailwindcss.com), MIT License (compiled into `app/assets/remote.css`)

@@ -203,7 +203,9 @@ public class DimService extends Service implements Runnable {
     private void audioOsd(JSONObject body, String before, JSONObject now) throws JSONException {
         if (osd == null) osd = new Osd(this);
         String t;
-        if (body.has("volume") && now.optJSONObject("volume") != null) {
+        if (body.has("label")) { // a preset of the phone app (e.g. a video preset): its name
+            osd.show(MainActivity.t("Preset", "Preset"), body.optString("label").replaceAll("\\p{Cntrl}", ""), -1);
+        } else if (body.has("volume") && now.optJSONObject("volume") != null) {
             JSONObject v = now.getJSONObject("volume");
             int pct = Math.round(v.getInt("level") * 100f / Math.max(1, v.getInt("max")));
             osd.show(MainActivity.t("Volume", "Volume"), pct + "%", pct);

@@ -187,6 +187,7 @@ public class MainActivity extends Activity
         timeline = new TimelineView(this);
         screen.addView(timeline, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(68)));
 
+        Fonts.apply(screen); // same typeface as the phone app
         setContentView(screen);
         refreshRemote();
         enabled.requestFocus();

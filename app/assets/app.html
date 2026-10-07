@@ -7,6 +7,10 @@
   <title>MidnightBeam</title>
   <!-- The phone app's own page (served on loopback by the app only). The TV and the browser remote use remote.html. -->
   <style>
+    @font-face { font-family: "Chakra Petch"; src: url(/fonts/ChakraPetch-Regular.ttf) format("truetype"); font-weight: 400; font-display: swap; }
+    @font-face { font-family: "Chakra Petch"; src: url(/fonts/ChakraPetch-SemiBold.ttf) format("truetype"); font-weight: 500 600; font-display: swap; }
+    @font-face { font-family: "Chakra Petch"; src: url(/fonts/ChakraPetch-Bold.ttf) format("truetype"); font-weight: 700 900; font-display: swap; }
+    @font-face { font-family: "Inconsolata"; src: url(/fonts/Inconsolata-Regular.ttf) format("truetype"); font-display: swap; }
     :root {
       --bg: #0a0807; --bg2: #100c0b; --card: #161110; --card2: #1f1815; --line: rgb(255 255 255 / 7%);
       --ink: #f6efe9; --muted: #a8978c; --red: #ff4d4d; --red2: #ff6b4d; --cream: #ffd9b3;
@@ -16,7 +20,7 @@
     * { box-sizing: border-box; }
     html, body { margin: 0; background: var(--bg); color: var(--ink); }
     body {
-      font-family: "Google Sans", "Segoe UI", Roboto, system-ui, sans-serif; line-height: 1.4;
+      font-family: "Chakra Petch", "Segoe UI", Roboto, system-ui, sans-serif; line-height: 1.4;
       -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none;
       min-height: 100vh;
       background: radial-gradient(ellipse 80% 45% at 90% -5%, rgb(255 107 77 / 10%), transparent 70%),
@@ -39,7 +43,7 @@
       -webkit-background-clip: text; background-clip: text; color: transparent;
       filter: drop-shadow(0 0 14px rgb(255 77 77 / 35%)); }
     .spark { color: var(--red); font-size: .8em; vertical-align: super; margin-left: 2px; text-shadow: 0 0 10px var(--red); }
-    .tagline { font-family: ui-monospace, "Roboto Mono", "DejaVu Sans Mono", monospace; color: #ddd0c7; font-size: .95rem; }
+    .tagline { font-family: "Inconsolata", ui-monospace, "Roboto Mono", monospace; color: #ddd0c7; font-size: .95rem; }
 
     .card { background: linear-gradient(180deg, var(--card), var(--bg2)); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; }
     .stack > * + * { margin-top: 12px; }
@@ -502,7 +506,7 @@ import * as DR from '/dayrhythm/src/index.js';
       audioTitle: 'Audio', audioSetting: 'Audio controls', audioSettingSub: 'Equalizer, bass and sound effects of the device, if its audio supports them',
       audioOff: 'Off', audioOn: 'On', audioCustom: 'Custom', audioFlat: 'Flat', audioNo: 'Not supported on this device',
       audioEffects: 'Audio effects on this device', audioNoText: 'This device’s audio does not support global effects.', audioVolume: 'Volume', audioPause: 'Equalizer and effects pause while the playing app uses audio effects of its own (for example a video player’s volume boost). To apply them to that app anyway, allow it once from a computer:', audioFollow: 'The effects follow the app that is playing.', audioNeedOn: 'Turn on audio effects to use them',
-      audioPresets: 'Presets', audioReset: 'Reset', audioEq: 'Equalizer', audioBass: 'Bass boost', audioVirt: 'Surround', audioLoud: 'Loudness', audioApply: 'Audio settings' },
+      audioPresets: 'Music', audioVideo: 'Video', vp: { dialogue: 'Dialogue', cinema: 'Cinema', night: 'Night', action: 'Action', sport: 'Sport' }, audioReset: 'Reset', audioEq: 'Equalizer', audioBass: 'Bass boost', audioVirt: 'Surround', audioLoud: 'Loudness', audioApply: 'Audio settings' },
     it: { tagline1: 'Meno luce blu. Serate film più rilassanti.', useHere: 'Usa su questo dispositivo', useHereSub: 'Filtro caldo e attenuazione per questo telefono',
       connectTv: 'Collega un TV o proiettore', connectTvSub: 'Controlla da qui il filtro dei tuoi TV box',
       home: 'Home', devices: 'Dispositivi', scenes: 'Scene', settings: 'Impostazioni', back: 'Indietro', power: 'Filtro acceso / spento',
@@ -549,7 +553,7 @@ import * as DR from '/dayrhythm/src/index.js';
       audioTitle: 'Audio', audioSetting: 'Controlli audio', audioSettingSub: 'Equalizzatore, bassi ed effetti sonori del dispositivo, se il suo audio li supporta',
       audioOff: 'Spento', audioOn: 'Attivo', audioCustom: 'Personalizzato', audioFlat: 'Piatto', audioNo: 'Non supportato su questo dispositivo',
       audioEffects: 'Effetti audio su questo dispositivo', audioNoText: 'L’audio di questo dispositivo non supporta gli effetti globali.', audioVolume: 'Volume', audioPause: 'Equalizzatore ed effetti si fermano mentre l’app in riproduzione usa effetti audio propri (per esempio il “volume boost” di un lettore video). Per applicarli comunque a quell’app, consentilo una volta da un computer:', audioFollow: 'Gli effetti seguono l’app in riproduzione.', audioNeedOn: 'Attiva gli effetti audio per usarli',
-      audioPresets: 'Preset', audioReset: 'Azzera', audioEq: 'Equalizzatore', audioBass: 'Potenziamento bassi', audioVirt: 'Surround', audioLoud: 'Loudness', audioApply: 'Impostazioni audio' }
+      audioPresets: 'Musica', audioVideo: 'Video', vp: { dialogue: 'Dialoghi', cinema: 'Cinema', night: 'Notte', action: 'Azione', sport: 'Sport' }, audioReset: 'Azzera', audioEq: 'Equalizzatore', audioBass: 'Potenziamento bassi', audioVirt: 'Surround', audioLoud: 'Loudness', audioApply: 'Impostazioni audio' }
   };
   function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { return null; } }
   // English by default; the system language when the app has it, unless the person picked one in Settings.
@@ -1345,6 +1349,24 @@ import * as DR from '/dayrhythm/src/index.js';
     if (sig !== auSig) { auSig = sig; buildAudio(box); }
     updateAudio();
   }
+  var VIDEO = [
+    { id: 'dialogue', curve: [-300, -100, 300, 500, 200], bass: 0, virt: 0, loud: 300 },
+    { id: 'cinema', curve: [500, 200, 0, 200, 300], bass: 400, virt: 500, loud: 0 },
+    { id: 'night', curve: [-400, -200, 200, 300, 0], bass: 0, virt: 0, loud: 600 },
+    { id: 'action', curve: [700, 300, -100, 300, 400], bass: 600, virt: 400, loud: 200 },
+    { id: 'sport', curve: [200, 0, 300, 400, 200], bass: 200, virt: 300, loud: 200 }
+  ];
+  var VIDEO_HZ = [60, 230, 910, 3600, 14000];
+  // Level of a video curve at each band of this device (log-frequency interpolation, clamped to its range)
+  function videoBands(v, eq) {
+    return eq.bands.map(function (b) {
+      var f = Math.log(Math.max(20, b.freq)), xs = VIDEO_HZ.map(Math.log), y;
+      if (f <= xs[0]) y = v.curve[0];
+      else if (f >= xs[xs.length - 1]) y = v.curve[xs.length - 1];
+      else for (var i = 0; i < xs.length - 1; i++) if (f <= xs[i + 1]) { y = v.curve[i] + (v.curve[i + 1] - v.curve[i]) * (f - xs[i]) / (xs[i + 1] - xs[i]); break; }
+      return Math.max(eq.min, Math.min(eq.max, Math.round(y / 50) * 50));
+    });
+  }
   function buildAudio(box) {
     var red = '#ff3b3b', amb = '#ffb15c';
     box.innerHTML = ''; $('au-volbox').innerHTML = '';
@@ -1357,7 +1379,7 @@ import * as DR from '/dayrhythm/src/index.js';
     }
     if (!au.supported) { box.appendChild(el('div', 'card muted', esc(L.audioNoText))); return; }
     box.appendChild(el('div', '', '<p class="small muted hidden" id="au-hint">' + L.audioNeedOn + '</p><p class="small muted" style="margin:0">' + (au.follow ? L.audioFollow : L.audioPause) + '</p>' +
-      (au.follow ? '' : '<p class="small muted" style="margin:6px 0 0;font-family:ui-monospace,monospace;word-break:break-all">adb shell pm grant dev.midnightbeam android.permission.DUMP</p>') +
+      (au.follow ? '' : '<p class="small muted" style="margin:6px 0 0;font-family:Inconsolata,ui-monospace,monospace;word-break:break-all">adb shell pm grant dev.midnightbeam android.permission.DUMP</p>') +
       '<div class="stack au-ctl" id="au-ctl"></div>'));
     var ctl = $('au-ctl'), eq = au.eq;
     if (eq) {
@@ -1372,6 +1394,21 @@ import * as DR from '/dayrhythm/src/index.js';
         chips.appendChild(c);
       });
       ctl.appendChild(chips);
+      // Video presets: our own curves (mB at reference frequencies), mapped onto the device's bands
+      ctl.appendChild(el('div', 'small muted', esc(L.audioVideo)));
+      var vchips = el('div', 'chips'); vchips.id = 'au-vid'; vchips.setAttribute('role', 'group');
+      VIDEO.forEach(function (v) {
+        var name = L.vp[v.id], c = el('button', 'chip', esc(name)); c.type = 'button'; c.setAttribute('data-v', v.id);
+        c.onclick = function () {
+          var body = { bands: videoBands(v, eq), label: name };
+          if (au.bass) body.bass = v.bass;
+          if (au.virt) body.virt = v.virt;
+          if (au.loud) body.loud = v.loud;
+          auPost(body, name);
+        };
+        vchips.appendChild(c);
+      });
+      ctl.appendChild(vchips);
       ctl.appendChild(el('div', 'small muted', esc(L.audioEq)));
       eq.bands.forEach(function (b, i) {
         var card = auSlider('au-b' + i, null, '', fmtHz(b.freq), eq.min, eq.max, 50, red, amb);
@@ -1415,6 +1452,10 @@ import * as DR from '/dayrhythm/src/index.js';
     if (au.loud) put('au-loud', au.loud.gain, fmtDb);
     if (eq) {
       var nm = local ? null : auPresetName(), flat = !nm && auFlat();
+      Array.prototype.forEach.call($('au-vid').children, function (c) {
+        c.disabled = !on;
+        c.setAttribute('aria-pressed', String(L.vp[c.getAttribute('data-v')] === nm));
+      });
       Array.prototype.forEach.call($('au-pre').children, function (c) {
         var i = c.getAttribute('data-i');
         c.disabled = !on;

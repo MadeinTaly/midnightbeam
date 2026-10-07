@@ -3,7 +3,6 @@ package dev.midnightbeam;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
-import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Handler;
 import android.os.Looper;
@@ -78,44 +77,44 @@ final class Osd implements Runnable {
         Context owner = svc != null ? svc : context;
         wm = (WindowManager) owner.getSystemService(Context.WINDOW_SERVICE);
 
+        // one line: "Volume   45%", with a thin bar along the bottom edge
         box = new LinearLayout(context);
         box.setOrientation(LinearLayout.VERTICAL);
-        box.setGravity(Gravity.CENTER_HORIZONTAL);
-        box.setPadding(dp(28), dp(16), dp(28), dp(18));
-        box.setMinimumWidth(dp(280));
         GradientDrawable bg = new GradientDrawable();
-        bg.setColor(Color.argb(0xEB, 0x16, 0x11, 0x10));
-        bg.setCornerRadius(dp(22));
-        bg.setStroke(dp(1), Color.argb(0x55, 0xFF, 0x6B, 0x4D));
+        bg.setColor(Color.argb(0xE6, 0x16, 0x11, 0x10));
+        bg.setCornerRadius(dp(18));
         box.setBackground(bg);
+        box.setClipToOutline(true);
 
+        LinearLayout row = new LinearLayout(context);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(18), dp(8), dp(18), dp(7));
         label = new TextView(context);
         label.setTextColor(MainActivity.LIGHT);
-        label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
-        box.addView(label);
+        label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+        label.setSingleLine(true);
+        label.setTypeface(Fonts.regular(context));
+        row.addView(label);
         value = new TextView(context);
         value.setTextColor(Color.WHITE);
-        value.setTextSize(TypedValue.COMPLEX_UNIT_SP, 28);
-        value.setTypeface(Typeface.DEFAULT_BOLD);
-        box.addView(value);
+        value.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+        value.setTypeface(Fonts.bold(context));
+        value.setSingleLine(true);
+        value.setPadding(dp(14), 0, 0, 0);
+        row.addView(value);
+        box.addView(row);
 
         bar = new LinearLayout(context);
         bar.setOrientation(LinearLayout.HORIZONTAL);
-        GradientDrawable track = new GradientDrawable();
-        track.setColor(Color.rgb(0x3A, 0x2C, 0x27));
-        track.setCornerRadius(dp(4));
-        bar.setBackground(track);
+        bar.setBackgroundColor(Color.rgb(0x3A, 0x2C, 0x27));
         fill = new View(context);
-        GradientDrawable fg = new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,
-                new int[] {MainActivity.PRIMARY, Color.rgb(0xFF, 0xB1, 0x5C)});
-        fg.setCornerRadius(dp(4));
-        fill.setBackground(fg);
+        fill.setBackground(new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,
+                new int[] {MainActivity.PRIMARY, Color.rgb(0xFF, 0xB1, 0x5C)}));
         rest = new View(context);
         bar.addView(fill);
         bar.addView(rest);
-        LinearLayout.LayoutParams barLp = new LinearLayout.LayoutParams(dp(240), dp(8));
-        barLp.topMargin = dp(10);
-        box.addView(bar, barLp);
+        box.addView(bar, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(3)));
 
         WindowManager.LayoutParams lp = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT,
@@ -124,7 +123,7 @@ final class Osd implements Runnable {
                         | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
                 PixelFormat.TRANSLUCENT);
         lp.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
-        lp.y = Math.round(context.getResources().getDisplayMetrics().heightPixels * 0.08f);
+        lp.y = Math.round(context.getResources().getDisplayMetrics().heightPixels * 0.06f);
         try {
             wm.addView(box, lp);
             return true;

@@ -38,6 +38,7 @@ public class TimelineView extends View implements Comparator<JSONObject> {
         super(context);
         density = context.getResources().getDisplayMetrics().density;
         text.setTextSize(13 * density);
+        text.setTypeface(Fonts.regular(context));
         now.setColor(MainActivity.ACCENT);
         now.setStrokeWidth(3 * density);
     }

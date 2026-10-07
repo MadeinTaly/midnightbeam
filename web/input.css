@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face { font-family: "Chakra Petch"; src: url(/fonts/ChakraPetch-Regular.ttf) format("truetype"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Chakra Petch"; src: url(/fonts/ChakraPetch-SemiBold.ttf) format("truetype"); font-weight: 500 600; font-display: swap; }
+@font-face { font-family: "Chakra Petch"; src: url(/fonts/ChakraPetch-Bold.ttf) format("truetype"); font-weight: 700 900; font-display: swap; }
+@font-face { font-family: "Inconsolata"; src: url(/fonts/Inconsolata-Regular.ttf) format("truetype"); font-display: swap; }
+
 /* Theme: the app palette (primary #FF2B2B, accent #FF6B4D, light #FFD9B3, background #0B0B0F, surface #1C1513).
    The page is always dark; text colours keep WCAG AA contrast on their backgrounds. */
 :root, .dark {
@@ -24,7 +29,7 @@
   margin: 0;
   background: radial-gradient(ellipse at 85% 0%, rgb(255 43 43 / 16%), transparent 45%), var(--app-bg);
   color: var(--app-ink);
-  font-family: "Segoe UI Variable", "Segoe UI", Roboto, sans-serif;
+  font-family: "Chakra Petch", "Segoe UI", Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   line-height: 1.5;
 }
