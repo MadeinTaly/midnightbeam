@@ -240,7 +240,7 @@ MidnightBeam collects no data and works only on your local network: see [PRIVACY
 
 ## Support
 
-If MidnightBeam is useful to you, you can support its development here: https://gt.1471995.xyz
+If MidnightBeam is useful to you, you can support its development here: https://linktr.ee/made_in_Taly
 
 ## License
 
