@@ -93,6 +93,32 @@ final class ScheduleMath {
         return 1 - toNext / w;
     }
 
+    /**
+     * New start of slot {@code i} when its edge is moved one {@code step} in direction {@code dir} (+1/-1) with the
+     * remote: to the next multiple of {@code step}, staying at least {@code gap} minutes from the neighbours.
+     * {@code starts} are in timeline order. Cyclic (daily): neighbours wrap around and so may midnight. Not cyclic
+     * (one day of a week): between the previous slot (or 00:00) and the next one (or 23:59).
+     */
+    static int moveEdge(int[] starts, int i, int dir, int step, int gap, boolean cyclic) {
+        int n = starts.length, cur = starts[i];
+        int target = dir > 0 ? (cur / step + 1) * step : ((cur + step - 1) / step - 1) * step;
+        // never past a neighbour, never backwards (neighbours set closer than gap elsewhere leave it where it is)
+        if (!cyclic) {
+            int lo = i > 0 ? starts[i - 1] + gap : 0;
+            int hi = i + 1 < n ? starts[i + 1] - gap : DAY - 1;
+            int t = Math.max(lo, Math.min(hi, target));
+            return lo > hi || (dir > 0 ? t < cur : t > cur) ? cur : t;
+        }
+        if (n == 1) return ((target % DAY) + DAY) % DAY;
+        int prev = starts[(i - 1 + n) % n], next = starts[(i + 1) % n];
+        int span = ((next - prev) % DAY + DAY) % DAY;
+        if (span == 0) span = DAY;
+        int dc = ((cur - prev) % DAY + DAY) % DAY; // distance from the previous slot, unwrapped
+        int d = Math.max(gap, Math.min(span - gap, dc + target - cur));
+        if (span - gap < gap || (dir > 0 ? d < dc : d > dc)) return cur;
+        return (prev + d) % DAY;
+    }
+
     /** "HH:MM" to minutes, or -1 if malformed. */
     static int minutes(String hhmm) {
         if (hhmm == null || !hhmm.matches("\\d{2}:\\d{2}")) return -1;

@@ -15,9 +15,11 @@ to be restarted to pick up new values from automation tools.
 - **Phone app mode**: on a phone or tablet the app itself is the remote page, for the phone's own filter and for
   every TV you saved
 - **Daily or weekly schedule**: a timeline of time slots (movie night, early to bed…) that the TV applies by itself,
-  even with the phone off; shown as a bar at the bottom of the TV screen
+  even with the phone off; shown as a bar at the bottom of the TV screen, where the remote moves the slot edges
+  (left/right pick an edge, OK grabs it, left/right move it by 10 minutes, OK saves, Back undoes)
 - **Remote-friendly settings screen**: only D-pad and OK are needed, with a visible focus highlight
-  for the many TV-box themes that show none
+  for the many TV-box themes that show none; a collapsed **Advanced** section switches the schedule on/off,
+  sets its gradual change and holds the audio settings (volume, equalizer, bass, surround, loudness)
 - **Restores the last setting at boot**, early: the boot receiver has a high priority, because on some boxes
   `BOOT_COMPLETED` reaches apps one at a time and can take over a minute
 - **Small**: ~410 KB APK (most of it the artwork), plain Java, no tracking; no internet connections: the network is used only
@@ -232,7 +234,7 @@ update each other, so uninstall the release build before installing your own.
 - [QR Code generator library](https://www.nayuki.io/page/qr-code-generator-library) by Project Nayuki,
   MIT License (`app/src/io/nayuki/qrcodegen`, unmodified)
 - [Tailwind CSS](https://tailwindcss.com), MIT License (compiled into `app/assets/remote.css`)
-- [dayrhythm](https://github.com/MadeinTaly/dayrhythm), MIT License (git submodule `vendor/dayrhythm`, v0.4.0, used unminified from its `src/`; the schedule editor of the phone page)
+- [dayrhythm](https://github.com/MadeinTaly/dayrhythm), MIT License (git submodule `vendor/dayrhythm`, v0.6.0, used unminified from its `src/`; the schedule editor of the phone page)
 
 ## Privacy
 

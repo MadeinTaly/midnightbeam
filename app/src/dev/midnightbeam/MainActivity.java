@@ -16,10 +16,18 @@ import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.SeekBar;
 import android.widget.Switch;
 import android.widget.TextView;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.List;
 import java.util.Locale;
 
 import io.nayuki.qrcodegen.QrCode;
@@ -51,6 +59,22 @@ public class MainActivity extends Activity
     private Slider bright;
     private Slider temp;
     private boolean ready;
+    // Advanced section (collapsed): schedule switches and audio, built each time it opens
+    private Button advanced;
+    private LinearLayout advancedBox;
+    private Switch scheduleOn;
+    private Slider transition;
+    private Slider volume;
+    private Switch fxOn;
+    private Button eqPreset;
+    private int eqPresetIndex = -1;
+    private JSONArray eqPresets;
+    private final List<Slider> bands = new ArrayList<>();
+    private Slider bass;
+    private Slider virt;
+    private Slider loud;
+    private Button fxReset;
+    private boolean updating; // switches set by code, not by the user
 
     /** UI language: Italian on Italian devices, English otherwise. */
     static String t(String en, String it) {
@@ -80,16 +104,22 @@ public class MainActivity extends Activity
         SharedPreferences p = getSharedPreferences(DimService.PREFS, MODE_PRIVATE);
         prefs = p;
 
-        // Two columns (filter controls, phone remote QR code) above the schedule timeline.
+        // Two columns (filter controls, phone remote QR code) above the schedule timeline and the Advanced section.
+        // The whole screen scrolls: moving the focus with the remote brings each row into view.
+        ScrollView scroll = new ScrollView(this);
+        scroll.setBackgroundColor(BG);
+        scroll.setFillViewport(true);
         LinearLayout screen = new LinearLayout(this);
         screen.setOrientation(LinearLayout.VERTICAL);
         screen.setBackgroundColor(BG);
         int pad = dp(48);
         screen.setPadding(pad, dp(28), pad, dp(24));
+        scroll.addView(screen);
 
         LinearLayout page = new LinearLayout(this);
         page.setOrientation(LinearLayout.HORIZONTAL);
-        screen.addView(page, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f));
+        screen.addView(page, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -186,8 +216,17 @@ public class MainActivity extends Activity
         timeline = new TimelineView(this);
         screen.addView(timeline, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(68)));
 
+        advanced = button(screen);
+        ((LinearLayout.LayoutParams) advanced.getLayoutParams()).topMargin = dp(20);
+        advancedBox = new LinearLayout(this);
+        advancedBox.setOrientation(LinearLayout.VERTICAL);
+        advancedBox.setVisibility(View.GONE);
+        screen.addView(advancedBox, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
+        refreshAdvanced();
+
         Fonts.apply(screen); // same typeface as the phone app
-        setContentView(screen);
+        setContentView(scroll);
         refreshRemote();
         enabled.requestFocus();
         ready = true;
@@ -239,14 +278,232 @@ public class MainActivity extends Activity
     @Override
     public void run() {
         boolean on = prefs.getBoolean("schedule_on", false);
-        timeline.setSchedule(DimService.todaySlots(prefs.getString("schedule", "[]")), on);
-        timelineTitle.setText(timeline.isEmpty()
+        String resolved = prefs.getString("schedule", "[]");
+        timeline.setSchedule(DimService.todaySlots(resolved), on, resolved.trim().startsWith("{"));
+        timeline.setVisibility(timeline.isEmpty() ? View.GONE : View.VISIBLE);
+        refreshTimelineTitle();
+        if (scheduleOn != null) {
+            updating = true;
+            scheduleOn.setChecked(on);
+            scheduleOn.setEnabled(!timeline.isEmpty());
+            updating = false;
+        }
+        main.postDelayed(this, 30000);
+    }
+
+    /** Title above the timeline: the schedule state, or what the remote does while the timeline has the focus. */
+    void refreshTimelineTitle() {
+        String hint = timeline.hint();
+        boolean on = prefs.getBoolean("schedule_on", false);
+        timelineTitle.setText(!hint.isEmpty() ? hint : timeline.isEmpty()
                 ? t("Schedule: set it from the phone remote", "Programmazione: impostala dal telefono")
                 : on ? t("Schedule \u00b7 on", "Programmazione \u00b7 attiva")
-                : t("Schedule \u00b7 off (turn it on from the phone remote)",
-                    "Programmazione \u00b7 spenta (attivala dal telefono)"));
-        timeline.setVisibility(timeline.isEmpty() ? View.GONE : View.VISIBLE);
-        main.postDelayed(this, 30000);
+                : t("Schedule \u00b7 off (turn it on in Advanced or from the phone)",
+                    "Programmazione \u00b7 spenta (attivala in Avanzate o dal telefono)"));
+        timelineTitle.setTextColor(hint.isEmpty() ? NORMAL : FOCUS);
+    }
+
+    /**
+     * A slot edge moved on the timeline: today's slot starting at {@code from} now starts at {@code to}. Updates
+     * both the schedule the service runs (resolved) and the one the phone editor shows (value), then saves.
+     */
+    void moveScheduleEdge(String from, String to) {
+        try {
+            String r = prefs.getString("schedule", "[]").trim();
+            String v = prefs.getString("schedule_value", r).trim();
+            Object value = v.startsWith("{") ? new JSONObject(v) : new JSONArray(v);
+            Object resolved;
+            if (r.startsWith("{")) { // weekly: today's own slots
+                JSONObject week = new JSONObject(r);
+                String day = ScheduleMath.WEEKDAYS[ScheduleMath.mondayIndex(Calendar.getInstance().get(Calendar.DAY_OF_WEEK))];
+                JSONArray own = week.optJSONArray(day);
+                if (own == null) return;
+                retime(own, from, to);
+                resolved = week;
+                JSONObject w = value instanceof JSONObject ? ((JSONObject) value).optJSONObject("week") : null;
+                if (w == null) value = new JSONObject().put("week", new JSONObject(week.toString()));
+                else if (w.optJSONArray(day) != null) retime(w.getJSONArray(day), from, to);
+                else w.put(day, new JSONArray(own.toString())); // was linked to a saved day: today gets its own copy
+            } else {
+                JSONArray day = new JSONArray(r);
+                retime(day, from, to);
+                resolved = day;
+                if (value instanceof JSONArray) retime((JSONArray) value, from, to);
+                else value = day;
+            }
+            sendSchedule(new JSONObject().put("enabled", prefs.getBoolean("schedule_on", false))
+                    .put("resolved", resolved).put("value", value));
+        } catch (JSONException ignored) {
+        }
+    }
+
+    private static void retime(JSONArray slots, String from, String to) throws JSONException {
+        for (int i = 0; i < slots.length(); i++) {
+            JSONObject s = slots.optJSONObject(i);
+            if (s != null && from.equals(s.optString("time"))) {
+                s.put("time", to);
+                return;
+            }
+        }
+    }
+
+    /** Schedule switch: the same schedule, on or off. */
+    private void setScheduleOn(boolean on) {
+        try {
+            String r = prefs.getString("schedule", "[]").trim();
+            String v = prefs.getString("schedule_value", r).trim();
+            sendSchedule(new JSONObject().put("enabled", on)
+                    .put("resolved", r.startsWith("{") ? new JSONObject(r) : new JSONArray(r))
+                    .put("value", v.startsWith("{") ? new JSONObject(v) : new JSONArray(v)));
+        } catch (JSONException ignored) {
+        }
+    }
+
+    private void sendSchedule(JSONObject body) {
+        Compat.startForegroundService(this, new Intent(this, DimService.class).putExtra("schedule", body.toString()));
+        main.removeCallbacks(this);
+        main.postDelayed(this, 500); // the service has saved it by then: redraw from the stored schedule
+    }
+
+    private void sendAudio(JSONObject body) {
+        Compat.startForegroundService(this, new Intent(this, DimService.class).putExtra("audio", body.toString()));
+    }
+
+    // ---- Advanced section ----
+
+    private void refreshAdvanced() {
+        boolean open = advancedBox.getVisibility() == View.VISIBLE;
+        advanced.setText((open ? "\u25be " : "\u25b8 ") + t("Advanced: schedule, audio", "Avanzate: programmazione, audio"));
+    }
+
+    /** Builds the Advanced rows from the current settings (each time it opens: the phone may have changed them). */
+    private void buildAdvanced() {
+        advancedBox.removeAllViews();
+        bands.clear();
+        eqPreset = null;
+        eqPresetIndex = -1; // not stored on the device: the phone may have changed the bands since
+        fxOn = null;
+        fxReset = null;
+        advancedBox.addView(section(t("Schedule", "Programmazione")));
+        updating = true;
+        scheduleOn = switchRow(advancedBox, t("Schedule on", "Programmazione attiva"));
+        scheduleOn.setChecked(prefs.getBoolean("schedule_on", false));
+        scheduleOn.setEnabled(!timeline.isEmpty());
+        transition = new Slider(this, advancedBox, t("Gradual change at the end of each slot", "Passaggio graduale a fine fascia"),
+                " min", 0, 60, 15, prefs.getInt("transition", 30));
+
+        advancedBox.addView(section("Audio"));
+        JSONObject a;
+        try {
+            a = new JSONObject(audioJson());
+        } catch (JSONException | RuntimeException e) {
+            a = new JSONObject();
+        }
+        JSONObject vol = a.optJSONObject("volume");
+        volume = vol == null ? null : new Slider(this, advancedBox, t("Volume", "Volume"), "", 0,
+                vol.optInt("max", 15), 1, vol.optInt("level"));
+        bass = virt = loud = null;
+        if (!a.optBoolean("supported", false)) {
+            advancedBox.addView(note(t("This device does not allow audio effects (equalizer, bass, surround).",
+                    "Questo dispositivo non permette effetti audio (equalizzatore, bassi, surround).")));
+        } else {
+            fxOn = switchRow(advancedBox, t("Audio effects", "Effetti audio"));
+            fxOn.setChecked(a.optBoolean("enabled", false));
+            advancedBox.addView(note(t("Tune them by ear with something playing underneath (a film, music).",
+                    "Regolali a orecchio con qualcosa in riproduzione sotto (un film, musica).")));
+            JSONObject eq = a.optJSONObject("eq");
+            if (eq != null) {
+                eqPresets = eq.optJSONArray("presets");
+                if (eqPresets != null && eqPresets.length() > 0) {
+                    eqPreset = button(advancedBox);
+                    refreshPreset();
+                }
+                JSONArray b = eq.optJSONArray("bands");
+                int min = eq.optInt("min", -1500) / 100, max = eq.optInt("max", 1500) / 100;
+                for (int i = 0; b != null && i < b.length(); i++) {
+                    JSONObject band = b.optJSONObject(i);
+                    int hz = band.optInt("freq");
+                    String name = hz >= 1000 ? (hz % 1000 == 0 ? String.valueOf(hz / 1000) : String.valueOf(Math.round(hz / 100f) / 10f)) + " kHz"
+                            : hz + " Hz";
+                    bands.add(new Slider(this, advancedBox, t("Equalizer ", "Equalizzatore ") + name, " dB", min, max, 1,
+                            Math.round(band.optInt("level") / 100f)));
+                }
+            }
+            JSONObject o = a.optJSONObject("bass");
+            if (o != null) bass = new Slider(this, advancedBox, t("Bass boost", "Bassi"), "%", 0, 100, 5, o.optInt("strength") / 10);
+            o = a.optJSONObject("virt");
+            if (o != null) virt = new Slider(this, advancedBox, "Surround", "%", 0, 100, 5, o.optInt("strength") / 10);
+            o = a.optJSONObject("loud");
+            if (o != null) loud = new Slider(this, advancedBox, t("Loudness", "Volume extra"), " dB", 0, 15, 1, o.optInt("gain") / 100);
+            fxReset = button(advancedBox);
+            fxReset.setText(t("Reset audio effects", "Azzera effetti audio"));
+        }
+        updating = false;
+        Fonts.apply(advancedBox);
+    }
+
+    /** Audio state: from the service's effects when it runs (no effects are live otherwise). */
+    private String audioJson() {
+        AudioFx fx = DimService.runningAudio;
+        return (fx != null ? fx : new AudioFx(this, prefs)).json();
+    }
+
+    private void refreshPreset() {
+        eqPreset.setText(t("Equalizer preset: ", "Preset equalizzatore: ")
+                + (eqPresetIndex >= 0 ? eqPresets.optString(eqPresetIndex) : t("custom", "personalizzato"))
+                + t("  (OK: next)", "  (OK: successivo)"));
+    }
+
+    /** An effect changed: sent with the effects switched on (changing one means wanting to hear it). */
+    private void sendEffect(JSONObject body) throws JSONException {
+        if (fxOn != null && !fxOn.isChecked()) {
+            updating = true;
+            fxOn.setChecked(true);
+            updating = false;
+            body.put("enabled", true);
+        }
+        sendAudio(body);
+    }
+
+    private TextView section(String s) {
+        TextView v = text(s, 20, ACCENT);
+        v.setPadding(0, dp(24), 0, 0);
+        return v;
+    }
+
+    private TextView note(String s) {
+        TextView v = text(s, 15, NORMAL);
+        v.setPadding(0, dp(6), 0, 0);
+        return v;
+    }
+
+    private Switch switchRow(LinearLayout parent, String label) {
+        Switch s = new Switch(this);
+        s.setText(label);
+        s.setTextColor(LIGHT);
+        s.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20);
+        s.setPadding(0, dp(16), 0, dp(8));
+        s.setFocusable(true);
+        s.setOnFocusChangeListener(this);
+        s.setOnCheckedChangeListener(this);
+        parent.addView(s);
+        return s;
+    }
+
+    private Button button(LinearLayout parent) {
+        Button b = new Button(this);
+        b.setAllCaps(false);
+        b.setTextColor(LIGHT);
+        b.setBackgroundColor(BUTTON_BACKGROUND);
+        b.setPadding(dp(20), dp(10), dp(20), dp(10));
+        b.setFocusable(true);
+        b.setOnClickListener(this);
+        b.setOnFocusChangeListener(this);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        lp.topMargin = dp(12);
+        parent.addView(b, lp);
+        return b;
     }
 
     /** Shows the QR code and the address of the phone remote when it is on. */
@@ -313,6 +570,61 @@ public class MainActivity extends Activity
         } else if (v == newKey) {
             DimService.newPairingKey(prefs); // phones paired with the old code stop working
             refreshRemote();
+        } else if (v == advanced) {
+            boolean open = advancedBox.getVisibility() != View.VISIBLE;
+            if (open) buildAdvanced();
+            advancedBox.setVisibility(open ? View.VISIBLE : View.GONE);
+            refreshAdvanced();
+        } else if (v == eqPreset) {
+            eqPresetIndex = (eqPresetIndex + 1) % eqPresets.length();
+            refreshPreset();
+            try {
+                sendEffect(new JSONObject().put("preset", eqPresetIndex));
+            } catch (JSONException ignored) {
+            }
+            main.postDelayed(audioRefresh, 300); // the preset set the bands: show them
+        } else if (v == fxReset) {
+            try {
+                sendAudio(new JSONObject().put("reset", true).put("bands", new JSONArray()));
+            } catch (JSONException ignored) {
+            }
+            eqPresetIndex = -1;
+            if (eqPreset != null) refreshPreset();
+            main.postDelayed(audioRefresh, 300);
+        }
+    }
+
+    private final Runnable audioRefresh = new AudioRefresh(this);
+
+    /** Reads the effects back after a preset or a reset (a plain class, see the note on inner classes above). */
+    static final class AudioRefresh implements Runnable {
+        private final MainActivity activity;
+
+        AudioRefresh(MainActivity activity) {
+            this.activity = activity;
+        }
+
+        @Override
+        public void run() {
+            activity.refreshEffects();
+        }
+    }
+
+    void refreshEffects() {
+        try {
+            JSONObject a = new JSONObject(audioJson());
+            JSONObject eq = a.optJSONObject("eq");
+            JSONArray b = eq == null ? null : eq.optJSONArray("bands");
+            for (int i = 0; b != null && i < b.length() && i < bands.size(); i++) {
+                bands.get(i).set(Math.round(b.getJSONObject(i).optInt("level") / 100f));
+            }
+            JSONObject o = a.optJSONObject("bass");
+            if (o != null && bass != null) bass.set(o.optInt("strength") / 10);
+            o = a.optJSONObject("virt");
+            if (o != null && virt != null) virt.set(o.optInt("strength") / 10);
+            o = a.optJSONObject("loud");
+            if (o != null && loud != null) loud.set(o.optInt("gain") / 100);
+        } catch (JSONException | RuntimeException ignored) {
         }
     }
 
@@ -320,7 +632,8 @@ public class MainActivity extends Activity
     @Override
     public void onFocusChange(View v, boolean hasFocus) {
         if (v instanceof TextView) ((TextView) v).setTextColor(hasFocus ? FOCUS : LIGHT);
-        v.setBackgroundColor(hasFocus ? FOCUS_BACKGROUND : v == newKey || v == getApp || v == accessibility ? BUTTON_BACKGROUND : Color.TRANSPARENT);
+        v.setBackgroundColor(hasFocus ? FOCUS_BACKGROUND
+                : v instanceof Button && !(v instanceof CompoundButton) ? BUTTON_BACKGROUND : Color.TRANSPARENT);
     }
 
     @Override
@@ -329,13 +642,45 @@ public class MainActivity extends Activity
             if (checked) DimService.pairingKey(prefs);
             Compat.startForegroundService(this, new Intent(this, DimService.class).putExtra("remote", checked));
             refreshRemote();
+        } else if (b == scheduleOn) {
+            if (!updating) setScheduleOn(checked);
+        } else if (b == fxOn) {
+            if (updating) return;
+            try {
+                sendAudio(new JSONObject().put("enabled", checked));
+            } catch (JSONException ignored) {
+            }
         } else {
             apply();
         }
     }
 
-    /** Called by a slider moved by the user: moving a slider also turns the filter on. */
-    void sliderMoved() {
+    /** Called by a slider moved by the user. */
+    void sliderMoved(Slider s) {
+        try {
+            if (s == transition) {
+                prefs.edit().putInt("transition", s.value()).apply(); // read by the service at every schedule tick
+            } else if (s == volume) {
+                sendAudio(new JSONObject().put("volume", s.value()));
+            } else if (bands.contains(s)) {
+                JSONArray levels = new JSONArray();
+                for (Slider band : bands) levels.put(band.value() * 100);
+                eqPresetIndex = -1;
+                if (eqPreset != null) refreshPreset();
+                sendEffect(new JSONObject().put("bands", levels));
+            } else if (s == bass || s == virt) {
+                sendEffect(new JSONObject().put(s == bass ? "bass" : "virt", s.value() * 10));
+            } else if (s == loud) {
+                sendEffect(new JSONObject().put("loud", s.value() * 100));
+            } else {
+                filterMoved();
+            }
+        } catch (JSONException ignored) {
+        }
+    }
+
+    /** Moving a filter slider also turns the filter on. */
+    private void filterMoved() {
         if (enabled.isChecked()) {
             apply();
         } else {
@@ -403,6 +748,12 @@ public class MainActivity extends Activity
             return min + bar.getProgress() * step;
         }
 
+        /** Shows a value read back from the device (not a user move: nothing is sent). */
+        void set(int value) {
+            bar.setProgress((value - min) / step);
+            refresh();
+        }
+
         private void refresh() {
             caption.setText((bar.hasFocus() ? "▶ " : "") + label + ": " + value() + unit);
         }
@@ -417,7 +768,7 @@ public class MainActivity extends Activity
         @Override
         public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
             refresh();
-            if (fromUser) activity.sliderMoved();
+            if (fromUser) activity.sliderMoved(this);
         }
 
         @Override

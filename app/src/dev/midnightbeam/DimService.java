@@ -66,6 +66,8 @@ public class DimService extends Service implements Runnable {
     private SessionReceiver sessionReceiver;
     private SessionScanner scanner;
     private AudioFx audio;
+    /** Audio effects of the running service, if any: the TV screen reads them here, a second set would take over. */
+    static volatile AudioFx runningAudio;
 
     // Read by the server thread, so volatile.
     private volatile int red;
@@ -83,6 +85,7 @@ public class DimService extends Service implements Runnable {
         super.onCreate();
         prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
         audio = new AudioFx(this, prefs);
+        runningAudio = audio;
         sessionReceiver = new SessionReceiver(this);
         android.content.IntentFilter f = new android.content.IntentFilter();
         f.addAction(android.media.audiofx.AudioEffect.ACTION_OPEN_AUDIO_EFFECT_CONTROL_SESSION);
@@ -113,6 +116,14 @@ public class DimService extends Service implements Runnable {
             if (intent.hasExtra("refresh")) removeOverlay(); // re-created in the right window by render()
             if (intent.hasExtra("local")) local = intent.getBooleanExtra("local", false);
             if (intent.getBooleanExtra("newkey", false)) newPairingKey(prefs);
+            try { // from the TV settings screen: same bodies as POST /api/schedule and /api/audio
+                if (intent.hasExtra("schedule")) {
+                    JSONObject j = new JSONObject(intent.getStringExtra("schedule"));
+                    applySchedule(j.optBoolean("enabled", false), j);
+                }
+                if (intent.hasExtra("audio")) applyAudio(new JSONObject(intent.getStringExtra("audio")));
+            } catch (JSONException ignored) {
+            }
         }
         main.removeCallbacks(this);
         run(); // schedule tick now, then every minute
@@ -701,6 +712,7 @@ public class DimService extends Service implements Runnable {
     public void onDestroy() {
         main.removeCallbacks(this);
         removeOverlay();
+        runningAudio = null;
         audio.release();
         if (server != null) {
             server.shutdown();
