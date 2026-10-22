@@ -58,7 +58,7 @@ final class RemoteServer extends Thread {
         STATIC.put("/fonts/ChakraPetch-Bold.ttf", "font/ttf");
         STATIC.put("/fonts/Inconsolata-Regular.ttf", "font/ttf");
         APP.put("/app.html", "text/html; charset=utf-8");
-        APP.put("/art.jpg", "image/jpeg");
+        APP.put("/card.svg", "image/svg+xml");
     }
 
     private final DimService service;

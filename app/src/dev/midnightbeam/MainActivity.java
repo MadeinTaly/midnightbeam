@@ -165,6 +165,13 @@ public class MainActivity extends Activity
         side.setPadding(dp(40), dp(8), 0, 0);
         page.addView(side, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 2f));
 
+        // test card: the real filter covers it, so the sliders' effect on whites, blues, skin and shadows shows here
+        TextView cardTitle = text(t("Test image: whites, blue sky, colours, shadows", "Immagine di prova: bianchi, cielo blu, colori, ombre"), 14, NORMAL);
+        cardTitle.setPadding(0, 0, 0, dp(6));
+        side.addView(cardTitle);
+        side.addView(new TestCardView(this), new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+
         remote = new Switch(this);
         remote.setText(t("Phone remote", "Telecomando dal telefono"));
         remote.setTextColor(LIGHT);

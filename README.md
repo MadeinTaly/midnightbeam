@@ -85,7 +85,9 @@ On a phone or tablet, the launcher opens the app's own screen (`app/assets/app.h
 app on `127.0.0.1:8765` only). The first time it asks whether to **use the filter on this device** or to
 **connect a TV or projector**. Then:
 
-- **Home**: the selected device with its power button, a preview of the filter, scenes, the warm filter /
+- **Home**: the selected device with its power button, a test image under the filter (white page with text, blue
+  sky, colour patches with a skin tone, grey ramp; for a TV it shows the same overlay the TV draws, hold it to see
+  it without), scenes, the warm filter /
   brightness / colour temperature sliders and the schedule (with [dayrhythm](https://github.com/MadeinTaly/dayrhythm)).
 - **Devices**: this phone and every saved TV, with their state and a power button each; tap one to control it,
   the ⋯ button renames or removes it, or **Apply to…** copies its filter settings and schedule (with saved days) to

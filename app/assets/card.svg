@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice">
+  <!-- Test card for the filter preview: same layout as TestCardView.java (TV). -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2f6fd6"/>
+      <stop offset="1" stop-color="#b9dcff"/>
+    </linearGradient>
+  </defs>
+  <rect width="320" height="180" fill="#16171b"/>
+  <!-- white page with text: glare and readability -->
+  <rect x="8" y="8" width="142" height="104" rx="6" fill="#ffffff"/>
+  <text x="18" y="38" font-family="sans-serif" font-size="24" font-weight="700" fill="#1b1b1f">Aa</text>
+  <rect x="18" y="50" width="120" height="6" rx="3" fill="#3a3a40"/>
+  <rect x="18" y="62" width="104" height="6" rx="3" fill="#3a3a40"/>
+  <rect x="18" y="74" width="114" height="6" rx="3" fill="#3a3a40"/>
+  <rect x="18" y="86" width="80" height="6" rx="3" fill="#3a3a40"/>
+  <rect x="18" y="98" width="96" height="6" rx="3" fill="#9a9aa2"/>
+  <!-- landscape: blue sky, sun, cloud, meadow -->
+  <rect x="158" y="8" width="154" height="64" rx="6" fill="url(#sky)"/>
+  <circle cx="284" cy="26" r="10" fill="#fff6c8"/>
+  <ellipse cx="196" cy="30" rx="18" ry="7" fill="#ffffff"/>
+  <path d="M158 56 Q200 40 240 54 T312 50 V66 Q312 72 306 72 H164 Q158 72 158 66 Z" fill="#3f9b4c"/>
+  <!-- colour patches: red, orange, yellow, green, cyan, blue, violet, skin -->
+  <rect x="158" y="78" width="17" height="34" rx="3" fill="#e53935"/>
+  <rect x="177.5" y="78" width="17" height="34" rx="3" fill="#fb8c00"/>
+  <rect x="197" y="78" width="17" height="34" rx="3" fill="#fdd835"/>
+  <rect x="216.5" y="78" width="17" height="34" rx="3" fill="#43a047"/>
+  <rect x="236" y="78" width="17" height="34" rx="3" fill="#00acc1"/>
+  <rect x="255.5" y="78" width="17" height="34" rx="3" fill="#1e5bd8"/>
+  <rect x="275" y="78" width="17" height="34" rx="3" fill="#8e24aa"/>
+  <rect x="294.5" y="78" width="17.5" height="34" rx="3" fill="#e0ac8a"/>
+  <!-- grey ramp, black to white: shadow detail when dimming -->
+  <rect x="8" y="120" width="30.4" height="52" fill="#000000"/>
+  <rect x="38.4" y="120" width="30.4" height="52" fill="#1c1c1c"/>
+  <rect x="68.8" y="120" width="30.4" height="52" fill="#383838"/>
+  <rect x="99.2" y="120" width="30.4" height="52" fill="#555555"/>
+  <rect x="129.6" y="120" width="30.4" height="52" fill="#717171"/>
+  <rect x="160" y="120" width="30.4" height="52" fill="#8e8e8e"/>
+  <rect x="190.4" y="120" width="30.4" height="52" fill="#aaaaaa"/>
+  <rect x="220.8" y="120" width="30.4" height="52" fill="#c6c6c6"/>
+  <rect x="251.2" y="120" width="30.4" height="52" fill="#e3e3e3"/>
+  <rect x="281.6" y="120" width="30.4" height="52" fill="#ffffff"/>
+</svg>

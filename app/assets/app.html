@@ -67,7 +67,9 @@
     .device-name { font-size: 1.1rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .preview { position: relative; margin-top: 14px; border-radius: 16px; overflow: hidden; aspect-ratio: 16 / 9; background: #000; }
     .preview img { display: block; width: 100%; height: 100%; object-fit: cover; }
-    .preview .tint, .preview .dim { position: absolute; inset: 0; transition: background .25s; pointer-events: none; }
+    .preview .tint { position: absolute; inset: 0; transition: background .25s; pointer-events: none; }
+    .pv-chip { margin: 6px 2px 0; font-size: .75rem; color: var(--muted, #a99a90); text-align: center; }
+    .preview { touch-action: manipulation; user-select: none; -webkit-user-select: none; }
 
     /* scenes row */
     .scenes { display: flex; gap: 10px; overflow-x: auto; padding: 4px 2px 6px; margin: 16px -2px 4px; scrollbar-width: none; }
@@ -284,7 +286,7 @@
         </button>
         <button id="h-power" class="power" type="button" data-al="power" data-icon="power"></button>
       </div>
-      <div class="preview" aria-hidden="true"><img src="/art.jpg" alt=""><div class="tint" id="pv-tint"></div><div class="dim" id="pv-dim"></div></div>
+      <div class="preview" id="pv" aria-hidden="true"><img src="/card.svg" alt="" draggable="false"><div class="tint" id="pv-tint"></div></div><p class="pv-chip" id="pv-chip"></p>
       <div class="scenes" id="h-scenes" role="group"></div>
     </div>
     <div class="card slider-card">
@@ -464,7 +466,7 @@ import * as DR from '/dayrhythm/src/index.js';
       connectTv: 'Connect a TV or projector', connectTvSub: 'Control the filter of your TV boxes from here',
       home: 'Home', devices: 'Devices', scenes: 'Scenes', settings: 'Settings', back: 'Back', power: 'Filter on / off',
       red: 'Warm filter', bright: 'Brightness', temp: 'Colour temperature', schedTitle: 'Schedule',
-      connected: 'Connected', offline: 'Offline', filterOn: 'filter on', filterOff: 'filter off', checking: 'Connecting…',
+      connected: 'Connected', offline: 'Offline', filterOn: 'filter on', filterOff: 'filter off', pvHold: 'Hold to see without filter', pvOriginal: 'Without filter', pvLocal: 'The real filter is on this screen', checking: 'Connecting…',
       thisDevice: 'This device', local: 'This phone', localTablet: 'This tablet', schedOff: 'Off', schedOn: 'On', schedNext: 'next: {name} at {time}',
       permBanner: 'Allow “Display over other apps” so the filter can be drawn on this phone. Tap here.',
       permButton: 'Allow display over other apps', permOk: 'The filter can be drawn over other apps.', permMissing: 'The filter needs the “Display over other apps” permission.',
@@ -511,7 +513,7 @@ import * as DR from '/dayrhythm/src/index.js';
       connectTv: 'Collega un TV o proiettore', connectTvSub: 'Controlla da qui il filtro dei tuoi TV box',
       home: 'Home', devices: 'Dispositivi', scenes: 'Scene', settings: 'Impostazioni', back: 'Indietro', power: 'Filtro acceso / spento',
       red: 'Filtro caldo', bright: 'Luminosità', temp: 'Temperatura colore', schedTitle: 'Programmazione',
-      connected: 'Connesso', offline: 'Non raggiungibile', filterOn: 'filtro acceso', filterOff: 'filtro spento', checking: 'Connessione…',
+      connected: 'Connesso', offline: 'Non raggiungibile', filterOn: 'filtro acceso', filterOff: 'filtro spento', pvHold: 'Tieni premuto per vederla senza filtro', pvOriginal: 'Senza filtro', pvLocal: 'Il filtro vero è già su questo schermo', checking: 'Connessione…',
       thisDevice: 'Questo dispositivo', local: 'Questo telefono', localTablet: 'Questo tablet', schedOff: 'Spenta', schedOn: 'Attiva', schedNext: 'prossima: {name} alle {time}',
       permBanner: 'Consenti “Mostra sopra altre app” per disegnare il filtro su questo telefono. Tocca qui.',
       permButton: 'Consenti mostra sopra altre app', permOk: 'Il filtro può essere disegnato sopra le altre app.', permMissing: 'Il filtro ha bisogno del permesso “Mostra sopra altre app”.',
@@ -642,9 +644,18 @@ import * as DR from '/dayrhythm/src/index.js';
     var tint = kelvinRgb(v.temp), tintA = v.red / 100 * 0.65, dimA = (100 - v.bright) / 100, b0 = 205;
     return 'rgb(' + tint.map(function (x) { return ((b0 * (1 - tintA) + x * tintA) * (1 - dimA)) | 0; }).join(',') + ')';
   }
+  // The overlay the device draws (DimService.overlayColor): filter colour at red% of 0.65 opacity, merged with the
+  // black of the dimming. As an rgba() painted over the test card it gives exactly what the screen shows.
+  function overlayRgba(v) {
+    if (!v || v.on === false) return 'rgba(0,0,0,0)';
+    var tint = kelvinRgb(v.temp), tintA = v.red / 100 * 0.65, dimA = (100 - v.bright) / 100, a = 1 - (1 - dimA) * (1 - tintA);
+    if (a <= 0) return 'rgba(0,0,0,0)';
+    var k = tintA * (1 - dimA) / a;
+    return 'rgba(' + tint.map(function (x) { return Math.round(x * k); }).join(',') + ',' + a.toFixed(3) + ')';
+  }
   function thumbCss(s) {
-    var c = kelvinRgb(s.temp), a = 0.35 + s.red / 100 * 0.6, d = (100 - s.bright) / 100 * 0.75;
-    return 'background: linear-gradient(rgba(0,0,0,' + d.toFixed(2) + '),rgba(0,0,0,' + d.toFixed(2) + ')), linear-gradient(135deg, rgba(' + c.join(',') + ',' + a.toFixed(2) + '), rgba(' + c.join(',') + ',.15)), url(/art.jpg) center/cover';
+    var o = overlayRgba({ on: true, red: s.red, bright: s.bright, temp: s.temp });
+    return 'background: linear-gradient(' + o + ',' + o + '), url(/card.svg) center/cover';
   }
   function same(s, st) { return st && st.on && st.red === s.red && st.bright === s.bright && st.temp === s.temp; }
 
@@ -653,12 +664,20 @@ import * as DR from '/dayrhythm/src/index.js';
   function setRange(id, v) { var r = $(id); r.value = v; paintRange(r); }
   function paintRange(r) { r.style.setProperty('--p', ((r.value - r.min) / (r.max - r.min) * 100) + '%'); }
   function labels() { $('v-red').textContent = $('r-red').value + '%'; $('v-bright').textContent = $('r-bright').value + '%'; $('v-temp').textContent = $('r-temp').value + 'K'; }
+  // Test card under the filter. This device: no simulation, its real filter already covers the screen.
+  // Another device: the same overlay simulated; holding the card shows it without the filter.
+  var pvHeld = false;
   function preview() {
-    var on = state && state.on, c = kelvinRgb(+$('r-temp').value);
-    $('pv-tint').style.background = on ? 'rgba(' + c.join(',') + ',' + (+$('r-red').value / 100 * 0.65 + 0.12).toFixed(2) + ')' : 'transparent';
-    $('pv-tint').style.mixBlendMode = 'multiply';
-    $('pv-dim').style.background = on ? 'rgba(0,0,0,' + ((100 - $('r-bright').value) / 100 * 0.9).toFixed(2) + ')' : 'transparent';
+    var local = !cur, on = state && state.on;
+    $('pv-tint').style.background = local || pvHeld ? 'transparent'
+      : overlayRgba({ on: on, red: +$('r-red').value, bright: +$('r-bright').value, temp: +$('r-temp').value });
+    $('pv-chip').textContent = local ? L.pvLocal : pvHeld ? L.pvOriginal : on ? L.pvHold : '';
+    $('pv-chip').style.display = $('pv-chip').textContent ? '' : 'none';
   }
+  function pvHold(held) { if (pvHeld !== held) { pvHeld = held; preview(); } }
+  $('pv').addEventListener('pointerdown', function () { pvHold(true); });
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (t) { $('pv').addEventListener(t, function () { pvHold(false); }); });
+  $('pv').addEventListener('contextmenu', function (e) { e.preventDefault(); });
   function renderDevice() {
     $('h-dev-ic').innerHTML = icon(devType(cur));
     $('h-dev-name').textContent = devName(cur);
