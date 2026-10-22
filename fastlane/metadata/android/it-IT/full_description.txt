@@ -4,7 +4,7 @@ Stende un velo trasparente ai tocchi sopra tutto, video compresi. Intensità del
 
 <b>Sul TV</b>
 * una schermata di impostazioni che si usa con le sole frecce e OK, con un'evidenziazione ben visibile
-* un QR per comandarlo dal telefono (sui TV il telecomando è attivo di default, solo in rete locale, protetto da un codice di abbinamento)
+* un QR per comandarlo dal telefono (sui TV il telecomando è attivo di default, solo in rete locale, protetto da un codice di abbinamento; il TV si annuncia in rete locale via mDNS così l’app per telefono lo trova)
 * un pulsante "App per Android" con un QR per scaricare l'app sul telefono
 * la programmazione mostrata come timeline in fondo allo schermo
 

@@ -16,6 +16,22 @@ final class Compat {
     private Compat() {
     }
 
+    /** Installed from an F-Droid client: that build is signed by F-Droid, so phones should get it there too. */
+    static boolean fromFdroid(Context context) {
+        String i = null;
+        try {
+            i = context.getPackageManager().getInstallerPackageName(context.getPackageName());
+        } catch (RuntimeException ignored) {
+        }
+        return i != null && (i.startsWith("org.fdroid.") || i.equals("com.looker.droidify") || i.equals("com.machiav3lli.fdroid"));
+    }
+
+    /** Where phones download the app: the same source as this copy (F-Droid page or latest GitHub APK). */
+    static String appUrl(Context context) {
+        return fromFdroid(context) ? "https://f-droid.org/packages/dev.midnightbeam/"
+                : "https://github.com/MadeinTaly/midnightbeam/releases/latest/download/midnightbeam.apk";
+    }
+
     static void startForegroundService(Context context, Intent intent) {
         try {
             Context.class.getMethod("startForegroundService", Intent.class).invoke(context, intent);

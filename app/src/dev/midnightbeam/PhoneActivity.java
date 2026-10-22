@@ -119,7 +119,6 @@ public class PhoneActivity extends Activity implements View.OnClickListener, Run
 
     /** Loads the page; the server just asked to start gets a moment to bind its port. */
     private void startLoad() {
-        needsLoad = false;
         retries = 0;
         main.removeCallbacks(this);
         main.postDelayed(this, 400);
@@ -128,6 +127,8 @@ public class PhoneActivity extends Activity implements View.OnClickListener, Run
     /** Runnable: (re)loads the page. */
     @Override
     public void run() {
+        // cleared only here: a pause before the posted load (e.g. the system notification prompt) keeps it pending
+        needsLoad = false;
         failed = false;
         error.setVisibility(View.GONE);
         String hash = "#k=" + DimService.pairingKey(prefs) + (select.isEmpty() ? "" : "&dev=" + Uri.encode(select));
@@ -138,6 +139,7 @@ public class PhoneActivity extends Activity implements View.OnClickListener, Run
     /** Called by AppWebClient when the page could not be loaded: retry a few times, then say so. */
     void loadFailed() {
         failed = true;
+        needsLoad = true; // a pause cancels the posted retry: load again on resume
         if (retries < 5) {
             retries++;
             main.postDelayed(this, 600);

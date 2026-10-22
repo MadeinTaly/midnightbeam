@@ -4,7 +4,7 @@ It draws a click-through overlay above everything, video included. Filter streng
 
 <b>On the TV</b>
 * a settings screen that needs only the D-pad and OK, with a clearly visible focus highlight
-* a QR code to control it from a phone (the phone remote is on by default on TVs, on the local network only, protected by a pairing code)
+* a QR code to control it from a phone (the phone remote is on by default on TVs, on the local network only, protected by a pairing code; the TV announces itself there over mDNS so the phone app can find it)
 * an "Android app" button with a QR code to download the app on a phone
 * the schedule shown as a timeline at the bottom of the screen
 

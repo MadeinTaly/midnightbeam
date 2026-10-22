@@ -45,7 +45,6 @@ public class MainActivity extends Activity
     private Button newKey;
     private Button getApp;
     private boolean showingApp; // the QR code shows the Android app download instead of the phone remote
-    static final String APK_URL = "https://github.com/MadeinTaly/midnightbeam/releases/latest/download/midnightbeam.apk";
     private Button accessibility;
     private TextView accessibilityHint;
     private Slider red;
@@ -254,12 +253,13 @@ public class MainActivity extends Activity
     private void refreshRemote() {
         getApp.setText(showingApp ? t("Back to the phone remote", "Torna al telecomando")
                 : t("Android app", "App per Android"));
-        if (showingApp) { // QR code of the latest APK, for phones and tablets
+        if (showingApp) { // QR code of the app (F-Droid page or latest APK, like this copy), for phones and tablets
             qr.setVisibility(View.VISIBLE);
             newKey.setVisibility(View.GONE);
-            qr.setImageBitmap(qrBitmap(APK_URL));
+            qr.setImageBitmap(qrBitmap(Compat.appUrl(this)));
             remoteInfo.setText(t("Scan with an Android phone to download the app",
-                    "Inquadra con un telefono Android per scaricare l'app") + "\ngithub.com/MadeinTaly/midnightbeam");
+                    "Inquadra con un telefono Android per scaricare l'app") + "\n"
+                    + (Compat.fromFdroid(this) ? "f-droid.org/packages/dev.midnightbeam" : "github.com/MadeinTaly/midnightbeam"));
             return;
         }
         boolean on = remote.isChecked();

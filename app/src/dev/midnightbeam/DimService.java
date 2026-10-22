@@ -412,7 +412,7 @@ public class DimService extends Service implements Runnable {
     String infoJson() {
         try {
             return new JSONObject().put("name", deviceName()).put("model", android.os.Build.MODEL)
-                    .put("type", Compat.deviceType(this)).put("id", deviceId(prefs)).toString();
+                    .put("type", Compat.deviceType(this)).put("id", deviceId(prefs)).put("app", Compat.appUrl(this)).toString();
         } catch (JSONException e) {
             throw new IllegalStateException(e);
         }

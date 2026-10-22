@@ -435,9 +435,9 @@ import * as DR from '/dayrhythm/src/index.js';
   if (!standalone && !inApp) $('a2hs').classList.remove('hidden');
 
   // Android browser, not in the app: a link that hands this TV over to the app (pairing), or to the download page.
-  var tvName = '';
+  var tvName = '', appUrl = $('get-app').href; // the TV's /api/info says where its own copy comes from (F-Droid or GitHub)
   function openAppLink() {
-    var fallback = encodeURIComponent('https://github.com/MadeinTaly/midnightbeam/releases/latest/download/midnightbeam.apk');
+    var fallback = encodeURIComponent(appUrl);
     $('open-app').href = 'intent://add?host=' + encodeURIComponent(location.hostname) + '&port=' + (location.port || 80) +
       '&k=' + encodeURIComponent(key || '') + '&name=' + encodeURIComponent(tvName || location.hostname) +
       '#Intent;scheme=midnightbeam;package=dev.midnightbeam;S.browser_fallback_url=' + fallback + ';end';
@@ -446,7 +446,11 @@ import * as DR from '/dayrhythm/src/index.js';
     openAppLink();
     $('open-app').classList.remove('hidden');
     $('get-app').classList.remove('hidden');
-    api('/api/info').then(function (i) { tvName = i.name || ''; openAppLink(); }).catch(function () {});
+    api('/api/info').then(function (i) {
+      tvName = i.name || '';
+      if (i.app) $('get-app').href = appUrl = i.app;
+      openAppLink();
+    }).catch(function () {});
   }
 
   // ---- Boot ----
