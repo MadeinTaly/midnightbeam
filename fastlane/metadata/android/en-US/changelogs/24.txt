@@ -1,0 +1,5 @@
+* TV: move schedule slot edges with the remote (OK grabs, left/right 10 min, OK saves, Back undoes)
+* TV: collapsible Advanced section: schedule switch, gradual change, audio settings
+* Phone: the slot editor no longer closes by itself; edges move only after a short press
+* Phone app: page loads after the first-start notification prompt (was black)
+* Download link points to F-Droid when installed from F-Droid
