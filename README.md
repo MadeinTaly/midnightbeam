@@ -22,16 +22,20 @@ to be restarted to pick up new values from automation tools.
   sets its gradual change and holds the audio settings (volume, equalizer, bass, surround, loudness)
 - **Restores the last setting at boot**, early: the boot receiver has a high priority, because on some boxes
   `BOOT_COMPLETED` reaches apps one at a time and can take over a minute
-- **Small**: ~410 KB APK (most of it the artwork), plain Java, no tracking; no internet connections: the network is used only
+- **Small**: ~350 KB APK (most of it fonts and artwork), plain Java, no tracking; no internet connections: the network is used only
   by the optional LAN remote (port 8765, pairing key, off unless enabled) and, in phone app mode, to reach your paired TVs
 - Android 8.0+ (API 26), phones work too
 
 ![Settings screen, focused row highlighted](docs/settings-screen.png)
-<sub>The settings screen as rendered by the app on a 1080p Android TV projector (the focused row is highlighted).</sub>
+<sub>The TV screen at 1080p: controls, test image and phone remote on one screen, the schedule below; the focused row lights up gold.</sub>
 
 ![Filter effect on a test pattern](docs/filter-simulation.png)
 <sub>Effect on a test pattern, simulated with the same colour and blending formula the app uses
 (real screen captures do not include overlays on many TV boxes).</sub>
+
+New in 1.7: the "Arcade" look, gold and oxblood red on wine black with Bungee, Chivo and Silkscreen; sliders coloured by
+their setting; the TV screen fits on one page, with Advanced opening across the bottom; a new icon (a tiny saucer
+painting the moon red with its laser) and new artwork.
 
 New in 1.6: no blue anywhere in the interface (warm blacks, red and amber), a new phone app (welcome screen, Home, Devices, Scenes, Settings) and dayrhythm 0.3.0.
 
