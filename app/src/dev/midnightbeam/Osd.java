@@ -81,8 +81,9 @@ final class Osd implements Runnable {
         box = new LinearLayout(context);
         box.setOrientation(LinearLayout.VERTICAL);
         GradientDrawable bg = new GradientDrawable();
-        bg.setColor(Color.argb(0xE6, 0x16, 0x11, 0x10));
-        bg.setCornerRadius(dp(18));
+        bg.setColor(Color.argb(0xF0, Color.red(MainActivity.BG), Color.green(MainActivity.BG), Color.blue(MainActivity.BG)));
+        bg.setStroke(dp(2), MainActivity.RULE);
+        bg.setCornerRadius(dp(4));
         box.setBackground(bg);
         box.setClipToOutline(true);
 
@@ -97,9 +98,9 @@ final class Osd implements Runnable {
         label.setTypeface(Fonts.regular(context));
         row.addView(label);
         value = new TextView(context);
-        value.setTextColor(Color.WHITE);
+        value.setTextColor(MainActivity.ACCENT);
         value.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
-        value.setTypeface(Fonts.bold(context));
+        value.setTypeface(Fonts.figure(context));
         value.setSingleLine(true);
         value.setPadding(dp(14), 0, 0, 0);
         row.addView(value);
@@ -107,10 +108,9 @@ final class Osd implements Runnable {
 
         bar = new LinearLayout(context);
         bar.setOrientation(LinearLayout.HORIZONTAL);
-        bar.setBackgroundColor(Color.rgb(0x3A, 0x2C, 0x27));
+        bar.setBackgroundColor(MainActivity.RULE);
         fill = new View(context);
-        fill.setBackground(new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,
-                new int[] {MainActivity.PRIMARY, Color.rgb(0xFF, 0xB1, 0x5C)}));
+        fill.setBackgroundColor(MainActivity.ACCENT);
         rest = new View(context);
         bar.addView(fill);
         bar.addView(rest);

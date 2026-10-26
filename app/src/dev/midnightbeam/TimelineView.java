@@ -3,6 +3,7 @@ package dev.midnightbeam;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Typeface;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.RectF;
@@ -36,6 +37,8 @@ public class TimelineView extends View implements Comparator<JSONObject> {
     static final int GAP = 10;
 
     private final MainActivity activity;
+    private final Typeface body;
+    private final Typeface figure;
     private final Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint text = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint now = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -57,7 +60,9 @@ public class TimelineView extends View implements Comparator<JSONObject> {
         Context context = activity;
         density = context.getResources().getDisplayMetrics().density;
         text.setTextSize(13 * density);
-        text.setTypeface(Fonts.regular(context));
+        body = Fonts.bold(context);
+        figure = Fonts.figure(context);
+        text.setTypeface(body);
         now.setColor(MainActivity.ACCENT);
         now.setStrokeWidth(3 * density);
         edge.setStrokeWidth(4 * density);
@@ -261,13 +266,13 @@ public class TimelineView extends View implements Comparator<JSONObject> {
         canvas.drawLine(nx, 0, nx, h, now);
         if (hasFocus()) {
             float in = frame.getStrokeWidth() / 2;
-            canvas.drawRoundRect(in, in, w - in, h - in, 14 * density, 14 * density, frame);
+            canvas.drawRoundRect(in, in, w - in, h - in, 4 * density, 4 * density, frame);
             if (sel >= 0) drawEdge(canvas, w, h);
         }
     }
 
     private void block(Canvas canvas, JSONObject s, float left, float right, float h, boolean labels) {
-        float gap = 4 * density, radius = 14 * density;
+        float gap = 4 * density, radius = 4 * density;
         rect.set(left + gap / 2, 0, right - gap / 2, h);
         if (rect.width() <= 0) return;
         fill.setColor(preview(s));
@@ -279,9 +284,9 @@ public class TimelineView extends View implements Comparator<JSONObject> {
         float tx = rect.left + 10 * density;
         float room = rect.width() - 16 * density;
         if (room > 30 * density) {
-            text.setFakeBoldText(true);
+            text.setTypeface(figure);
             drawClipped(canvas, s.optString("time"), tx, 20 * density, room);
-            text.setFakeBoldText(false);
+            text.setTypeface(body);
             drawClipped(canvas, s.optString("label"), tx, 38 * density, room);
             drawClipped(canvas, modelText(s), tx, 56 * density, room);
         }
@@ -296,16 +301,16 @@ public class TimelineView extends View implements Comparator<JSONObject> {
         edge.setColor(colour);
         canvas.drawLine(x, 0, x, h, edge);
         String label = grabbed ? "◀ " + hhmm(start) + " ▶" : hhmm(start);
-        text.setFakeBoldText(true);
+        text.setTypeface(figure);
         float tw = text.measureText(label), pad = 8 * density, th = 22 * density;
         float left = Math.max(0, Math.min(w - tw - 2 * pad, x - tw / 2 - pad));
         float top = h / 2 - th / 2;
         rect.set(left, top, left + tw + 2 * pad, top + th);
         fill.setColor(colour);
-        canvas.drawRoundRect(rect, th / 2, th / 2, fill);
-        text.setColor(grabbed ? Color.WHITE : MainActivity.BG);
+        canvas.drawRoundRect(rect, 2 * density, 2 * density, fill);
+        text.setColor(grabbed ? MainActivity.LIGHT : MainActivity.BG);
         canvas.drawText(label, left + pad, top + th / 2 + 5 * density, text);
-        text.setFakeBoldText(false);
+        text.setTypeface(body);
     }
 
     private void drawClipped(Canvas canvas, String s, float x, float y, float room) {

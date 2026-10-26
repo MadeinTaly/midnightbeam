@@ -231,7 +231,7 @@ update each other, so uninstall the release build before installing your own.
 
 ## Third-party
 
-- [Chakra Petch](https://github.com/m4rc1e/Chakra-Petch) and [Inconsolata](https://github.com/googlefonts/Inconsolata), SIL Open Font License 1.1 (`app/assets/fonts`, subset to Latin; the license texts are next to them)
+- [Bungee](https://github.com/djrrb/Bungee), [Chivo](https://github.com/Omnibus-Type/Chivo) and [Silkscreen](https://github.com/googlefonts/silkscreen), SIL Open Font License 1.1 (`app/assets/fonts`, subset to Latin; the license texts are next to them)
 
 - [QR Code generator library](https://www.nayuki.io/page/qr-code-generator-library) by Project Nayuki,
   MIT License (`app/src/io/nayuki/qrcodegen`, unmodified)

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#0b0b0f">
+  <meta name="theme-color" content="#18080b">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -218,11 +218,11 @@ import * as DR from '/dayrhythm/src/index.js';
   }
   // The same tiny screen as an SVG image for the component's slot icons.
   function iconUri(model) {
-    var fill = model.id === 'off' ? '#2b3f5e' : model.id === 'custom' ? 'url(#g)' : previewCss(model);
-    var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 24"><defs><linearGradient id="g"><stop offset="0" stop-color="#ff6b4d"/><stop offset=".55" stop-color="#6e2a24"/><stop offset="1" stop-color="#0b0b0f"/></linearGradient></defs>' +
-      '<rect x="2" y="2" width="28" height="17" rx="3" fill="' + fill + '" stroke="#ffd9b3" stroke-width="2"/>' +
-      (model.id === 'off' ? '<path d="M4 17L28 4M4 11L20 3M12 19L29 10" stroke="#c9a88a" stroke-width="1.5"/>' : '') +
-      '<rect x="11" y="21" width="10" height="2" rx="1" fill="#ffd9b3"/></svg>';
+    var fill = model.id === 'off' ? '#311a1f' : model.id === 'custom' ? 'url(#g)' : previewCss(model);
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 24"><defs><linearGradient id="g"><stop offset="0" stop-color="#edc23e"/><stop offset=".55" stop-color="#d73337"/><stop offset="1" stop-color="#18080b"/></linearGradient></defs>' +
+      '<rect x="2" y="2" width="28" height="17" rx="1" fill="' + fill + '" stroke="#f3eee4" stroke-width="2"/>' +
+      (model.id === 'off' ? '<path d="M4 17L28 4M4 11L20 3M12 19L29 10" stroke="#b3a192" stroke-width="1.5"/>' : '') +
+      '<rect x="11" y="21" width="10" height="2" fill="#f3eee4"/></svg>';
     return { src: 'data:image/svg+xml,' + encodeURIComponent(svg) };
   }
 
@@ -320,9 +320,9 @@ import * as DR from '/dayrhythm/src/index.js';
           o.summary = '{bright}% · {temp} K';
         }
         if (mo.id === 'custom') o.fields = [
-          { key: 'red', type: 'range', label: L.fields.red, min: 0, max: 100, step: 5, unit: '%', default: 20, accent: '#ff2b2b' },
-          { key: 'bright', type: 'range', label: L.fields.bright, min: 5, max: 100, step: 5, unit: '%', default: 40, accent: '#ff6b4d' },
-          { key: 'temp', type: 'range', label: L.fields.temp, min: 1000, max: 4000, step: 100, format: '{value} K', default: 1100, accent: '#ffd9b3' }
+          { key: 'red', type: 'range', label: L.fields.red, min: 0, max: 100, step: 5, unit: '%', default: 20, accent: '#d73337' },
+          { key: 'bright', type: 'range', label: L.fields.bright, min: 5, max: 100, step: 5, unit: '%', default: 40, accent: '#edc23e' },
+          { key: 'temp', type: 'range', label: L.fields.temp, min: 1000, max: 4000, step: 100, format: '{value} K', default: 1100, accent: '#f3eee4' }
         ];
         return o;
       }),

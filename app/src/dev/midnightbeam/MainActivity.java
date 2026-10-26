@@ -3,8 +3,12 @@ package dev.midnightbeam;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.res.ColorStateList;
 import android.graphics.Bitmap;
 import android.graphics.Color;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.LayerDrawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -81,17 +85,69 @@ public class MainActivity extends Activity
         return "it".equals(Locale.getDefault().getLanguage()) ? it : en;
     }
 
-    // Palette (same as the phone page): primary, accent, light, background, surface.
-    static final int PRIMARY = Color.rgb(0xFF, 0x2B, 0x2B);
-    static final int ACCENT = Color.rgb(0xFF, 0x6B, 0x4D);
-    static final int LIGHT = Color.rgb(0xFF, 0xD9, 0xB3);
-    static final int BG = Color.rgb(0x0B, 0x0B, 0x0F);
-    static final int SURFACE = Color.rgb(0x2A, 0x1F, 0x1B); // warm dark, no blue: this app is against blue light
+    // Palette (same as the phone page, "Arcade" oxblood): gold leads, oxblood red answers, on a wine-black ground.
+    // Warm only, no blue: this app is against blue light.
+    static final int PRIMARY = Color.rgb(0xD7, 0x33, 0x37); // oxblood red: the hard offset shadow, the grabbed edge
+    static final int ACCENT = Color.rgb(0xED, 0xC2, 0x3E); // gold: the cursor row, the title's lead
+    static final int LIGHT = Color.rgb(0xF3, 0xEE, 0xE4);
+    static final int BG = Color.rgb(0x18, 0x08, 0x0B);
+    static final int SURFACE = Color.rgb(0x24, 0x10, 0x15);
+    static final int RULE = Color.rgb(0x53, 0x32, 0x39);
 
     static final int FOCUS = ACCENT;
     static final int NORMAL = LIGHT;
-    static final int FOCUS_BACKGROUND = SURFACE;
-    static final int BUTTON_BACKGROUND = SURFACE;
+
+    // What each filter slider does, from its minimum to its maximum (as on the phone page); the bar wears the value's colour.
+    static final int[] SPECTRUM_RED = {0x8A7466, 0xC4402F, 0xE0262B};
+    static final int[] SPECTRUM_BRIGHT = {0x5A4A4C, 0x8F8379, 0xF3EEE4};
+    static final int[] SPECTRUM_TEMP = {0xFF3800, 0xFF6D00, 0xFF8912, 0xFFA148, 0xFFB46B, 0xFFC38A, 0xFFD1A3}; // 1000 to 4000 K
+
+    /** The colour at {@code f} (0 to 1) along a spectrum. */
+    static int spectrumAt(int[] sp, float f) {
+        float at = Math.max(0f, Math.min(1f, f)) * (sp.length - 1);
+        int i = Math.min(sp.length - 2, (int) at);
+        float t = at - i;
+        int a = sp[i], b = sp[i + 1];
+        return Color.rgb(Math.round(((a >> 16) & 255) * (1 - t) + ((b >> 16) & 255) * t),
+                Math.round(((a >> 8) & 255) * (1 - t) + ((b >> 8) & 255) * t),
+                Math.round((a & 255) * (1 - t) + (b & 255) * t));
+    }
+
+    /** The press surface: a 2dp border on a fill, with the red offset shadow; focused, it lights gold like a cursor. */
+    Drawable surface(boolean focused) {
+        int r = dp(4), off = dp(5);
+        GradientDrawable shadow = new GradientDrawable();
+        shadow.setColor(PRIMARY);
+        shadow.setCornerRadius(r);
+        GradientDrawable face = new GradientDrawable();
+        face.setColor(focused ? ACCENT : SURFACE);
+        face.setStroke(dp(2), focused ? BG : LIGHT);
+        face.setCornerRadius(r);
+        LayerDrawable d = new LayerDrawable(new Drawable[] {shadow, face});
+        d.setLayerInset(0, off, off, 0, 0);
+        d.setLayerInset(1, 0, 0, off, off);
+        return d;
+    }
+
+    /** Puts the press surface on a button, the text centred on the face (the shadow takes the bottom-right). */
+    void press(Button b, boolean focused) {
+        b.setBackground(surface(focused));
+        b.setTextColor(focused ? BG : LIGHT);
+        b.setPadding(dp(20), dp(10), dp(25), dp(15));
+    }
+
+    /** Focus of a switch: the whole row turns into the cursor row (gold, dark text). */
+    static void cursor(TextView v, boolean on) {
+        v.setBackgroundColor(on ? ACCENT : Color.TRANSPARENT);
+        v.setTextColor(on ? BG : LIGHT);
+    }
+
+    /** Arcade switch colours: gold thumb and red track when on, muted when off. */
+    static void tint(Switch s) {
+        int[][] states = {{android.R.attr.state_checked}, {}};
+        s.setThumbTintList(new ColorStateList(states, new int[] {ACCENT, LIGHT}));
+        s.setTrackTintList(new ColorStateList(states, new int[] {PRIMARY, RULE}));
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -112,8 +168,7 @@ public class MainActivity extends Activity
         LinearLayout screen = new LinearLayout(this);
         screen.setOrientation(LinearLayout.VERTICAL);
         screen.setBackgroundColor(BG);
-        int pad = dp(48);
-        screen.setPadding(pad, dp(28), pad, dp(24));
+        screen.setPadding(dp(36), dp(14), dp(36), dp(12));
         scroll.addView(screen);
 
         LinearLayout page = new LinearLayout(this);
@@ -123,31 +178,20 @@ public class MainActivity extends Activity
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        page.addView(root, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 3f));
+        page.addView(root, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 5f));
 
-        TextView title = text("MidnightBeam", 28, ACCENT);
+        TextView title = text("MIDNIGHTBEAM", 26, LIGHT);
+        title.setShadowLayer(0.01f, -dp(2), 0, PRIMARY); // the split: one hard red edge, no blur
+        title.setTag(Fonts.DISPLAY);
+        title.setPadding(dp(8), 0, 0, dp(4));
         root.addView(title);
-
-        accessibilityHint = text(t("To cover the screensaver and the system bars too (and for full darkness), enable MidnightBeam in Accessibility",
-                "Per coprire anche lo screensaver e le barre di sistema (e per il buio totale), attiva MidnightBeam in Accessibilità"), 16, LIGHT);
-        accessibilityHint.setPadding(0, dp(12), 0, dp(4));
-        accessibility = new Button(this);
-        accessibility.setText(t("Enable", "Attiva"));
-        accessibility.setAllCaps(false);
-        accessibility.setTextColor(LIGHT);
-        accessibility.setBackgroundColor(BUTTON_BACKGROUND);
-        accessibility.setFocusable(true);
-        accessibility.setOnClickListener(this);
-        accessibility.setOnFocusChangeListener(this);
-        root.addView(accessibilityHint);
-        root.addView(accessibility, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT));
 
         enabled = new Switch(this);
         enabled.setText(t("Enabled", "Attivo"));
         enabled.setTextColor(LIGHT);
-        enabled.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20);
-        enabled.setPadding(0, dp(24), 0, dp(8));
+        enabled.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+        enabled.setPadding(dp(8), dp(8), dp(8), dp(8));
+        tint(enabled);
         enabled.setChecked(!p.getBoolean("off", false));
         enabled.setFocusable(true);
         enabled.setOnFocusChangeListener(this);
@@ -156,27 +200,49 @@ public class MainActivity extends Activity
 
         red = new Slider(this, root, t("Warm filter", "Filtro caldo"), "%", 0, 100, 5, p.getInt("red", 0));
         bright = new Slider(this, root, t("Brightness", "Luminosità"), "%", 5, 100, 5, p.getInt("bright", 100));
-        temp = new Slider(this, root, t("Colour temperature (lower = redder)", "Colore (più basso = più rosso)"), " K", 1000, 4000, 100,
+        temp = new Slider(this, root, t("Colour (lower = redder)", "Colore (più basso = più rosso)"), " K", 1000, 4000, 100,
                 p.getInt("temp", DimService.DEFAULT_TEMP));
+        red.paint(SPECTRUM_RED);
+        bright.paint(SPECTRUM_BRIGHT);
+        temp.paint(SPECTRUM_TEMP);
+
+        // test card: the real filter covers it, so the sliders' effect on whites, blues, skin and shadows shows here
+        LinearLayout mid = new LinearLayout(this);
+        mid.setOrientation(LinearLayout.VERTICAL);
+        mid.setPadding(dp(28), dp(6), 0, 0);
+        page.addView(mid, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 4f));
+        TextView cardTitle = text(t("Test image: whites, blue sky, colours, shadows", "Immagine di prova: bianchi, cielo blu, colori, ombre"), 13, NORMAL);
+        cardTitle.setPadding(0, 0, 0, dp(6));
+        mid.addView(cardTitle);
+        mid.addView(new TestCardView(this), new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+
+        accessibilityHint = text(t("To cover the screensaver and the system bars too (and for full darkness), enable MidnightBeam in Accessibility",
+                "Per coprire anche lo screensaver e le barre di sistema (e per il buio totale), attiva MidnightBeam in Accessibilità"), 13, LIGHT);
+        accessibilityHint.setPadding(0, dp(12), 0, dp(6));
+        accessibility = new Button(this);
+        accessibility.setText(t("Enable", "Attiva"));
+        accessibility.setAllCaps(false);
+        press(accessibility, false);
+        accessibility.setFocusable(true);
+        accessibility.setOnClickListener(this);
+        accessibility.setOnFocusChangeListener(this);
+        mid.addView(accessibilityHint);
+        mid.addView(accessibility, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT));
 
         LinearLayout side = new LinearLayout(this);
         side.setOrientation(LinearLayout.VERTICAL);
         side.setGravity(Gravity.CENTER_HORIZONTAL);
-        side.setPadding(dp(40), dp(8), 0, 0);
-        page.addView(side, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 2f));
-
-        // test card: the real filter covers it, so the sliders' effect on whites, blues, skin and shadows shows here
-        TextView cardTitle = text(t("Test image: whites, blue sky, colours, shadows", "Immagine di prova: bianchi, cielo blu, colori, ombre"), 14, NORMAL);
-        cardTitle.setPadding(0, 0, 0, dp(6));
-        side.addView(cardTitle);
-        side.addView(new TestCardView(this), new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        side.setPadding(dp(28), 0, 0, 0);
+        page.addView(side, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 3f));
 
         remote = new Switch(this);
-        remote.setText(t("Phone remote", "Telecomando dal telefono"));
+        remote.setText(t("Phone remote", "Telecomando"));
         remote.setTextColor(LIGHT);
-        remote.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20);
+        remote.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
         remote.setPadding(dp(8), dp(8), dp(8), dp(8));
+        tint(remote);
         remote.setChecked(p.getBoolean("remote", Compat.isTv(this)));
         remote.setFocusable(true);
         remote.setOnFocusChangeListener(this);
@@ -185,48 +251,53 @@ public class MainActivity extends Activity
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
 
         qr = new ImageView(this);
-        qr.setPadding(0, dp(16), 0, dp(8));
-        side.addView(qr, new LinearLayout.LayoutParams(dp(210), dp(226)));
+        qr.setPadding(0, dp(8), 0, dp(6));
+        side.addView(qr, new LinearLayout.LayoutParams(dp(136), dp(148)));
 
-        remoteInfo = text("", 14, NORMAL);
+        remoteInfo = text("", 12, NORMAL);
         remoteInfo.setGravity(Gravity.CENTER_HORIZONTAL);
         side.addView(remoteInfo);
 
         newKey = new Button(this);
-        newKey.setText(t("New pairing code", "Nuovo codice di abbinamento"));
+        newKey.setText(t("New pairing code", "Nuovo codice"));
         newKey.setAllCaps(false);
-        newKey.setTextColor(LIGHT);
-        newKey.setBackgroundColor(BUTTON_BACKGROUND);
-        newKey.setPadding(dp(20), dp(10), dp(20), dp(10));
+        press(newKey, false);
         newKey.setFocusable(true);
         newKey.setOnClickListener(this);
         newKey.setOnFocusChangeListener(this);
-        side.addView(newKey, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        LinearLayout.LayoutParams keyLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        keyLp.topMargin = dp(6);
+        side.addView(newKey, keyLp);
 
         getApp = new Button(this);
         getApp.setAllCaps(false);
-        getApp.setTextColor(LIGHT);
-        getApp.setBackgroundColor(BUTTON_BACKGROUND);
-        getApp.setPadding(dp(20), dp(10), dp(20), dp(10));
+        press(getApp, false);
         getApp.setFocusable(true);
         getApp.setOnClickListener(this);
         getApp.setOnFocusChangeListener(this);
         LinearLayout.LayoutParams appLp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        appLp.topMargin = dp(10);
+        appLp.topMargin = dp(8);
         side.addView(getApp, appLp);
 
+        // the timeline's title and the Advanced button share one row
+        LinearLayout tlRow = new LinearLayout(this);
+        tlRow.setOrientation(LinearLayout.HORIZONTAL);
+        tlRow.setGravity(Gravity.CENTER_VERTICAL);
+        tlRow.setPadding(0, dp(4), 0, dp(6));
+        screen.addView(tlRow, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
         timelineTitle = text("", 15, NORMAL);
-        timelineTitle.setPadding(0, dp(12), 0, dp(6));
-        screen.addView(timelineTitle);
+        timelineTitle.setPadding(dp(8), dp(4), dp(8), dp(4));
+        tlRow.addView(timelineTitle, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        advanced = button(tlRow);
+        ((LinearLayout.LayoutParams) advanced.getLayoutParams()).topMargin = 0;
         timeline = new TimelineView(this);
         screen.addView(timeline, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(68)));
 
-        advanced = button(screen);
-        ((LinearLayout.LayoutParams) advanced.getLayoutParams()).topMargin = dp(20);
         advancedBox = new LinearLayout(this);
-        advancedBox.setOrientation(LinearLayout.VERTICAL);
+        advancedBox.setOrientation(LinearLayout.HORIZONTAL);
         advancedBox.setVisibility(View.GONE);
         screen.addView(advancedBox, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT));
@@ -259,6 +330,26 @@ public class MainActivity extends Activity
         @Override
         public void run() {
             activity.refreshAccessibility();
+        }
+    }
+
+    /**
+     * After the Advanced section opens (once laid out): scrolls its row (timeline title, button) to the top of the
+     * screen, so the timeline and the section's columns fill it; closed, back to the top of the page.
+     */
+    static final class ShowAdvanced implements Runnable {
+        private final MainActivity activity;
+        private final boolean open;
+
+        ShowAdvanced(MainActivity activity, boolean open) {
+            this.activity = activity;
+            this.open = open;
+        }
+
+        @Override
+        public void run() {
+            View row = (View) activity.advanced.getParent();
+            ((ScrollView) row.getParent().getParent()).smoothScrollTo(0, open ? row.getTop() : 0);
         }
     }
 
@@ -383,7 +474,10 @@ public class MainActivity extends Activity
         advanced.setText((open ? "\u25be " : "\u25b8 ") + t("Advanced: schedule, audio", "Avanzate: programmazione, audio"));
     }
 
-    /** Builds the Advanced rows from the current settings (each time it opens: the phone may have changed them). */
+    /**
+     * Builds the Advanced section from the current settings (each time it opens: the phone may have changed them):
+     * three columns across the bottom of the screen, schedule, audio and equalizer.
+     */
     private void buildAdvanced() {
         advancedBox.removeAllViews();
         bands.clear();
@@ -391,15 +485,17 @@ public class MainActivity extends Activity
         eqPresetIndex = -1; // not stored on the device: the phone may have changed the bands since
         fxOn = null;
         fxReset = null;
-        advancedBox.addView(section(t("Schedule", "Programmazione")));
+        LinearLayout sched = column(0), audio = column(dp(28)), eqCol = column(dp(28));
+
+        sched.addView(section(t("Schedule", "Programmazione")));
         updating = true;
-        scheduleOn = switchRow(advancedBox, t("Schedule on", "Programmazione attiva"));
+        scheduleOn = switchRow(sched, t("Schedule on", "Programmazione attiva"));
         scheduleOn.setChecked(prefs.getBoolean("schedule_on", false));
         scheduleOn.setEnabled(!timeline.isEmpty());
-        transition = new Slider(this, advancedBox, t("Gradual change at the end of each slot", "Passaggio graduale a fine fascia"),
+        transition = new Slider(this, sched, t("Gradual change at the end of each slot", "Passaggio graduale a fine fascia"),
                 " min", 0, 60, 15, prefs.getInt("transition", 30));
 
-        advancedBox.addView(section("Audio"));
+        audio.addView(section("Audio"));
         JSONObject a;
         try {
             a = new JSONObject(audioJson());
@@ -407,22 +503,32 @@ public class MainActivity extends Activity
             a = new JSONObject();
         }
         JSONObject vol = a.optJSONObject("volume");
-        volume = vol == null ? null : new Slider(this, advancedBox, t("Volume", "Volume"), "", 0,
+        volume = vol == null ? null : new Slider(this, audio, t("Volume", "Volume"), "", 0,
                 vol.optInt("max", 15), 1, vol.optInt("level"));
         bass = virt = loud = null;
         if (!a.optBoolean("supported", false)) {
-            advancedBox.addView(note(t("This device does not allow audio effects (equalizer, bass, surround).",
+            audio.addView(note(t("This device does not allow audio effects (equalizer, bass, surround).",
                     "Questo dispositivo non permette effetti audio (equalizzatore, bassi, surround).")));
         } else {
-            fxOn = switchRow(advancedBox, t("Audio effects", "Effetti audio"));
+            fxOn = switchRow(audio, t("Audio effects", "Effetti audio"));
             fxOn.setChecked(a.optBoolean("enabled", false));
-            advancedBox.addView(note(t("Tune them by ear with something playing underneath (a film, music).",
+            audio.addView(note(t("Tune them by ear with something playing underneath (a film, music).",
                     "Regolali a orecchio con qualcosa in riproduzione sotto (un film, musica).")));
+            JSONObject o = a.optJSONObject("bass");
+            if (o != null) bass = new Slider(this, audio, t("Bass boost", "Bassi"), "%", 0, 100, 5, o.optInt("strength") / 10);
+            o = a.optJSONObject("virt");
+            if (o != null) virt = new Slider(this, audio, "Surround", "%", 0, 100, 5, o.optInt("strength") / 10);
+            o = a.optJSONObject("loud");
+            if (o != null) loud = new Slider(this, audio, t("Loudness", "Volume extra"), " dB", 0, 15, 1, o.optInt("gain") / 100);
+            fxReset = button(audio);
+            fxReset.setText(t("Reset audio effects", "Azzera effetti audio"));
+
             JSONObject eq = a.optJSONObject("eq");
             if (eq != null) {
+                eqCol.addView(section(t("Equalizer", "Equalizzatore")));
                 eqPresets = eq.optJSONArray("presets");
                 if (eqPresets != null && eqPresets.length() > 0) {
-                    eqPreset = button(advancedBox);
+                    eqPreset = button(eqCol);
                     refreshPreset();
                 }
                 JSONArray b = eq.optJSONArray("bands");
@@ -432,21 +538,22 @@ public class MainActivity extends Activity
                     int hz = band.optInt("freq");
                     String name = hz >= 1000 ? (hz % 1000 == 0 ? String.valueOf(hz / 1000) : String.valueOf(Math.round(hz / 100f) / 10f)) + " kHz"
                             : hz + " Hz";
-                    bands.add(new Slider(this, advancedBox, t("Equalizer ", "Equalizzatore ") + name, " dB", min, max, 1,
-                            Math.round(band.optInt("level") / 100f)));
+                    bands.add(new Slider(this, eqCol, name, " dB", min, max, 1, Math.round(band.optInt("level") / 100f)));
                 }
             }
-            JSONObject o = a.optJSONObject("bass");
-            if (o != null) bass = new Slider(this, advancedBox, t("Bass boost", "Bassi"), "%", 0, 100, 5, o.optInt("strength") / 10);
-            o = a.optJSONObject("virt");
-            if (o != null) virt = new Slider(this, advancedBox, "Surround", "%", 0, 100, 5, o.optInt("strength") / 10);
-            o = a.optJSONObject("loud");
-            if (o != null) loud = new Slider(this, advancedBox, t("Loudness", "Volume extra"), " dB", 0, 15, 1, o.optInt("gain") / 100);
-            fxReset = button(advancedBox);
-            fxReset.setText(t("Reset audio effects", "Azzera effetti audio"));
         }
+        if (eqCol.getChildCount() == 0) advancedBox.removeView(eqCol);
         updating = false;
         Fonts.apply(advancedBox);
+    }
+
+    /** One column of the Advanced section (equal widths), {@code gap} from the previous one. */
+    private LinearLayout column(int gap) {
+        LinearLayout c = new LinearLayout(this);
+        c.setOrientation(LinearLayout.VERTICAL);
+        c.setPadding(gap, 0, 0, 0);
+        advancedBox.addView(c, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        return c;
     }
 
     /** Audio state: from the service's effects when it runs (no effects are live otherwise). */
@@ -473,8 +580,9 @@ public class MainActivity extends Activity
     }
 
     private TextView section(String s) {
-        TextView v = text(s, 20, ACCENT);
-        v.setPadding(0, dp(24), 0, 0);
+        TextView v = text(s.toUpperCase(Locale.ROOT), 20, LIGHT);
+        v.setTag(Fonts.DISPLAY);
+        v.setPadding(0, dp(28), 0, dp(4));
         return v;
     }
 
@@ -489,7 +597,8 @@ public class MainActivity extends Activity
         s.setText(label);
         s.setTextColor(LIGHT);
         s.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20);
-        s.setPadding(0, dp(16), 0, dp(8));
+        s.setPadding(dp(8), dp(12), dp(8), dp(12));
+        tint(s);
         s.setFocusable(true);
         s.setOnFocusChangeListener(this);
         s.setOnCheckedChangeListener(this);
@@ -500,9 +609,7 @@ public class MainActivity extends Activity
     private Button button(LinearLayout parent) {
         Button b = new Button(this);
         b.setAllCaps(false);
-        b.setTextColor(LIGHT);
-        b.setBackgroundColor(BUTTON_BACKGROUND);
-        b.setPadding(dp(20), dp(10), dp(20), dp(10));
+        press(b, false);
         b.setFocusable(true);
         b.setOnClickListener(this);
         b.setOnFocusChangeListener(this);
@@ -582,6 +689,7 @@ public class MainActivity extends Activity
             if (open) buildAdvanced();
             advancedBox.setVisibility(open ? View.VISIBLE : View.GONE);
             refreshAdvanced();
+            advancedBox.post(new ShowAdvanced(this, open));
         } else if (v == eqPreset) {
             eqPresetIndex = (eqPresetIndex + 1) % eqPresets.length();
             refreshPreset();
@@ -638,9 +746,11 @@ public class MainActivity extends Activity
     /** Focus highlight of the switches and the button (the sliders handle their own). */
     @Override
     public void onFocusChange(View v, boolean hasFocus) {
-        if (v instanceof TextView) ((TextView) v).setTextColor(hasFocus ? FOCUS : LIGHT);
-        v.setBackgroundColor(hasFocus ? FOCUS_BACKGROUND
-                : v instanceof Button && !(v instanceof CompoundButton) ? BUTTON_BACKGROUND : Color.TRANSPARENT);
+        if (v instanceof Button && !(v instanceof CompoundButton)) {
+            press((Button) v, hasFocus);
+        } else if (v instanceof TextView) {
+            cursor((TextView) v, hasFocus);
+        }
     }
 
     @Override
@@ -725,8 +835,12 @@ public class MainActivity extends Activity
         private final String unit;
         private final int min;
         private final int step;
+        private final LinearLayout row;
         private final TextView caption;
+        private final TextView figure;
+        private final TextView unitView;
         private final SeekBar bar;
+        private int[] spectrum;
 
         Slider(MainActivity activity, LinearLayout parent, String label, String unit,
                int min, int max, int step, int value) {
@@ -735,17 +849,34 @@ public class MainActivity extends Activity
             this.unit = unit;
             this.min = min;
             this.step = step;
-            caption = activity.text("", 18, NORMAL);
-            caption.setPadding(0, activity.dp(20), 0, activity.dp(4));
-            caption.setGravity(Gravity.START);
+            caption = activity.text(label, 16, NORMAL);
+            caption.setTypeface(android.graphics.Typeface.DEFAULT_BOLD); // Chivo Bold, like the switches
+            figure = activity.text("", 16, ACCENT);
+            figure.setTag(Fonts.FIGURE);
+            row = new LinearLayout(activity);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            row.setPadding(activity.dp(8), activity.dp(3), activity.dp(8), activity.dp(3));
+            row.addView(caption, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+            row.addView(figure);
+            unitView = activity.text(unit.trim(), 15, ACCENT); // the unit beside the pixel figure, in Chivo Bold
+            unitView.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+            unitView.setPadding(activity.dp(6), 0, 0, 0);
+            row.addView(unitView);
             bar = new SeekBar(activity);
             bar.setMax((max - min) / step);
             bar.setKeyProgressIncrement(1);
             bar.setProgress((Math.max(min, Math.min(max, value)) - min) / step);
             bar.setOnSeekBarChangeListener(this);
+            bar.setProgressTintList(ColorStateList.valueOf(ACCENT));
+            bar.setThumbTintList(ColorStateList.valueOf(ACCENT));
+            bar.setProgressBackgroundTintList(ColorStateList.valueOf(RULE));
             bar.setFocusable(true);
             bar.setOnFocusChangeListener(this);
-            parent.addView(caption);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            lp.topMargin = activity.dp(8);
+            parent.addView(row, lp);
             parent.addView(bar, new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
             refresh();
@@ -755,6 +886,12 @@ public class MainActivity extends Activity
             return min + bar.getProgress() * step;
         }
 
+        /** Colours the bar and the thumb with the value's colour along this setting's spectrum. */
+        void paint(int[] spectrum) {
+            this.spectrum = spectrum;
+            refresh();
+        }
+
         /** Shows a value read back from the device (not a user move: nothing is sent). */
         void set(int value) {
             bar.setProgress((value - min) / step);
@@ -762,13 +899,22 @@ public class MainActivity extends Activity
         }
 
         private void refresh() {
-            caption.setText((bar.hasFocus() ? "▶ " : "") + label + ": " + value() + unit);
+            caption.setText((bar.hasFocus() ? "▶ " : "") + label);
+            figure.setText(String.valueOf(value()));
+            if (spectrum != null) {
+                ColorStateList c = ColorStateList.valueOf(spectrumAt(spectrum, bar.getProgress() / (float) Math.max(1, bar.getMax())));
+                bar.setProgressTintList(c);
+                bar.setThumbTintList(c);
+            }
         }
 
         @Override
         public void onFocusChange(View v, boolean hasFocus) {
-            caption.setTextColor(hasFocus ? FOCUS : NORMAL);
-            bar.setBackgroundColor(hasFocus ? FOCUS_BACKGROUND : Color.TRANSPARENT);
+            row.setBackgroundColor(hasFocus ? ACCENT : Color.TRANSPARENT);
+            caption.setTextColor(hasFocus ? BG : LIGHT);
+            figure.setTextColor(hasFocus ? BG : ACCENT);
+            unitView.setTextColor(hasFocus ? BG : ACCENT);
+            bar.setBackgroundColor(hasFocus ? SURFACE : Color.TRANSPARENT);
             refresh();
         }
 

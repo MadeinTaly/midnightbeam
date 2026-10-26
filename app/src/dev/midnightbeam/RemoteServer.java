@@ -53,10 +53,11 @@ final class RemoteServer extends Thread {
         STATIC.put("/icon-512.png", "image/png");
         STATIC.put("/apple-touch-icon.png", "image/png");
         // the app's typefaces (SIL OFL, see assets/fonts), used by both pages
-        STATIC.put("/fonts/ChakraPetch-Regular.ttf", "font/ttf");
-        STATIC.put("/fonts/ChakraPetch-SemiBold.ttf", "font/ttf");
-        STATIC.put("/fonts/ChakraPetch-Bold.ttf", "font/ttf");
-        STATIC.put("/fonts/Inconsolata-Regular.ttf", "font/ttf");
+        STATIC.put("/fonts/Bungee-Regular.ttf", "font/ttf");
+        STATIC.put("/fonts/Chivo-Regular.ttf", "font/ttf");
+        STATIC.put("/fonts/Chivo-Bold.ttf", "font/ttf");
+        STATIC.put("/fonts/Chivo-Black.ttf", "font/ttf");
+        STATIC.put("/fonts/Silkscreen-Bold.ttf", "font/ttf");
         APP.put("/app.html", "text/html; charset=utf-8");
         APP.put("/card.svg", "image/svg+xml");
     }

@@ -1,0 +1,4 @@
+* New "Arcade" look: gold and oxblood red on wine black, no blue; Bungee, Chivo and Silkscreen fonts
+* Phone: each slider shows the colours of its setting, the thumb wears the current one; scene buttons preview their tint; new icons
+* TV: everything on one screen (controls, test image, phone remote); Advanced opens across the bottom in three columns
+* TV: sliders coloured by their value, the focused row lit gold
