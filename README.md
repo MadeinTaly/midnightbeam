@@ -240,7 +240,7 @@ update each other, so uninstall the release build before installing your own.
 - [QR Code generator library](https://www.nayuki.io/page/qr-code-generator-library) by Project Nayuki,
   MIT License (`app/src/io/nayuki/qrcodegen`, unmodified)
 - [Tailwind CSS](https://tailwindcss.com), MIT License (compiled into `app/assets/remote.css`)
-- [dayrhythm](https://github.com/MadeinTaly/dayrhythm), MIT License (git submodule `vendor/dayrhythm`, v0.7.0, used unminified from its `src/`; the schedule editor of the phone page)
+- [dayrhythm](https://github.com/MadeinTaly/dayrhythm), MIT License (git submodule `vendor/dayrhythm`, v0.7.3, used unminified from its `src/`; the schedule editor of the phone page)
 
 The look of the app (the Arcade theme, the phone page and the TV screen) was designed with the wonderful
 [Hallmark](https://www.usehallmark.com/).

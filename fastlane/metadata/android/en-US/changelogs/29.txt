@@ -1,0 +1,1 @@
+* Phone schedule: the page scrolls across slot edges again, the grip in the middle of an edge drags at once, a still press grabs it elsewhere; slot names no longer break one letter per line on narrow screens; no blue square when tapping (dayrhythm 0.7.3)
