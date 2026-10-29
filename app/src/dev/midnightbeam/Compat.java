@@ -50,6 +50,16 @@ final class Compat {
         }
     }
 
+    /** Lets the overlay cover the display cutout too (status bar band on notched phones), API 28+. */
+    static void coverCutout(android.view.WindowManager.LayoutParams lp) {
+        if (Build.VERSION.SDK_INT < 28) return;
+        try {
+            // LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS (API 30) or SHORT_EDGES (API 28)
+            lp.getClass().getField("layoutInDisplayCutoutMode").setInt(lp, Build.VERSION.SDK_INT >= 30 ? 3 : 1);
+        } catch (ReflectiveOperationException | RuntimeException ignored) {
+        }
+    }
+
     static Intent accessibilitySettings() {
         return new Intent("android.settings.ACCESSIBILITY_SETTINGS");
     }

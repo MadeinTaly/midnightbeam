@@ -659,6 +659,7 @@ public class DimService extends Service implements Runnable {
                             | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
                     PixelFormat.TRANSLUCENT);
             lp.alpha = maxAlpha;
+            Compat.coverCutout(lp);
             view.setBackgroundColor(color);
             try {
                 viewWm.addView(view, lp);
