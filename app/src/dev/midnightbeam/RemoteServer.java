@@ -40,6 +40,9 @@ import java.util.Locale;
 final class RemoteServer extends Thread {
     static final int PORT = 8765;
     private static final int MAX_BODY = 32768;
+    private static final int MAX_CONNECTIONS = 16;
+    private static final int MAX_HEADERS = 64;
+    private static final long REQUEST_MS = 10000;
 
     /** Static files for "add to home screen" (manifest and icons) and the page's scripts. */
     private static final java.util.Map<String, String> STATIC = new java.util.HashMap<>();
@@ -66,6 +69,7 @@ final class RemoteServer extends Thread {
     private final AssetManager assets;
     private final Handler main = new Handler(Looper.getMainLooper());
     private volatile ServerSocket socket;
+    private final java.util.concurrent.atomic.AtomicInteger active = new java.util.concurrent.atomic.AtomicInteger();
     /** true: all interfaces (LAN remote); false: loopback only (the phone app's own WebView). */
     final boolean lan;
 
@@ -75,6 +79,16 @@ final class RemoteServer extends Thread {
         this.lan = lan;
         this.assets = service.getAssets();
         setDaemon(true);
+    }
+
+    /** Binds the port; false if it is busy (the caller drops this server and tries again on the next render). */
+    boolean bind() {
+        try {
+            socket = lan ? new ServerSocket(PORT) : new ServerSocket(PORT, 50, InetAddress.getByName("127.0.0.1"));
+            return true;
+        } catch (IOException e) {
+            return false;
+        }
     }
 
     void shutdown() {
@@ -90,26 +104,35 @@ final class RemoteServer extends Thread {
 
     @Override
     public void run() {
-        try (ServerSocket s = lan ? new ServerSocket(PORT) : new ServerSocket(PORT, 50, InetAddress.getByName("127.0.0.1"))) {
-            socket = s;
-            while (!isInterrupted()) {
+        try (ServerSocket s = socket) {
+            while (!isInterrupted() && !s.isClosed()) {
                 try {
                     Socket c = s.accept();
+                    if (active.incrementAndGet() > MAX_CONNECTIONS) {
+                        active.decrementAndGet();
+                        c.close();
+                        continue;
+                    }
                     c.setSoTimeout(5000);
                     // one short-lived thread per connection: browsers open several sockets in parallel
                     new Connection(this, c).start();
                 } catch (IOException e) {
-                    if (isInterrupted()) return;
+                    if (isInterrupted() || s.isClosed()) return;
+                    try {
+                        Thread.sleep(200); // e.g. out of file descriptors: do not spin
+                    } catch (InterruptedException ie) {
+                        return;
+                    }
                 }
             }
         } catch (IOException ignored) {
-            // port busy or socket closed by shutdown()
         }
     }
 
     private void handle(Socket c) throws IOException {
-        InputStream in = c.getInputStream();
-        String requestLine = readLine(in);
+        InputStream in = new java.io.BufferedInputStream(c.getInputStream());
+        long deadline = System.currentTimeMillis() + REQUEST_MS;
+        String requestLine = readLine(in, deadline);
         if (requestLine == null) return;
         String[] parts = requestLine.split(" ");
         if (parts.length < 2) return;
@@ -121,7 +144,9 @@ final class RemoteServer extends Thread {
         String key = null;
         int length = 0;
         String line;
-        while ((line = readLine(in)) != null && !line.isEmpty()) {
+        int headers = 0;
+        while ((line = readLine(in, deadline)) != null && !line.isEmpty()) {
+            if (++headers > MAX_HEADERS) throw new IOException("too many headers");
             int colon = line.indexOf(':');
             if (colon < 0) continue;
             String name = line.substring(0, colon).trim().toLowerCase(Locale.ROOT);
@@ -144,11 +169,21 @@ final class RemoteServer extends Thread {
         byte[] body = new byte[length];
         int read = 0;
         while (read < length) {
+            if (System.currentTimeMillis() > deadline) throw new IOException("request too slow");
             int n = in.read(body, read, length - read);
             if (n < 0) break;
             read += n;
         }
 
+        try {
+            route(method, path, key, loopback, body, read, out);
+        } catch (java.io.FileNotFoundException e) { // an asset that is not in the APK
+            send(out, 404, "text/plain", "not found");
+        }
+    }
+
+    private void route(String method, String path, String key, boolean loopback, byte[] body, int read, OutputStream out)
+            throws IOException {
         if (method.equals("GET") && (path.equals("/") || path.equals("/index.html"))) {
             send(out, 200, "text/html; charset=utf-8", asset("remote.html"));
         } else if (method.equals("GET") && path.equals("/remote.css")) {
@@ -288,7 +323,7 @@ final class RemoteServer extends Thread {
 
     /** extraHeader: one more "Name: value" header line, or null. */
     static void send(OutputStream out, int code, String type, byte[] b, String extraHeader) throws IOException {
-        String status = code == 200 ? "OK" : code == 403 ? "Forbidden" : code == 404 ? "Not Found" : code == 400 ? "Bad Request" : code == 502 ? "Bad Gateway" : "Error";
+        String status = code == 200 ? "OK" : code == 403 ? "Forbidden" : code == 404 ? "Not Found" : code == 400 ? "Bad Request" : code == 413 ? "Payload Too Large" : code == 502 ? "Bad Gateway" : "Error";
         String head = "HTTP/1.1 " + code + " " + status + "\r\n"
                 + "Content-Type: " + type + "\r\n"
                 + "Content-Length: " + b.length + "\r\n"
@@ -301,10 +336,11 @@ final class RemoteServer extends Thread {
     }
 
     /** Reads an ASCII line terminated by CRLF or LF; null at end of stream. */
-    private static String readLine(InputStream in) throws IOException {
+    private static String readLine(InputStream in, long deadline) throws IOException {
         StringBuilder sb = new StringBuilder();
         int ch;
         while ((ch = in.read()) >= 0) {
+            if (System.currentTimeMillis() > deadline) throw new IOException("request too slow");
             if (ch == '\n') return sb.toString();
             if (ch != '\r') sb.append((char) ch);
             if (sb.length() > 8192) throw new IOException("line too long");
@@ -329,6 +365,8 @@ final class RemoteServer extends Thread {
             try (Socket c = socket) {
                 server.handle(c);
             } catch (IOException ignored) {
+            } finally {
+                server.active.decrementAndGet();
             }
         }
     }

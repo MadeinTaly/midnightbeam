@@ -35,6 +35,10 @@ final class Compat {
     static void startForegroundService(Context context, Intent intent) {
         try {
             Context.class.getMethod("startForegroundService", Intent.class).invoke(context, intent);
+        } catch (java.lang.reflect.InvocationTargetException e) {
+            // framework refusals (ForegroundServiceStartNotAllowedException, "not allowed to start service")
+            if (e.getCause() instanceof RuntimeException) throw (RuntimeException) e.getCause();
+            throw new IllegalStateException(e);
         } catch (ReflectiveOperationException e) {
             throw new IllegalStateException(e);
         }
@@ -104,6 +108,13 @@ final class Compat {
      * a projector when its build names or an installed package say so (projector firmwares ship a projector service).
      */
     static String deviceType(Context context) {
+        if (deviceType == null) deviceType = computeDeviceType(context);
+        return deviceType;
+    }
+
+    private static volatile String deviceType;
+
+    private static String computeDeviceType(Context context) {
         if (isTv(context)) {
             String id = (Build.MANUFACTURER + " " + Build.BRAND + " " + Build.MODEL + " " + Build.PRODUCT + " " + Build.DEVICE)
                     .toLowerCase(Locale.ROOT);

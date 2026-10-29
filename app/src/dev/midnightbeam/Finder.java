@@ -43,10 +43,12 @@ final class Finder implements Runnable {
             Long last = LAST.get(id);
             long now = System.currentTimeMillis();
             if (last != null && now - last < 60000) return null;
-            LAST.put(id, now);
         }
         String me = RemoteServer.localIp();
         if (me == null) return null;
+        synchronized (LAST) {
+            LAST.put(id, System.currentTimeMillis());
+        }
         String prefix = me.substring(0, me.lastIndexOf('.') + 1);
         AtomicReference<String> found = new AtomicReference<>();
         Thread[] threads = new Thread[THREADS];
@@ -70,6 +72,27 @@ final class Finder implements Runnable {
             }
         }
         return found.get();
+    }
+
+    /** True if host:port answers /api/info to this key with exactly this device id. */
+    static boolean verify(String host, int port, String key, String id) {
+        try {
+            HttpURLConnection c = (HttpURLConnection) new URL("http://" + host + ":" + port + "/api/info").openConnection();
+            c.setConnectTimeout(1500);
+            c.setReadTimeout(2000);
+            c.setRequestProperty("X-Key", key);
+            try (java.io.InputStream in = c.getInputStream()) {
+                java.io.ByteArrayOutputStream b = new java.io.ByteArrayOutputStream();
+                byte[] buf = new byte[1024];
+                int n;
+                while ((n = in.read(buf)) > 0 && b.size() < 8192) b.write(buf, 0, n);
+                return c.getResponseCode() == 200 && id.equals(new org.json.JSONObject(b.toString("UTF-8")).optString("id"));
+            } finally {
+                c.disconnect();
+            }
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     @Override

@@ -29,7 +29,10 @@ public class DimAccessibilityService extends AccessibilityService {
     }
 
     private void refresh() {
-        Compat.startForegroundService(this, new Intent(this, DimService.class).putExtra("refresh", true));
+        try {
+            Compat.startForegroundService(this, new Intent(this, DimService.class).putExtra("refresh", true));
+        } catch (RuntimeException ignored) { // started from the background: the system may refuse
+        }
     }
 
     @Override

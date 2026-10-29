@@ -159,6 +159,7 @@ public class MainActivity extends Activity
         }
         SharedPreferences p = getSharedPreferences(DimService.PREFS, MODE_PRIVATE);
         prefs = p;
+        DimService.seedSchedule(this, p);
 
         // Two columns (filter controls, phone remote QR code) above the schedule timeline and the Advanced section.
         // The whole screen scrolls: moving the focus with the remote brings each row into view.
@@ -628,6 +629,7 @@ public class MainActivity extends Activity
             qr.setVisibility(View.VISIBLE);
             newKey.setVisibility(View.GONE);
             qr.setImageBitmap(qrBitmap(Compat.appUrl(this)));
+            qr.setContentDescription(Compat.appUrl(this));
             remoteInfo.setText(t("Scan with an Android phone to download the app",
                     "Inquadra con un telefono Android per scaricare l'app") + "\n"
                     + (Compat.fromFdroid(this) ? "f-droid.org/packages/dev.midnightbeam" : "github.com/MadeinTaly/midnightbeam"));
@@ -649,6 +651,7 @@ public class MainActivity extends Activity
         }
         String url = "http://" + ip + ":" + RemoteServer.PORT + "/#k=" + DimService.pairingKey(prefs);
         qr.setImageBitmap(qrBitmap(url));
+        qr.setContentDescription(ip + ":" + RemoteServer.PORT);
         remoteInfo.setText(t("Scan with the phone camera", "Inquadra con la fotocamera del telefono")
                 + "\n" + ip + ":" + RemoteServer.PORT
                 + "\n" + t("Code", "Codice") + " " + DimService.pairingKey(prefs).replaceAll("(.{4})(?!$)", "$1 "));
@@ -676,7 +679,7 @@ public class MainActivity extends Activity
             if (Compat.enableAccessibility(this)) {
                 main.postDelayed(accessibilityCheck, 1500); // the service connects a moment later
             } else {
-                startActivity(Compat.accessibilitySettings());
+                Compat.enableOrOpenAccessibility(this);
             }
         } else if (v == getApp) {
             showingApp = !showingApp;

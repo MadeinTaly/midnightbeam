@@ -29,7 +29,10 @@ cp -r vendor/dayrhythm/src "$OUT/assets/dayrhythm/src"
 javac -source 8 -target 8 -nowarn -Xlint:-options -bootclasspath "$ANDROID_JAR" -d "$OUT/classes" \
     $(find app/src -name '*.java')
 if [ -n "$BUILD_TOOLS" ]; then
-    "$BUILD_TOOLS/d8" --min-api 26 --lib "$ANDROID_JAR" --output "$OUT" $(find "$OUT/classes" -name '*.class')
+    D8=("$BUILD_TOOLS/d8")
+    # Windows build-tools ship d8.bat, which bash cannot run: call the jar behind it
+    [ -x "$BUILD_TOOLS/d8" ] || D8=(java -cp "$BUILD_TOOLS/lib/d8.jar" com.android.tools.r8.D8)
+    "${D8[@]}" --min-api 26 --lib "$ANDROID_JAR" --output "$OUT" $(find "$OUT/classes" -name '*.class')
 else
     DX=${DX:-$(command -v dalvik-exchange || command -v dx)}
     "$DX" --dex --output="$OUT/classes.dex" "$OUT/classes"
@@ -47,6 +50,10 @@ if [ ! -f "$KEYSTORE" ]; then
     keytool -genkeypair -keystore "$KEYSTORE" -storepass android -keypass android -alias key \
         -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=midnightbeam" >/dev/null 2>&1
 fi
-apksigner sign --ks "$KEYSTORE" --ks-pass pass:android --key-pass pass:android \
+APKSIGNER=(apksigner)
+if ! command -v apksigner >/dev/null && [ -f "$BUILD_TOOLS/lib/apksigner.jar" ]; then
+    APKSIGNER=(java -jar "$BUILD_TOOLS/lib/apksigner.jar")
+fi
+"${APKSIGNER[@]}" sign --ks "$KEYSTORE" --ks-pass pass:android --key-pass pass:android \
     --out midnightbeam.apk "$OUT/aligned.apk"
-echo "built midnightbeam.apk ($(stat -c %s midnightbeam.apk) bytes)"
+echo "built midnightbeam.apk ($(wc -c < midnightbeam.apk) bytes)"

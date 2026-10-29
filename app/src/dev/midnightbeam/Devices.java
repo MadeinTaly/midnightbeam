@@ -37,7 +37,7 @@ final class Devices {
     }
 
     /** Adds the device or updates its key (and its name, when one is given). */
-    static void upsert(SharedPreferences p, String name, String host, int port, String key) {
+    static synchronized void upsert(SharedPreferences p, String name, String host, int port, String key) {
         JSONArray a = load(p);
         int i = find(a, host, port);
         try {
@@ -52,7 +52,7 @@ final class Devices {
         p.edit().putString(PREF, a.toString()).apply();
     }
 
-    static void rename(SharedPreferences p, String host, int port, String name) {
+    static synchronized void rename(SharedPreferences p, String host, int port, String name) {
         JSONArray a = load(p);
         int i = find(a, host, port);
         if (i < 0 || name.isEmpty()) return;
@@ -65,7 +65,7 @@ final class Devices {
     }
 
     /** The device answered at a new address: keep its name, key and type under the new host. */
-    static void move(SharedPreferences p, String oldHost, int port, String newHost) {
+    static synchronized void move(SharedPreferences p, String oldHost, int port, String newHost) {
         JSONArray a = load(p);
         int dup = find(a, newHost, port);
         if (dup >= 0) a.remove(dup); // an older entry for that address
@@ -80,7 +80,7 @@ final class Devices {
     }
 
     /** Sets one string field of a saved device (e.g. "did", its network id). */
-    static void setField(SharedPreferences p, String host, int port, String key, String value) {
+    static synchronized void setField(SharedPreferences p, String host, int port, String key, String value) {
         JSONArray a = load(p);
         int i = find(a, host, port);
         if (i < 0) return;
@@ -93,7 +93,7 @@ final class Devices {
     }
 
     /** Kind of device, for its icon only (see AppApi). */
-    static void setType(SharedPreferences p, String host, int port, String type) {
+    static synchronized void setType(SharedPreferences p, String host, int port, String type) {
         JSONArray a = load(p);
         int i = find(a, host, port);
         if (i < 0) return;
@@ -105,7 +105,7 @@ final class Devices {
         p.edit().putString(PREF, a.toString()).apply();
     }
 
-    static void delete(SharedPreferences p, String host, int port) {
+    static synchronized void delete(SharedPreferences p, String host, int port) {
         JSONArray a = load(p);
         int i = find(a, host, port);
         if (i < 0) return;

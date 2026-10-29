@@ -9,10 +9,11 @@ import android.net.nsd.NsdServiceInfo;
  * devices announce themselves, so the phone app finds it at once and follows it when its address changes.
  * TXT record: id (random, stable, not secret) and type. The pairing key is never announced.
  */
-final class Advertiser implements NsdManager.RegistrationListener {
+final class Advertiser {
     static final String SERVICE_TYPE = "_midnightbeam._tcp";
 
     private final NsdManager nsd;
+    private Listener listener; // a fresh one per start(): NsdManager rejects a listener still being unregistered
     private boolean registered;
 
     Advertiser(Context context) {
@@ -28,7 +29,8 @@ final class Advertiser implements NsdManager.RegistrationListener {
         s.setAttribute("id", id);
         s.setAttribute("type", type);
         try {
-            nsd.registerService(s, NsdManager.PROTOCOL_DNS_SD, this);
+            listener = new Listener(this);
+            nsd.registerService(s, NsdManager.PROTOCOL_DNS_SD, listener);
             registered = true;
         } catch (RuntimeException ignored) {
             // no mDNS on this box: the phone app still finds it with its fallback scan
@@ -39,25 +41,38 @@ final class Advertiser implements NsdManager.RegistrationListener {
         if (!registered) return;
         registered = false;
         try {
-            nsd.unregisterService(this);
+            nsd.unregisterService(listener);
         } catch (RuntimeException ignored) {
         }
     }
 
-    @Override
-    public void onRegistrationFailed(NsdServiceInfo serviceInfo, int errorCode) {
-        registered = false;
+    private void failed(Listener from) {
+        if (from == listener) registered = false;
     }
 
-    @Override
-    public void onUnregistrationFailed(NsdServiceInfo serviceInfo, int errorCode) {
-    }
+    /** Callbacks of one start() (a plain class, see MainActivity). */
+    private static final class Listener implements NsdManager.RegistrationListener {
+        private final Advertiser a;
 
-    @Override
-    public void onServiceRegistered(NsdServiceInfo serviceInfo) {
-    }
+        Listener(Advertiser a) {
+            this.a = a;
+        }
 
-    @Override
-    public void onServiceUnregistered(NsdServiceInfo serviceInfo) {
+        @Override
+        public void onRegistrationFailed(NsdServiceInfo serviceInfo, int errorCode) {
+            a.failed(this);
+        }
+
+        @Override
+        public void onUnregistrationFailed(NsdServiceInfo serviceInfo, int errorCode) {
+        }
+
+        @Override
+        public void onServiceRegistered(NsdServiceInfo serviceInfo) {
+        }
+
+        @Override
+        public void onServiceUnregistered(NsdServiceInfo serviceInfo) {
+        }
     }
 }

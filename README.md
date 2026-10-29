@@ -240,7 +240,37 @@ update each other, so uninstall the release build before installing your own.
 - [QR Code generator library](https://www.nayuki.io/page/qr-code-generator-library) by Project Nayuki,
   MIT License (`app/src/io/nayuki/qrcodegen`, unmodified)
 - [Tailwind CSS](https://tailwindcss.com), MIT License (compiled into `app/assets/remote.css`)
-- [dayrhythm](https://github.com/MadeinTaly/dayrhythm), MIT License (git submodule `vendor/dayrhythm`, v0.6.0, used unminified from its `src/`; the schedule editor of the phone page)
+- [dayrhythm](https://github.com/MadeinTaly/dayrhythm), MIT License (git submodule `vendor/dayrhythm`, v0.7.0, used unminified from its `src/`; the schedule editor of the phone page)
+
+The look of the app (the Arcade theme, the phone page and the TV screen) was designed with the wonderful
+[Hallmark](https://www.usehallmark.com/).
+
+<details><summary>Hallmark license (MIT)</summary>
+
+```
+MIT License
+
+Copyright (c) 2026 Hallmark contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+</details>
 
 ## Privacy
 

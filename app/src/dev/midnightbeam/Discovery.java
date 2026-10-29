@@ -22,14 +22,17 @@ import java.util.Map;
  * NsdManager discovery plus a Wi-Fi multicast lock, services resolved one at a time). A saved TV seen at a new
  * address is moved there at once; TVs not saved yet are listed for "Add device" (GET /api/discovered).
  */
-final class Discovery implements NsdManager.DiscoveryListener, NsdManager.ResolveListener {
+final class Discovery implements NsdManager.ResolveListener {
     /** Devices seen in this session, by id: {id, name, type, host, port}. */
     private static final Map<String, JSONObject> FOUND = new LinkedHashMap<>();
+
+    private static final java.util.Set<String> PENDING = new java.util.HashSet<>();
 
     private final NsdManager nsd;
     private final WifiManager.MulticastLock lock;
     private final SharedPreferences prefs;
     private final ArrayDeque<NsdServiceInfo> queue = new ArrayDeque<>();
+    private Listener listener; // a fresh one per start(): NsdManager rejects a listener still being stopped
     private boolean running;
     private boolean resolving;
 
@@ -45,7 +48,8 @@ final class Discovery implements NsdManager.DiscoveryListener, NsdManager.Resolv
         if (running || nsd == null) return;
         try {
             if (lock != null) lock.acquire();
-            nsd.discoverServices(Advertiser.SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, this);
+            listener = new Listener(this);
+            nsd.discoverServices(Advertiser.SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, listener);
             running = true;
         } catch (RuntimeException e) {
             release();
@@ -57,7 +61,7 @@ final class Discovery implements NsdManager.DiscoveryListener, NsdManager.Resolv
         running = false;
         queue.clear();
         try {
-            nsd.stopServiceDiscovery(this);
+            nsd.stopServiceDiscovery(listener);
         } catch (RuntimeException ignored) {
         }
         release();
@@ -91,13 +95,55 @@ final class Discovery implements NsdManager.DiscoveryListener, NsdManager.Resolv
 
     // ---- discovery ----
 
-    @Override
-    public void onServiceFound(NsdServiceInfo service) {
+    private void serviceFound(Listener from, NsdServiceInfo service) {
         synchronized (this) {
-            if (!running) return;
+            if (!running || from != listener) return;
             queue.add(service);
         }
         next();
+    }
+
+    private void startFailed(Listener from) {
+        synchronized (this) {
+            if (from != listener) return;
+            running = false;
+        }
+        release();
+    }
+
+    /** Discovery callbacks of one start() (a plain class, see MainActivity). */
+    private static final class Listener implements NsdManager.DiscoveryListener {
+        private final Discovery d;
+
+        Listener(Discovery d) {
+            this.d = d;
+        }
+
+        @Override
+        public void onServiceFound(NsdServiceInfo service) {
+            d.serviceFound(this, service);
+        }
+
+        @Override
+        public void onServiceLost(NsdServiceInfo service) {
+        }
+
+        @Override
+        public void onDiscoveryStarted(String serviceType) {
+        }
+
+        @Override
+        public void onDiscoveryStopped(String serviceType) {
+        }
+
+        @Override
+        public void onStartDiscoveryFailed(String serviceType, int errorCode) {
+            d.startFailed(this);
+        }
+
+        @Override
+        public void onStopDiscoveryFailed(String serviceType, int errorCode) {
+        }
     }
 
     /** Resolves the queued services one at a time (older Android allows only one resolve at once). */
@@ -159,34 +205,50 @@ final class Discovery implements NsdManager.DiscoveryListener, NsdManager.Resolv
             JSONObject s = saved.optJSONObject(i);
             if (s == null || !id.equals(s.optString("did"))) continue;
             if (!s.optString("host").equals(host) || s.optInt("port") != port) {
-                String old = s.optString("host") + ":" + s.optInt("port");
-                Devices.move(prefs, s.optString("host"), s.optInt("port"), host);
-                AppApi.noteMoved(old, host + ":" + s.optInt("port"));
+                // the announcement is unauthenticated: move only after the new host proves it is that device
+                String pend = id + "@" + host + ":" + port;
+                synchronized (PENDING) {
+                    if (!PENDING.add(pend)) continue;
+                }
+                Thread t = new Thread(new Move(prefs, pend, s.optString("host"), port, host, s.optString("key"), id), "midnightbeam-move");
+                t.setDaemon(true);
+                t.start();
             }
         }
     }
 
-    @Override
-    public void onServiceLost(NsdServiceInfo service) {
-    }
+    /** Verifies a moved device off the NSD thread, then moves the saved entry (a plain class, see MainActivity). */
+    private static final class Move implements Runnable {
+        private final SharedPreferences prefs;
+        private final String pend;
+        private final String oldHost;
+        private final int port;
+        private final String host;
+        private final String key;
+        private final String id;
 
-    @Override
-    public void onDiscoveryStarted(String serviceType) {
-    }
-
-    @Override
-    public void onDiscoveryStopped(String serviceType) {
-    }
-
-    @Override
-    public void onStartDiscoveryFailed(String serviceType, int errorCode) {
-        synchronized (this) {
-            running = false;
+        Move(SharedPreferences prefs, String pend, String oldHost, int port, String host, String key, String id) {
+            this.prefs = prefs;
+            this.pend = pend;
+            this.oldHost = oldHost;
+            this.port = port;
+            this.host = host;
+            this.key = key;
+            this.id = id;
         }
-        release();
+
+        @Override
+        public void run() {
+            try {
+                if (!Finder.verify(host, port, key, id)) return;
+                Devices.move(prefs, oldHost, port, host);
+                AppApi.noteMoved(oldHost + ":" + port, host + ":" + port);
+            } finally {
+                synchronized (PENDING) {
+                    PENDING.remove(pend);
+                }
+            }
+        }
     }
 
-    @Override
-    public void onStopDiscoveryFailed(String serviceType, int errorCode) {
-    }
 }

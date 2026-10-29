@@ -61,6 +61,7 @@ public class DimService extends Service implements Runnable {
     /** The overlay could not be added: the "Display over other apps" permission is missing. */
     private volatile boolean blocked;
     private RemoteServer server;
+    private boolean destroyed; // main thread only
     private Advertiser advertiser;
     private Osd osd;
     private SessionReceiver sessionReceiver;
@@ -137,9 +138,39 @@ public class DimService extends Service implements Runnable {
         off = prefs.getBoolean("off", false);
         remote = prefs.getBoolean("remote", Compat.isTv(this)); // on TVs the phone remote is on by default
         scheduleOn = prefs.getBoolean("schedule_on", false);
+        seedSchedule(this, prefs);
         scheduleResolved = prefs.getString("schedule", "[]");
         scheduleValue = prefs.getString("schedule_value", scheduleResolved);
         audio.refresh();
+    }
+
+    /**
+     * TVs without a phone could not make slots at all: on a TV that has never had a schedule, store the phone page's
+     * "Movie night" preset (switched off), so the remote can move its edges and turn it on.
+     */
+    static void seedSchedule(Context context, SharedPreferences prefs) {
+        if (prefs.contains("schedule") || !Compat.isTv(context)) return;
+        String d = defaultSchedule();
+        prefs.edit().putString("schedule", d).putString("schedule_value", d).commit();
+    }
+
+    /** The "Movie night" preset of app.html/remote.html, with the same model values. */
+    private static String defaultSchedule() {
+        Object[][] slots = {
+                {"07:00", "off", false, 0, 100, 1100, MainActivity.t("Morning", "Mattina")},
+                {"14:00", "off", false, 0, 100, 1100, MainActivity.t("Afternoon", "Pomeriggio")},
+                {"19:30", "evening", true, 20, 40, 1100, MainActivity.t("Evening", "Sera")},
+                {"21:00", "cinema", true, 15, 55, 1500, MainActivity.t("Movie", "Film")},
+                {"23:30", "night", true, 20, 10, 1100, MainActivity.t("Night", "Notte")}};
+        JSONArray a = new JSONArray();
+        try {
+            for (Object[] s : slots) {
+                a.put(new JSONObject().put("time", s[0]).put("model", s[1]).put("on", s[2]).put("red", s[3])
+                        .put("bright", s[4]).put("temp", s[5]).put("label", s[6]));
+            }
+        } catch (JSONException ignored) {
+        }
+        return a.toString();
     }
 
     private void setValues(int r, int b, int t, boolean o) {
@@ -152,6 +183,7 @@ public class DimService extends Service implements Runnable {
 
     /** Shows/updates/removes the overlay and the server, and stops the service when nothing needs it. */
     private int render() {
+        if (destroyed) return START_NOT_STICKY; // a task queued on main can run after onDestroy
         boolean visible = !off && !(red == 0 && bright == 100);
         if (visible) showOverlay(overlayColor(red, bright, temp)); else removeOverlay();
         if (server != null && (!(remote || local) || server.lan != remote)) {
@@ -162,8 +194,9 @@ public class DimService extends Service implements Runnable {
         if ((remote || local) && server == null) {
             pairingKey(prefs);
             server = new RemoteServer(this, remote);
-            server.start();
-            if (remote) { // announced on the network only when it is reachable from it
+            if (!server.bind()) server = null; // port busy: tried again on the next render
+            else server.start();
+            if (server != null && remote) { // announced on the network only when it is reachable from it
                 if (advertiser == null) advertiser = new Advertiser(this);
                 advertiser.start(deviceName(), deviceId(prefs), Compat.deviceType(this));
             }
@@ -627,6 +660,7 @@ public class DimService extends Service implements Runnable {
     }
 
     private void showOverlay(int color) {
+        if (destroyed) return;
         DimAccessibilityService svc = DimAccessibilityService.instance;
         boolean acc = svc != null;
         if (view != null && viewAccessibility != acc) removeOverlay();
@@ -711,6 +745,7 @@ public class DimService extends Service implements Runnable {
 
     @Override
     public void onDestroy() {
+        destroyed = true;
         main.removeCallbacks(this);
         removeOverlay();
         runningAudio = null;

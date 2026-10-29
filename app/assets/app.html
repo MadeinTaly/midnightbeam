@@ -503,13 +503,13 @@ import * as DR from '/dayrhythm/src/index.js';
       setupTitle: 'Set up this device', setupIntro: 'For the warm filter and the dimming to work on this phone, Android needs your permission. It takes a few seconds.',
       stA11y: 'Accessibility (full darkness)', stOverlay: 'Display over other apps', required: 'Required', recommended: 'Recommended', allow: 'Allow', enable: 'Enable', done: 'Done',
       stOverlayText: 'Lets MidnightBeam draw the filter over the screen. In the list, find MidnightBeam and turn the switch on, then come back here.',
-      stA11yText: 'Without it, Android 12 and later cap the filter at 80% darkness and leave the status bar uncovered. In Accessibility, open MidnightBeam (it may be under Installed apps or Downloaded apps) and turn it on. It reads nothing on the screen.',
+      stA11yText: 'Without it, Android 12 and later cap the filter at 80% darkness and leave the navigation bar uncovered. In Accessibility, open MidnightBeam (it may be under Installed apps or Downloaded apps) and turn it on. It reads nothing on the screen.',
       stA11yOn: 'On: full darkness, system bars covered.', setupDone: 'Start using it', setupNeed: 'Allow “Display over other apps” first: without it nothing changes on the screen.',
       orConnect: 'Or control a TV or projector instead', setupOk: 'Ready', setupMissing: 'Permission missing: the filter cannot be shown', setupA11y: 'Ready, full darkness not enabled',
       needSetup: 'Set up this device first',
       a11yButton: 'Open Accessibility settings', language: 'Language', langAuto: 'Automatic',
       popTitle: 'One step before it works', popText: 'Android has not allowed MidnightBeam to draw over other apps yet, so the filter cannot appear on this phone. Give the permission now: it takes a few seconds.',
-      popA11yTitle: 'For full darkness', popA11yText: 'On this Android version the filter stops at 80% darkness and does not cover the status bar unless MidnightBeam is enabled in Accessibility. It is optional and it reads nothing on the screen.',
+      popA11yTitle: 'For full darkness', popA11yText: 'On this Android version the filter stops at 80% darkness and does not cover the navigation bar unless MidnightBeam is enabled in Accessibility. It is optional and it reads nothing on the screen.',
       setupNow: 'Set up now', later: 'Later', gotIt: 'OK', showWelcome: 'Show the welcome screen', source: 'Source code', support: 'Support the project', version: 'Version {v}',
       addDevice: 'Add device', addSub: 'TV, projector or another phone', scanQr: 'Scan the QR code',
       addSteps: ['On the TV, open MidnightBeam: the QR code is on the right (Phone remote on).', 'Tap Scan the QR code and point the camera at it.', 'MidnightBeam opens again with the TV saved. If the camera shows a link instead, tap it and choose MidnightBeam.'],
@@ -550,13 +550,13 @@ import * as DR from '/dayrhythm/src/index.js';
       setupTitle: 'Configura questo dispositivo', setupIntro: 'Perché filtro caldo e attenuazione funzionino su questo telefono, Android ha bisogno del tuo permesso. Bastano pochi secondi.',
       stA11y: 'Accessibilità (buio totale)', stOverlay: 'Mostra sopra altre app', required: 'Obbligatorio', recommended: 'Consigliato', allow: 'Consenti', enable: 'Attiva', done: 'Fatto',
       stOverlayText: 'Permette a MidnightBeam di disegnare il filtro sopra lo schermo. Nell’elenco trova MidnightBeam e attiva l’interruttore, poi torna qui.',
-      stA11yText: 'Senza, da Android 12 il filtro si ferma all’80% di scuro e non copre la barra di stato. In Accessibilità apri MidnightBeam (può essere sotto App installate o App scaricate) e attivalo. Non legge niente sullo schermo.',
+      stA11yText: 'Senza, da Android 12 il filtro si ferma all’80% di scuro e non copre la barra di navigazione. In Accessibilità apri MidnightBeam (può essere sotto App installate o App scaricate) e attivalo. Non legge niente sullo schermo.',
       stA11yOn: 'Attivo: buio totale, barre di sistema coperte.', setupDone: 'Inizia a usarlo', setupNeed: 'Prima consenti “Mostra sopra altre app”: senza, sullo schermo non cambia nulla.',
       orConnect: 'Oppure controlla un TV o proiettore', setupOk: 'Pronto', setupMissing: 'Permesso mancante: il filtro non può essere mostrato', setupA11y: 'Pronto, buio totale non attivo',
       needSetup: 'Prima configura questo dispositivo',
       a11yButton: 'Apri impostazioni Accessibilità', language: 'Lingua', langAuto: 'Automatica',
       popTitle: 'Manca un passaggio', popText: 'Android non ha ancora permesso a MidnightBeam di mostrarsi sopra le altre app, quindi il filtro non può comparire su questo telefono. Dai il permesso ora: bastano pochi secondi.',
-      popA11yTitle: 'Per il buio totale', popA11yText: 'Su questa versione di Android il filtro si ferma all’80% di scuro e non copre la barra di stato, a meno che MidnightBeam sia attivo in Accessibilità. È facoltativo e non legge nulla sullo schermo.',
+      popA11yTitle: 'Per il buio totale', popA11yText: 'Su questa versione di Android il filtro si ferma all’80% di scuro e non copre la barra di navigazione, a meno che MidnightBeam sia attivo in Accessibilità. È facoltativo e non legge nulla sullo schermo.',
       setupNow: 'Configura ora', later: 'Più tardi', gotIt: 'OK', showWelcome: 'Mostra la schermata iniziale', source: 'Codice sorgente', support: 'Sostieni il progetto', version: 'Versione {v}',
       addDevice: 'Aggiungi dispositivo', addSub: 'TV, proiettore o un altro telefono', scanQr: 'Scansiona il QR',
       addSteps: ['Sul TV apri MidnightBeam: il QR è a destra (Telecomando dal telefono attivo).', 'Tocca Scansiona il QR e inquadralo con la fotocamera.', 'MidnightBeam si riapre con il TV salvato. Se la fotocamera mostra un link, toccalo e scegli MidnightBeam.'],
@@ -1203,9 +1203,10 @@ import * as DR from '/dayrhythm/src/index.js';
   function slot(time, modelId, label) { return { time: time, model: modelId, label: label, values: valuesOf(modelById(modelId)) }; }
   function defaultValue() { return FASCE.map(function (f) { return slot(f.time, f.key === 'evening' ? 'evening' : f.key === 'film' ? 'cinema' : f.key === 'night' ? 'night' : 'off', L.fasce[f.key]); }); }
   function fromFlat(s) {
-    if (s.values || !('red' in s)) return s;
+    // flat slots from older versions; an "off" one may carry no model and no values at all
+    if (s.values || (!('red' in s) && s.on !== false)) return s;
     var mo = modelById(s.model), id = mo ? mo.id : (s.on === false ? 'off' : 'custom');
-    var o = { time: s.time, model: id, values: { on: s.on !== false, red: s.red, bright: s.bright, temp: s.temp } };
+    var o = { time: s.time, model: id, values: 'red' in s ? { on: s.on !== false, red: s.red, bright: s.bright, temp: s.temp } : valuesOf(modelById(id)) };
     if (s.label) o.label = s.label;
     return o;
   }

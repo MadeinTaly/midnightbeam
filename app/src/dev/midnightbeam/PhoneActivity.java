@@ -89,7 +89,10 @@ public class PhoneActivity extends Activity implements View.OnClickListener, Run
     protected void onResume() {
         super.onResume();
         // the page is served by the service: keep its loopback server on while this screen is open
-        Compat.startForegroundService(this, new Intent(this, DimService.class).putExtra("local", true));
+        try {
+            Compat.startForegroundService(this, new Intent(this, DimService.class).putExtra("local", true));
+        } catch (RuntimeException ignored) {
+        }
         if (needsLoad) startLoad();
         web.onResume();
         discovery.start(); // TVs on the network (mDNS), while this screen is open
@@ -101,7 +104,10 @@ public class PhoneActivity extends Activity implements View.OnClickListener, Run
         web.onPause();
         main.removeCallbacks(this);
         discovery.stop();
-        Compat.startForegroundService(this, new Intent(this, DimService.class).putExtra("local", false));
+        try { // onPause: the app may already be in the background
+            Compat.startForegroundService(this, new Intent(this, DimService.class).putExtra("local", false));
+        } catch (RuntimeException ignored) {
+        }
     }
 
     @Override

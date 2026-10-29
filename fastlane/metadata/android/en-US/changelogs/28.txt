@@ -1,0 +1,6 @@
+* TV: a default schedule (Movie night preset, off) so it can be edited and turned on with the remote alone
+* Restarts the filter, schedule and remote after an app update
+* The phone app checks a TV's identity before following it to a new address on the network
+* Sturdier LAN server and network discovery; no crash when Android refuses to start the service in the background
+* Setup texts: without Accessibility mode the navigation bar stays uncovered, not the status bar
+* dayrhythm 0.7.0
