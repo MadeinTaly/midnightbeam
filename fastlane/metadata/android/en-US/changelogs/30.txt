@@ -1,0 +1,2 @@
+* Phone schedule: new Glow look (tinted glass slots, glowing line icons, clearer day bar) with an icon per setting (dayrhythm 0.8.0)
+* The Now badge stays inside the schedule card

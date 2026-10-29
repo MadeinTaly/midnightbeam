@@ -436,6 +436,8 @@
 
 <script type="module">
 import * as DR from '/dayrhythm/src/index.js';
+import drThemes from '/dayrhythm/themes/index.js';
+import drIcons from '/dayrhythm/icons/index.js';
 (function () {
   'use strict';
   function $(id) { return document.getElementById(id); }
@@ -1193,6 +1195,11 @@ import * as DR from '/dayrhythm/src/index.js';
 
   // ---- Schedule (<day-rhythm>, same data as the browser remote) ----
   var core = DR.core, rhythm = $('rhythm');
+  // PREVIEW: dayrhythm themes + name-based icons
+  Object.keys(drThemes).forEach(function (k) { DR.themes.register(drThemes[k]); });
+  DR.icons.register(drIcons);
+  var DRTHEME = store('mb_drtheme') || 'glow';
+  var DRICON = { off: 'power', soft: 'sun-dim', evening: 'coffee', cinema: 'clapperboard', night: 'moon-star', deep: 'moon', custom: 'sliders-horizontal' };
   var FASCE = [{ key: 'morning', time: '07:00' }, { key: 'afternoon', time: '14:00' }, { key: 'evening', time: '19:30' }, { key: 'film', time: '21:00' }, { key: 'night', time: '23:00' }];
   var PRESETS = [
     { id: 'movie', icon: '🎬', slots: [['07:00', 'off', 'morning'], ['14:00', 'off', 'afternoon'], ['19:30', 'evening', 'evening'], ['21:00', 'cinema', 'film'], ['23:30', 'night', 'night']] },
@@ -1227,7 +1234,7 @@ import * as DR from '/dayrhythm/src/index.js';
   var weekly = false, transition = 30, enabled = false, schedule = null, scheduleLoaded = false;
   function config() {
     return {
-      theme: 'organic', colorScheme: 'dark', locale: lang, credits: 'minimal', week: weekly ? 'top' : 'off',
+      theme: DRTHEME, colorScheme: 'dark', locale: lang, credits: 'minimal', week: weekly ? 'top' : 'off',
       maxSlots: 12, minGap: 5, snap: 5, timeFormat: '24h', editor: 'full',
       messages: (function () {
         var o = {}; MODELS.forEach(function (mo) { o['model.' + mo.id] = L.models[mo.id]; });
@@ -1235,7 +1242,7 @@ import * as DR from '/dayrhythm/src/index.js';
         return o;
       })(),
       models: MODELS.map(function (mo) {
-        var o = { id: mo.id, label: L.models[mo.id], icon: iconUri(mo), defaults: valuesOf(mo) };
+        var o = { id: mo.id, label: L.models[mo.id], icon: DRICON[mo.id] || iconUri(mo), defaults: valuesOf(mo) };
         if (mo.id === 'off') o.off = true;
         else { o.preview = function (v) { return previewCss(v && v.temp != null ? v : mo); }; o.summary = '{bright}% · {temp} K'; }
         if (mo.id === 'custom') o.fields = [

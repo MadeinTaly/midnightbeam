@@ -25,6 +25,7 @@ rm -rf "$OUT" && mkdir -p "$OUT/classes" "$OUT/assets/dayrhythm"
 # the page loads the library's plain ES modules (no build, nothing minified)
 cp -r app/assets/* "$OUT/assets/"
 cp -r vendor/dayrhythm/src "$OUT/assets/dayrhythm/src"
+cp -r vendor/dayrhythm/themes vendor/dayrhythm/icons "$OUT/assets/dayrhythm/"
 
 javac -source 8 -target 8 -nowarn -Xlint:-options -bootclasspath "$ANDROID_JAR" -d "$OUT/classes" \
     $(find app/src -name '*.java')
