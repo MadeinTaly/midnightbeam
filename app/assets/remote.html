@@ -239,15 +239,20 @@ import * as DR from '/dayrhythm/src/index.js';
       if (deviceOffset > 720) deviceOffset -= 1440; if (deviceOffset < -720) deviceOffset += 1440;
       try { rhythm.clockOffset = Math.round(deviceOffset * 10) / 10; } catch (e) {}
     }
-    $('on').checked = s.on;
-    $('red').value = s.red; $('bright').value = s.bright; $('temp').value = s.temp;
-    labels();
+    if (!sliding()) {
+      $('on').checked = s.on;
+      $('red').value = s.red; $('bright').value = s.bright; $('temp').value = s.temp;
+      labels();
+    }
     current = s; renderQuick();
   }
-  var pending = null;
+  var pending = null, lastInput = 0;
+  function sliding() { return pending !== null || Date.now() - lastInput < 1500; }
   function sendLive() {
+    lastInput = Date.now();
     clearTimeout(pending);
     pending = setTimeout(function () {
+      pending = null;
       api('/api/set', { on: true, red: +$('red').value, bright: +$('bright').value, temp: +$('temp').value })
         .then(show).catch(function () {});
     }, 120);
@@ -458,7 +463,7 @@ import * as DR from '/dayrhythm/src/index.js';
   rhythm.config = config();
   setValue(defaultValue());
   refresh(); loadSchedule(); loadDays();
-  setInterval(function () { if (!document.hidden) refresh(); }, 15000);
+  setInterval(function () { if (!document.hidden) refresh(); }, 3000);
   document.addEventListener('visibilitychange', function () {
     if (document.hidden) return;
     refresh();

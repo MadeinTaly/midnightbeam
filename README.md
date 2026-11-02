@@ -69,7 +69,8 @@ Open the app from the launcher:
 
 ## Phone remote and schedule
 
-1. In the app on the TV, turn on **Phone remote**: a QR code appears.
+1. In the app on the TV, turn on **Phone remote** and press **Pair a phone**: a big QR code opens in the middle of
+   the screen, with a 4-digit code under it (**Android app** opens the QR code of the app download the same way).
 2. Scan it with the phone camera. The page opens in the browser; *Add to Home screen* makes it an app icon.
 3. Move the sliders or pick a preset: the TV follows instantly.
 4. **Schedule** (built with [dayrhythm](https://github.com/MadeinTaly/dayrhythm)): pick a day preset, tap a
@@ -103,13 +104,14 @@ app on `127.0.0.1:8765` only). The first time it asks whether to **use the filte
 Pairing a TV: scan its QR code. The code is still the plain `http://IP:8765/#k=KEY` link, so without the app
 it just opens the browser remote. With the app installed the link opens the app (on older Android you may
 need to allow it in *Settings → Apps → MidnightBeam → Open by default*) and saves the TV; the link can also be
-pasted in *Devices → Add device*. The browser remote has an **Open in the app** button that does the same
+pasted in *Devices → Add device*, or typed there as the TV's address plus the 4-digit code from the *Pair a phone*
+popup. The browser remote has an **Open in the app** button that does the same
 (`midnightbeam://add?host=…&port=…&k=…&name=…`) or, if the app is not installed, opens the download page.
 
 **Finding the TVs** (like the WLED app): a TV with *Phone remote* on announces itself on the local network with
 mDNS / DNS-SD (`_midnightbeam._tcp`, with its name, its type and a random id; never the pairing code). While the
 phone app is open it listens for them: TVs not saved yet appear in *Add device → Found on your network* (tap one and
-type the code shown on its screen), and a saved TV that got a new address (DHCP after a reboot) is followed at once.
+type the 4-digit code from its *Pair a phone* popup), and a saved TV that got a new address (DHCP after a reboot) is followed at once.
 Where mDNS is blocked, the app falls back to looking for the TV's port on the phone's /24 network with the saved code.
 
 The TV screen and the browser remote keep their own layout.
@@ -117,8 +119,11 @@ The TV screen and the browser remote keep their own layout.
 The page is in English, or Italian on Italian phones (switchable with EN | IT); the TV app follows the
 device language.
 
-The QR code carries a random pairing key: requests without it are refused. **New pairing code** on the TV
-disconnects every paired phone. The remote works only while the phone is on the same network as the TV.
+The QR code carries a random pairing key: requests without it are refused. **New code** in the TV's pairing popup
+disconnects every paired phone. The 4-digit code is traded for the key (`POST /api/pair {"pin":"1234"}`) only
+while the popup is open on the TV; 5 wrong codes lock that phone out until the popup opens again, and 20 wrong codes
+in total change the code and close pairing. Settings changed from a phone show up live on the TV screen, and the
+phone page follows changes made on the TV within a few seconds. The remote works only while the phone is on the same network as the TV.
 
 HTTP API (port 8765, header `X-Key: <pairing key>`), handy for scripts:
 

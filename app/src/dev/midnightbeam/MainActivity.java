@@ -1,6 +1,8 @@
 package dev.midnightbeam;
 
 import android.app.Activity;
+import android.app.Dialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
@@ -16,6 +18,8 @@ import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.View.OnFocusChangeListener;
+import android.view.ViewGroup;
+import android.view.Window;
 import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.ImageView;
@@ -52,11 +56,18 @@ public class MainActivity extends Activity
     private TextView timelineTitle;
     private Switch enabled;
     private Switch remote;
-    private ImageView qr;
     private TextView remoteInfo;
-    private Button newKey;
-    private Button getApp;
-    private boolean showingApp; // the QR code shows the Android app download instead of the phone remote
+    private Button pairBtn;
+    private Button appBtn;
+    // Popup with a big QR code (phone pairing or app download), at most one open
+    private Dialog popup;
+    private boolean popupPair;
+    private LinearLayout popupBox;
+    private ImageView popupQr;
+    private TextView popupPin;
+    private TextView popupInfo;
+    private TextView popupAddr;
+    private Button popupNew;
     private Button accessibility;
     private TextView accessibilityHint;
     private Slider red;
@@ -251,36 +262,12 @@ public class MainActivity extends Activity
         side.addView(remote, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
 
-        qr = new ImageView(this);
-        qr.setPadding(0, dp(8), 0, dp(6));
-        side.addView(qr, new LinearLayout.LayoutParams(dp(136), dp(148)));
-
         remoteInfo = text("", 12, NORMAL);
         remoteInfo.setGravity(Gravity.CENTER_HORIZONTAL);
         side.addView(remoteInfo);
 
-        newKey = new Button(this);
-        newKey.setText(t("New pairing code", "Nuovo codice"));
-        newKey.setAllCaps(false);
-        press(newKey, false);
-        newKey.setFocusable(true);
-        newKey.setOnClickListener(this);
-        newKey.setOnFocusChangeListener(this);
-        LinearLayout.LayoutParams keyLp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        keyLp.topMargin = dp(6);
-        side.addView(newKey, keyLp);
-
-        getApp = new Button(this);
-        getApp.setAllCaps(false);
-        press(getApp, false);
-        getApp.setFocusable(true);
-        getApp.setOnClickListener(this);
-        getApp.setOnFocusChangeListener(this);
-        LinearLayout.LayoutParams appLp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        appLp.topMargin = dp(8);
-        side.addView(getApp, appLp);
+        pairBtn = sideButton(side, t("Pair a phone", "Abbina telefono"), dp(6));
+        appBtn = sideButton(side, t("Android app", "App per Android"), dp(8));
 
         // the timeline's title and the Advanced button share one row
         LinearLayout tlRow = new LinearLayout(this);
@@ -361,6 +348,7 @@ public class MainActivity extends Activity
             refreshAccessibility();
         }
         if (timeline != null) run();
+        prefs.registerOnSharedPreferenceChangeListener(prefsSync);
         // the phone remote is on by default on TVs: make sure its server runs while the QR code is shown
         if (remote != null && remote.isChecked()) {
             Compat.startForegroundService(this, new Intent(this, DimService.class).putExtra("remote", true));
@@ -371,6 +359,86 @@ public class MainActivity extends Activity
     protected void onPause() {
         super.onPause();
         main.removeCallbacks(this);
+        prefs.unregisterOnSharedPreferenceChangeListener(prefsSync);
+        if (popup != null) popup.dismiss();
+        DimService.openPairing(false);
+    }
+
+    private final SharedPreferences.OnSharedPreferenceChangeListener prefsSync = new PrefsSync(this);
+
+    /** Hands every settings change (the phone remote writes them through the service) to the main thread. */
+    static final class PrefsSync implements SharedPreferences.OnSharedPreferenceChangeListener {
+        private final MainActivity activity;
+
+        PrefsSync(MainActivity activity) {
+            this.activity = activity;
+        }
+
+        @Override
+        public void onSharedPreferenceChanged(SharedPreferences p, String key) {
+            activity.main.post(new PrefChanged(activity, key));
+        }
+    }
+
+    static final class PrefChanged implements Runnable {
+        private final MainActivity activity;
+        private final String key;
+
+        PrefChanged(MainActivity activity, String key) {
+            this.activity = activity;
+            this.key = key;
+        }
+
+        @Override
+        public void run() {
+            activity.prefChanged(key);
+        }
+    }
+
+    /** Shows a setting changed elsewhere (the phone): switches and sliders are set by code, nothing is sent back. */
+    void prefChanged(String key) {
+        if (key == null || !ready) return;
+        switch (key) {
+            case "off":
+                updating = true;
+                enabled.setChecked(!prefs.getBoolean("off", false));
+                updating = false;
+                break;
+            case "red":
+                follow(red, prefs.getInt("red", 0));
+                break;
+            case "bright":
+                follow(bright, prefs.getInt("bright", 100));
+                break;
+            case "temp":
+                follow(temp, prefs.getInt("temp", DimService.DEFAULT_TEMP));
+                break;
+            case "transition":
+                if (transition != null) follow(transition, prefs.getInt("transition", 30));
+                break;
+            case "schedule":
+            case "schedule_on":
+            case "schedule_value":
+                main.removeCallbacks(this);
+                run();
+                break;
+            case "remote":
+                updating = true;
+                remote.setChecked(prefs.getBoolean("remote", Compat.isTv(this)));
+                updating = false;
+                break;
+            case "key":
+            case "pin":
+                refreshPopup();
+                break;
+            default:
+                break;
+        }
+    }
+
+    /** Moves a slider to a value changed elsewhere, unless the user is moving it right now. */
+    private static void follow(Slider s, int value) {
+        if (!s.busy()) s.set(value);
     }
 
     /** Refreshes the schedule timeline (set from the phone page) every 30 s while the screen is open. */
@@ -621,40 +689,153 @@ public class MainActivity extends Activity
         return b;
     }
 
-    /** Shows the QR code and the address of the phone remote when it is on. */
+    private Button sideButton(LinearLayout side, String label, int top) {
+        Button b = new Button(this);
+        b.setText(label);
+        b.setAllCaps(false);
+        press(b, false);
+        b.setFocusable(true);
+        b.setOnClickListener(this);
+        b.setOnFocusChangeListener(this);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        lp.topMargin = top;
+        side.addView(b, lp);
+        return b;
+    }
+
+    /** Info text and the Pair button: shown when the remote is on and the TV has a network address. */
     private void refreshRemote() {
-        getApp.setText(showingApp ? t("Back to the phone remote", "Torna al telecomando")
-                : t("Android app", "App per Android"));
-        if (showingApp) { // QR code of the app (F-Droid page or latest APK, like this copy), for phones and tablets
-            qr.setVisibility(View.VISIBLE);
-            newKey.setVisibility(View.GONE);
-            qr.setImageBitmap(qrBitmap(Compat.appUrl(this)));
-            qr.setContentDescription(Compat.appUrl(this));
-            remoteInfo.setText(t("Scan with an Android phone to download the app",
-                    "Inquadra con un telefono Android per scaricare l'app") + "\n"
-                    + (Compat.fromFdroid(this) ? "f-droid.org/packages/dev.midnightbeam" : "github.com/MadeinTaly/midnightbeam"));
-            return;
-        }
         boolean on = remote.isChecked();
-        qr.setVisibility(on ? View.VISIBLE : View.GONE);
-        newKey.setVisibility(on ? View.VISIBLE : View.GONE);
-        if (!on) {
-            remoteInfo.setText(t("Control this filter from a phone on the same network.",
-                    "Comanda il filtro da un telefono sulla stessa rete."));
+        boolean net = on && RemoteServer.localIp() != null;
+        pairBtn.setVisibility(net ? View.VISIBLE : View.GONE);
+        remoteInfo.setText(!on ? t("Control this filter from a phone on the same network.",
+                "Comanda il filtro da un telefono sulla stessa rete.")
+                : net ? t("Pair a phone to control this filter.", "Abbina un telefono per comandare il filtro.")
+                : t("Not connected to a network.", "Nessuna rete collegata."));
+        if (!net && popup != null && popupPair) popup.dismiss();
+    }
+
+    /** Opens the centred popup with a big QR code: phone pairing (QR link, PIN, new code) or the app download. */
+    private void showPopup(boolean pair) {
+        if (popup != null || (pair && RemoteServer.localIp() == null)) return;
+        popupPair = pair;
+        android.util.DisplayMetrics dm = getResources().getDisplayMetrics();
+        int side = Math.max(dp(160), Math.min(Math.round(dm.heightPixels * 0.75f), dm.widthPixels - dp(300) - dp(110)));
+        // two columns, so the QR can be big and everything still fits a TV screen: QR left, texts right
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(24), dp(24), dp(32), dp(24));
+        popupQr = new ImageView(this);
+        row.addView(popupQr, new LinearLayout.LayoutParams(side, side));
+        popupBox = new LinearLayout(this);
+        popupBox.setOrientation(LinearLayout.VERTICAL);
+        popupBox.setGravity(Gravity.CENTER_HORIZONTAL);
+        popupBox.setPadding(dp(28), 0, 0, 0);
+        row.addView(popupBox, new LinearLayout.LayoutParams(dp(300), LinearLayout.LayoutParams.WRAP_CONTENT));
+        TextView title = text(pair ? t("PAIR", "ABBINA") : t("DOWNLOAD APP", "SCARICA L'APP"), 30, LIGHT);
+        title.setTag(Fonts.DISPLAY);
+        title.setGravity(Gravity.CENTER_HORIZONTAL);
+        title.setShadowLayer(0.01f, -dp(2), 0, PRIMARY);
+        title.setPadding(0, 0, 0, dp(10));
+        popupBox.addView(title);
+        TextView info = text(pair ? t("Scan with the phone camera, or in the MidnightBeam app enter the code",
+                "Inquadra con la fotocamera del telefono, o nell'app MidnightBeam inserisci il codice")
+                : t("Scan with an Android phone to download the app", "Inquadra con un telefono Android per scaricare l'app"),
+                18, LIGHT);
+        info.setGravity(Gravity.CENTER_HORIZONTAL);
+        popupBox.addView(info);
+        popupInfo = info;
+        popupPin = null;
+        popupAddr = null;
+        popupNew = null;
+        if (pair) {
+            popupPin = text("", 64, ACCENT);
+            popupPin.setGravity(Gravity.CENTER_HORIZONTAL);
+            popupPin.setTag(Fonts.FIGURE);
+            popupPin.setPadding(0, dp(8), 0, 0);
+            popupBox.addView(popupPin);
+            popupAddr = text("", 14, NORMAL);
+            popupAddr.setGravity(Gravity.CENTER_HORIZONTAL);
+            popupBox.addView(popupAddr);
+            popupNew = new Button(this);
+            popupNew.setText(t("New code", "Nuovo codice"));
+            popupNew.setAllCaps(false);
+            press(popupNew, false);
+            popupNew.setFocusable(true);
+            popupNew.setOnClickListener(this);
+            popupNew.setOnFocusChangeListener(this);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            lp.topMargin = dp(16);
+            popupBox.addView(popupNew, lp);
+        } else {
+            popupAddr = text(Compat.fromFdroid(this) ? "f-droid.org/packages/dev.midnightbeam" : "github.com/MadeinTaly/midnightbeam",
+                    14, NORMAL);
+            popupAddr.setPadding(0, dp(10), 0, 0);
+            popupAddr.setGravity(Gravity.CENTER_HORIZONTAL);
+            popupBox.addView(popupAddr);
+            popupBox.setFocusable(true);
+            popupBox.setOnClickListener(this); // OK closes it
+        }
+        Fonts.apply(row);
+
+        popup = new Dialog(this);
+        popup.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        popup.setContentView(row);
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(BG);
+        bg.setStroke(dp(2), RULE);
+        bg.setCornerRadius(dp(4));
+        popup.getWindow().setBackgroundDrawable(bg);
+        popup.getWindow().setLayout(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        popup.setOnDismissListener(new PopupClosed(this));
+        if (pair) DimService.openPairing(true);
+        refreshPopup();
+        popup.show();
+        (pair ? popupNew : popupBox).requestFocus();
+    }
+
+    /** Draws the open popup from the current key and PIN (they change with New code, or after too many wrong PINs). */
+    private void refreshPopup() {
+        if (popup == null) return;
+        if (!popupPair) {
+            popupQr.setImageBitmap(qrBitmap(Compat.appUrl(this)));
+            popupQr.setContentDescription(Compat.appUrl(this));
             return;
         }
         String ip = RemoteServer.localIp();
         if (ip == null) {
-            qr.setVisibility(View.GONE);
-            remoteInfo.setText(t("Not connected to a network.", "Nessuna rete collegata."));
+            popup.dismiss();
             return;
         }
-        String url = "http://" + ip + ":" + RemoteServer.PORT + "/#k=" + DimService.pairingKey(prefs);
-        qr.setImageBitmap(qrBitmap(url));
-        qr.setContentDescription(ip + ":" + RemoteServer.PORT);
-        remoteInfo.setText(t("Scan with the phone camera", "Inquadra con la fotocamera del telefono")
-                + "\n" + ip + ":" + RemoteServer.PORT
-                + "\n" + t("Code", "Codice") + " " + DimService.pairingKey(prefs).replaceAll("(.{4})(?!$)", "$1 "));
+        popupQr.setImageBitmap(qrBitmap("http://" + ip + ":" + RemoteServer.PORT + "/#k=" + DimService.pairingKey(prefs)));
+        boolean open = DimService.pairingOpen();
+        popupPin.setText(open ? DimService.pairingPin(prefs) : "----");
+        popupInfo.setText(open ? t("Scan with the phone camera, or in the MidnightBeam app enter the code",
+                "Inquadra con la fotocamera del telefono, o nell'app MidnightBeam inserisci il codice")
+                : t("Too many wrong codes: press New code", "Troppi codici errati: premi Nuovo codice"));
+        popupAddr.setText(ip + ":" + RemoteServer.PORT);
+    }
+
+    void popupClosed() {
+        popup = null;
+        DimService.openPairing(false);
+    }
+
+    /** Dismiss listener of the popup (a plain class, see the note on inner classes above). */
+    static final class PopupClosed implements DialogInterface.OnDismissListener {
+        private final MainActivity activity;
+
+        PopupClosed(MainActivity activity) {
+            this.activity = activity;
+        }
+
+        @Override
+        public void onDismiss(DialogInterface dialog) {
+            activity.popupClosed();
+        }
     }
 
     /** QR code as a bitmap: black modules on white, with the standard 4-module quiet zone. */
@@ -681,12 +862,14 @@ public class MainActivity extends Activity
             } else {
                 Compat.enableOrOpenAccessibility(this);
             }
-        } else if (v == getApp) {
-            showingApp = !showingApp;
-            refreshRemote();
-        } else if (v == newKey) {
+        } else if (v == pairBtn || v == appBtn) {
+            showPopup(v == pairBtn);
+        } else if (v == popupNew) {
             DimService.newPairingKey(prefs); // phones paired with the old code stop working
-            refreshRemote();
+            DimService.openPairing(true);
+            refreshPopup();
+        } else if (v == popupBox) {
+            popup.dismiss();
         } else if (v == advanced) {
             boolean open = advancedBox.getVisibility() != View.VISIBLE;
             if (open) buildAdvanced();
@@ -759,8 +942,10 @@ public class MainActivity extends Activity
     @Override
     public void onCheckedChanged(CompoundButton b, boolean checked) {
         if (b == remote) {
-            if (checked) DimService.pairingKey(prefs);
-            Compat.startForegroundService(this, new Intent(this, DimService.class).putExtra("remote", checked));
+            if (!updating) {
+                if (checked) DimService.pairingKey(prefs);
+                Compat.startForegroundService(this, new Intent(this, DimService.class).putExtra("remote", checked));
+            }
             refreshRemote();
         } else if (b == scheduleOn) {
             if (!updating) setScheduleOn(checked);
@@ -770,7 +955,7 @@ public class MainActivity extends Activity
                 sendAudio(new JSONObject().put("enabled", checked));
             } catch (JSONException ignored) {
             }
-        } else {
+        } else if (!updating) {
             apply();
         }
     }
@@ -844,6 +1029,8 @@ public class MainActivity extends Activity
         private final TextView unitView;
         private final SeekBar bar;
         private int[] spectrum;
+        private long movedAt; // last move by the user (uptime ms)
+        private boolean dragging; // finger on the bar
 
         Slider(MainActivity activity, LinearLayout parent, String label, String unit,
                int min, int max, int step, int value) {
@@ -895,6 +1082,11 @@ public class MainActivity extends Activity
             refresh();
         }
 
+        /** The user has this slider focused and moved it a moment ago: leave it alone. */
+        boolean busy() {
+            return dragging || bar.hasFocus() && android.os.SystemClock.uptimeMillis() - movedAt < 1500;
+        }
+
         /** Shows a value read back from the device (not a user move: nothing is sent). */
         void set(int value) {
             bar.setProgress((value - min) / step);
@@ -924,15 +1116,21 @@ public class MainActivity extends Activity
         @Override
         public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
             refresh();
-            if (fromUser) activity.sliderMoved(this);
+            if (fromUser) {
+                movedAt = android.os.SystemClock.uptimeMillis();
+                activity.sliderMoved(this);
+            }
         }
 
         @Override
         public void onStartTrackingTouch(SeekBar seekBar) {
+            dragging = true;
         }
 
         @Override
         public void onStopTrackingTouch(SeekBar seekBar) {
+            dragging = false;
+            movedAt = android.os.SystemClock.uptimeMillis();
         }
     }
 }

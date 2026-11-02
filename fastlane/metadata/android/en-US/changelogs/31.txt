@@ -1,0 +1,3 @@
+* Pairing: Pair a phone on the TV opens a big QR code in the middle of the screen with a 4-digit code to type in the app; Android app shows the download QR the same way
+* Settings changed from the phone show up live on the TV screen, and the phone follows the TV within seconds
+* Phone schedule in the Arcade look: square cards, hard shadows, gold and oxblood

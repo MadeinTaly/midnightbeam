@@ -514,15 +514,16 @@ import drIcons from '/dayrhythm/icons/index.js';
       popA11yTitle: 'For full darkness', popA11yText: 'On this Android version the filter stops at 80% darkness and does not cover the navigation bar unless MidnightBeam is enabled in Accessibility. It is optional and it reads nothing on the screen.',
       setupNow: 'Set up now', later: 'Later', gotIt: 'OK', showWelcome: 'Show the welcome screen', source: 'Source code', support: 'Support the project', version: 'Version {v}',
       addDevice: 'Add device', addSub: 'TV, projector or another phone', scanQr: 'Scan the QR code',
-      addSteps: ['On the TV, open MidnightBeam: the QR code is on the right (Phone remote on).', 'Tap Scan the QR code and point the camera at it.', 'MidnightBeam opens again with the TV saved. If the camera shows a link instead, tap it and choose MidnightBeam.'],
+      addSteps: ['On the TV, open MidnightBeam and press Pair a phone: a big QR appears with a 4-digit code under it.','Tap Scan the QR code and point the camera at it.', 'MidnightBeam opens again with the TV saved. If the camera shows a link instead, tap it and choose MidnightBeam.'],
       noCamera: 'No camera app found: paste the link instead',
       options: 'Options', applyTo: 'Apply to…', applyTitle: 'Apply “{name}” to…', applyWhat: 'What to copy', applyFilter: 'Filter settings (warm filter, brightness, colour)',
       applySched: 'Schedule and saved days', applyGo: 'Apply to {n} devices', applyGo1: 'Apply to 1 device', applyNone: 'Choose at least one device',
       applied: 'Applied to {n} of {t}', appliedFail: 'not reachable: {names}', applying: 'Applying…', noOthers: 'There are no other devices yet: add one first.',
       sync: 'Sync all devices', syncSub: 'Every change you make goes to all your saved TVs at once ({n}). This phone is not included.', syncOn: 'sync on', syncDone: 'All TVs now follow “{name}”',
-      foundTitle: 'Found on your network', foundHint: 'Enter the code shown on its screen under the QR code', searching: 'Looking for TVs with MidnightBeam (Phone remote on)…', noneFound: 'None found yet: on the TV, open MidnightBeam and turn on Phone remote.',
-      manual: 'Or add it by hand, with what the TV shows under the QR code', address: 'Address', code: 'Code', add: 'Add',
-      badLink: 'Check the address and the code shown on the TV', needCode: 'Enter the code shown on the TV under the QR code',
+      foundTitle: 'Found on your network', foundHint: 'Enter the 4-digit code shown under the QR on the TV (press Pair a phone)', searching: 'Looking for TVs with MidnightBeam (Phone remote on)…', noneFound: 'None found yet: on the TV, open MidnightBeam and turn on Phone remote.',
+      manual: 'Or add it by hand: on the TV press Pair a phone, a big QR appears with a 4-digit code under it', address: 'Address', code: 'Code', add: 'Add',
+      badLink: 'Check the address and the code shown on the TV', needCode: 'Enter the 4-digit code shown under the QR on the TV (press Pair a phone)',
+      badPin: 'Wrong code: check the 4 digits on the TV', pairClosed: 'On the TV press Pair a phone so the code is shown', pairLocked: 'Too many wrong codes from this phone: on the TV press New code, then try again',
       added: 'Device added', rename: 'Name', save: 'Save', remove: 'Remove device', removeAgain: 'Tap again to remove', removed: 'Device removed', cancel: 'Cancel',
       type: 'Type', types: { projector: 'Projector', tv: 'TV', tablet: 'Tablet', phone: 'Phone', monitor: 'Monitor', other: 'Other' },
       newScene: 'New scene', custom: 'Custom', customSub: 'Create your own scene.', sceneName: 'Scene name', sceneSaved: 'Scene saved', deleteScene: 'Delete scene',
@@ -561,15 +562,16 @@ import drIcons from '/dayrhythm/icons/index.js';
       popA11yTitle: 'Per il buio totale', popA11yText: 'Su questa versione di Android il filtro si ferma all’80% di scuro e non copre la barra di navigazione, a meno che MidnightBeam sia attivo in Accessibilità. È facoltativo e non legge nulla sullo schermo.',
       setupNow: 'Configura ora', later: 'Più tardi', gotIt: 'OK', showWelcome: 'Mostra la schermata iniziale', source: 'Codice sorgente', support: 'Sostieni il progetto', version: 'Versione {v}',
       addDevice: 'Aggiungi dispositivo', addSub: 'TV, proiettore o un altro telefono', scanQr: 'Scansiona il QR',
-      addSteps: ['Sul TV apri MidnightBeam: il QR è a destra (Telecomando dal telefono attivo).', 'Tocca Scansiona il QR e inquadralo con la fotocamera.', 'MidnightBeam si riapre con il TV salvato. Se la fotocamera mostra un link, toccalo e scegli MidnightBeam.'],
+      addSteps: ['Sul TV apri MidnightBeam e premi Abbina telefono: compare un QR grande con un codice di 4 cifre sotto.','Tocca Scansiona il QR e inquadralo con la fotocamera.', 'MidnightBeam si riapre con il TV salvato. Se la fotocamera mostra un link, toccalo e scegli MidnightBeam.'],
       noCamera: 'Nessuna app fotocamera: incolla il link',
       options: 'Opzioni', applyTo: 'Applica anche a…', applyTitle: 'Applica “{name}” anche a…', applyWhat: 'Cosa copiare', applyFilter: 'Impostazioni del filtro (filtro caldo, luminosità, colore)',
       applySched: 'Programmazione e giornate salvate', applyGo: 'Applica a {n} dispositivi', applyGo1: 'Applica a 1 dispositivo', applyNone: 'Scegli almeno un dispositivo',
       applied: 'Applicato a {n} su {t}', appliedFail: 'non raggiungibili: {names}', applying: 'Applico…', noOthers: 'Non ci sono ancora altri dispositivi: aggiungine uno.',
       sync: 'Sincronizza tutti i dispositivi', syncSub: 'Ogni modifica che fai va a tutti i TV salvati insieme ({n}). Questo telefono è escluso.', syncOn: 'sincronizzati', syncDone: 'Tutti i TV ora seguono “{name}”',
-      foundTitle: 'Trovati in rete', foundHint: 'Inserisci il codice mostrato sul suo schermo sotto il QR', searching: 'Cerco TV con MidnightBeam (telecomando dal telefono attivo)…', noneFound: 'Nessuno ancora: sul TV apri MidnightBeam e attiva Telecomando dal telefono.',
-      manual: 'Oppure aggiungilo a mano, con quello che il TV mostra sotto il QR', address: 'Indirizzo', code: 'Codice', add: 'Aggiungi',
-      badLink: 'Controlla indirizzo e codice mostrati sul TV', needCode: 'Inserisci il codice mostrato sul TV sotto il QR',
+      foundTitle: 'Trovati in rete', foundHint: 'Inserisci il codice di 4 cifre mostrato sotto il QR sul TV (premi Abbina telefono)', searching: 'Cerco TV con MidnightBeam (telecomando dal telefono attivo)…', noneFound: 'Nessuno ancora: sul TV apri MidnightBeam e attiva Telecomando dal telefono.',
+      manual: 'Oppure aggiungilo a mano: sul TV premi Abbina telefono, compare un QR grande con un codice di 4 cifre sotto', address: 'Indirizzo', code: 'Codice', add: 'Aggiungi',
+      badLink: 'Controlla indirizzo e codice mostrati sul TV', needCode: 'Inserisci il codice di 4 cifre mostrato sotto il QR sul TV (premi Abbina telefono)',
+      badPin: 'Codice errato: controlla le 4 cifre sul TV', pairClosed: 'Sul TV premi Abbina telefono per mostrare il codice', pairLocked: 'Troppi codici errati da questo telefono: sul TV premi Nuovo codice e riprova',
       added: 'Dispositivo aggiunto', rename: 'Nome', save: 'Salva', remove: 'Rimuovi dispositivo', removeAgain: 'Tocca di nuovo per rimuovere', removed: 'Dispositivo rimosso', cancel: 'Annulla',
       type: 'Tipo', types: { projector: 'Proiettore', tv: 'TV', tablet: 'Tablet', phone: 'Telefono', monitor: 'Monitor', other: 'Altro' },
       newScene: 'Nuova scena', custom: 'Personalizzata', customSub: 'Crea la tua scena.', sceneName: 'Nome della scena', sceneSaved: 'Scena salvata', deleteScene: 'Elimina scena',
@@ -933,17 +935,29 @@ import drIcons from '/dayrhythm/icons/index.js';
       '<a class="btn btn-grad" href="midnightbeam-app://scan" id="ad-scan">' + icon('qr') + L.scanQr + '</a><ol class="steps">' + L.addSteps.map(function (s) { return '<li>' + s + '</li>'; }).join('') + '</ol>' +
       '<div class="small muted">' + L.manual + '</div>' +
       '<label class="small muted" for="ad-link">' + L.address + '</label><input class="field" id="ad-link" inputmode="url" autocomplete="off" autocapitalize="off" placeholder="192.168.1.20:8765">' +
-      '<label class="small muted" for="ad-code">' + L.code + '</label><input class="field" id="ad-code" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="a1b2 c3d4 e5f6 …">' +
+      '<label class="small muted" for="ad-code">' + L.code + '</label><input class="field" id="ad-code" autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="numeric" pattern="[0-9]*" placeholder="1234">' +
       '<button class="btn btn-soft" type="button" id="ad-go">' + icon('link') + L.add + '</button></div>');
     listFound(0);
     $('ad-go').onclick = function () {
-      var link = pairingLink($('ad-link').value, $('ad-code').value);
-      if (!link) return;
-      api('/api/devices', { op: 'add', link: link }, '').then(function (r) {
-        closeSheet(); toast(L.added);
-        return loadDevices().then(function () { selectDevice(r.id); probeAll(); });
+      var addr = $('ad-link').value.trim(), code = $('ad-code').value.trim();
+      if (/^midnightbeam:|[#?&]k=[0-9a-f]+/i.test(addr) || code.replace(/\s/g, '').length > 4) {
+        var link = pairingLink(addr, code);
+        if (!link) return;
+        api('/api/devices', { op: 'add', link: link }, '').then(added, function () { toast(L.badLink); });
+        return;
+      }
+      var m = addr.match(/^(?:https?:\/\/)?([^\/:#?\s]+)(?::(\d+))?/i);
+      if (!m) { toast(L.badLink); return; }
+      if (!/^\d{4}$/.test(code)) { toast(L.needCode); return; }
+      api('/api/devices', { op: 'pair', host: m[1], port: +(m[2] || 8765), pin: code }, '').then(function (r) {
+        if (r.ok) return added(r);
+        toast(r.error === 'pin' ? L.badPin : r.error === 'closed' ? L.pairClosed : r.error === 'locked' ? L.pairLocked : L.unreachable);
       }, function () { toast(L.badLink); });
     };
+  }
+  function added(r) {
+    closeSheet(); toast(L.added);
+    return loadDevices().then(function () { selectDevice(r.id); probeAll(); });
   }
   // ---- Copy one device's settings to others ("Apply to…") ----
   function allDevices() { return [{ id: '', name: L.thisDevice }].concat(devices.map(function (d) { return { id: d.id, name: d.name }; })); }
@@ -1198,7 +1212,73 @@ import drIcons from '/dayrhythm/icons/index.js';
   // PREVIEW: dayrhythm themes + name-based icons
   Object.keys(drThemes).forEach(function (k) { DR.themes.register(drThemes[k]); });
   DR.icons.register(drIcons);
-  var DRTHEME = store('mb_drtheme') || 'glow';
+  (function () {
+    var T = '.dr-track ', N = '.dr-track.dr-track[data-orient] ', NH = '.dr-track.dr-track[data-orient=horizontal] ', NV = '.dr-track.dr-track[data-orient=vertical] ', D = '&:has(.dr-dial)';
+    var GOLD = '#edc23e', BG = '#18080b', RED = '#d73337', RULE = '#533239', INK = '#f3eee4', SOFT = '#311a1f', SURF = '#241015';
+    var BUNGEE = '"Bungee","Impact",sans-serif', SILK = '"Silkscreen",ui-monospace,monospace';
+    var skin = {
+      '': '--dr-track-thickness:11.5rem;--dr-spectrum-height:4rem;--dr-gap:.7rem;--dr-handle-size:.8rem;--dr-dial-inner:56;--dr-dial-outer:88;background:' + SURF + ';border:2px solid ' + RULE + ';border-radius:4px;padding:1.6rem;box-shadow:5px 5px 0 ' + RED,
+      [D]: 'background:' + BG + ';padding:2.4rem 2rem 1.6rem',
+      '.dr-toolbar': 'display:none',
+      '.dr-track-wrap.dr-track-wrap': 'overflow:visible',
+      '.dr-spectrum.dr-spectrum': 'padding:0;background:' + BG + ';border:2px solid ' + INK + ';margin-bottom:.15rem',
+      '.dr-spectrum-segment.dr-spectrum-segment': 'opacity:1;background:var(--dr-slot-color);filter:saturate(1.2) brightness(1.1);border-right:2px solid ' + BG,
+      '.dr-spectrum-segment[data-off].dr-spectrum-segment': 'background:repeating-linear-gradient(45deg,rgba(243,238,228,.55) 0 2px,rgba(243,238,228,.2) 2px 7px)!important;filter:none',
+      '.dr-spectrum-segment[data-active].dr-spectrum-segment': 'box-shadow:inset 0 0 0 3px ' + GOLD,
+      [T + '.dr-slot']: 'background:color-mix(in srgb,var(--dr-slot-color) 24%,' + SOFT + ');border:2px solid ' + INK + ';box-shadow:4px 4px 0 var(--dr-slot-color);overflow:visible;padding:.3rem',
+      [T + '.dr-slot-tint']: 'display:none',
+      [T + '.dr-slot[data-off]']: 'background:' + SOFT + ';border-color:' + RULE + ';box-shadow:4px 4px 0 ' + RULE,
+      [T + '.dr-slot[data-off] .dr-slot-icon']: 'color:' + INK + ';filter:none',
+      [T + '.dr-slot[data-active]']: 'background:color-mix(in srgb,' + GOLD + ' 14%,color-mix(in srgb,var(--dr-slot-color) 24%,' + SOFT + '));border:2px solid ' + GOLD + ';box-shadow:4px 4px 0 var(--dr-slot-color)',
+      [T + '.dr-slot-content']: 'justify-content:center;align-items:center;gap:.35rem;overflow:visible;text-align:center',
+      [T + '.dr-slot-time']: 'order:0;font-family:' + SILK + ';font-size:.8rem;font-weight:400;color:' + GOLD,
+      [T + '.dr-slot-model']: 'order:1;padding:0;min-height:0;background:none;border:0;color:inherit',
+      [T + '.dr-slot-icon']: 'color:color-mix(in oklch,color-mix(in oklch,var(--dr-slot-color) 40%,' + GOLD + ') 70%,#fff);--x-icon:clamp(1.6rem,calc((100cqw - 20rem)*.4),3.2rem);filter:drop-shadow(0 0 1px #000)',
+      [T + '.dr-slot[data-active] .dr-slot-icon']: 'color:' + GOLD,
+      [T + '.dr-slot-label']: 'order:2;font-family:' + BUNGEE + ';text-transform:uppercase;font-size:1rem;font-weight:400;line-height:1.02;color:' + INK,
+      [T + '.dr-slot-model-name,' + T + '.dr-slot-summary']: 'display:none',
+      [T + '.dr-handle-grip']: 'opacity:0;border-radius:0;transition:opacity .15s',
+      [T + '.dr-handle:hover .dr-handle-grip,' + T + '.dr-handle:focus-visible .dr-handle-grip,' + T + '.dr-handle[data-dragging] .dr-handle-grip']: 'opacity:.9;background:' + GOLD,
+      [N + '.dr-now-line']: 'background:' + GOLD + ';z-index:3',
+      [NH + '.dr-now-line']: 'width:2px;top:-1.9rem',
+      [NV + '.dr-now-line']: 'height:2px',
+      [N + '.dr-now-dot']: 'display:block;top:0;width:.8rem;height:.8rem;border-radius:0;background:' + GOLD,
+      [NV + '.dr-now-dot']: 'left:0',
+      [N + '.dr-now-badge']: 'font-family:' + SILK + ';font-weight:400;font-size:.9rem;border-radius:0;background:' + GOLD + ';color:' + BG + ';padding:.12rem .5rem',
+      [NH + '.dr-now-badge']: 'top:calc(var(--x-gap) + .55rem)',
+      // vertical track (phones): the badge rides the now line at the right edge, so the name stays left of it
+      [NV + '.dr-slot-content']: 'justify-content:flex-start;text-align:left',
+      [NV + '.dr-now-badge']: 'font-size:.7rem;padding:.05rem .35rem',
+      '.dr-credits': 'color:#b3a192;font-size:.9rem',
+      '.dr-credits-link': 'color:' + GOLD,
+      '.dr-dial-ring': 'fill:' + SOFT + ';stroke:' + INK + ';stroke-width:1.4',
+      '.dr-dial-arc': 'fill:var(--dr-arc-fill);stroke:' + BG + ';stroke-width:2;opacity:1',
+      '.dr-dial-arc[data-off]': 'fill:' + SURF,
+      '.dr-dial-arc-active': 'filter:brightness(1.3)',
+      '.dr-dial-guide': 'display:block;stroke:' + INK + ';opacity:.2',
+      '.dr-dial-tick': 'stroke:' + INK + ';opacity:.9;stroke-width:1.4',
+      '.dr-dial-tick-minor': 'display:block;stroke:' + INK + ';opacity:.4;stroke-width:1',
+      '.dr-dial-tick-label': 'fill:' + INK + ';font-family:"Chivo",sans-serif;font-size:5.5px;font-weight:900',
+      '.dr-dial-hand': 'stroke:' + GOLD + ';stroke-width:2.4;stroke-linecap:butt',
+      '.dr-dial-hub': 'display:block;fill:' + BG + ';stroke:' + GOLD + ';stroke-width:2.2',
+      '.dr-dial-handle': 'opacity:0',
+      '.dr-dial-handle:focus-visible,.dr-dial-handle[data-dragging]': 'opacity:1;fill:' + GOLD,
+      '.dr-dial-center-time': 'transform:translateY(-10px);font:400 17px ' + SILK + ';fill:' + GOLD,
+      '.dr-dial-center-label': 'transform:translateY(8px);font:400 8px ' + BUNGEE + ';text-transform:uppercase;fill:' + INK,
+      '.dr-dial-center-summary': 'display:none',
+      '.dr-dial-center-remaining': 'transform:translateY(6px);font:700 5px "Chivo",sans-serif;fill:#b3a192'
+    };
+    var th = {
+      id: 'mbarcade', title: 'MidnightBeam Arcade', scheme: 'dark',
+      description: 'Wine-black paper, gold hand, oxblood offsets, Bungee names and Silkscreen figures.',
+      light: { bg: BG, surface: SURF, 'surface-soft': SOFT, ink: INK, muted: '#b3a192', now: GOLD, accent: GOLD, 'accent-soft': '#4a3a14', 'accent-ink': BG, focus: GOLD, danger: RED, border: RULE, shadow: 'none', overlay: '#000000bb' },
+      shape: { 'radius-panel': '4px', 'radius-dialog': '4px', 'radius-card': '4px', 'radius-card-h': '4px', 'radius-chip': '0', 'radius-input': '0', 'radius-button': '4px', 'radius-spectrum': '0', 'radius-tab': '0', font: '"Chivo",ui-sans-serif,system-ui,sans-serif', 'tint-opacity': '1' },
+      skin: skin
+    };
+    DR.themes.register(th);
+  })();
+  var DRTHEME = store('mb_drtheme');
+  if (!DRTHEME || DRTHEME === 'glow') DRTHEME = 'mbarcade';
   var DRICON = { off: 'power', soft: 'sun-dim', evening: 'coffee', cinema: 'clapperboard', night: 'moon-star', deep: 'moon', custom: 'sliders-horizontal' };
   var FASCE = [{ key: 'morning', time: '07:00' }, { key: 'afternoon', time: '14:00' }, { key: 'evening', time: '19:30' }, { key: 'film', time: '21:00' }, { key: 'night', time: '23:00' }];
   var PRESETS = [
@@ -1311,6 +1391,7 @@ import drIcons from '/dayrhythm/icons/index.js';
     var id = cur;
     return api('/api/schedule').then(function (d) { if (id === cur) { schedule = d; summary(); } return d; }, function () { if (id === cur) { schedule = null; summary(); } return null; });
   }
+  var loadedSig = '';
   function loadScheduleAll() {
     flushSave(); status.textContent = '';
     loadScheduleSummary().then(function (d) {
@@ -1320,6 +1401,9 @@ import drIcons from '/dayrhythm/icons/index.js';
       transition = typeof d.transition === 'number' ? d.transition : 30;
       $('transition').value = String(transition);
       if (!v || (Array.isArray(v) && !v.length)) v = defaultValue();
+      var sig = JSON.stringify(v);
+      if (sig === loadedSig && scheduleLoaded) return; // unchanged: keep the open slot popup
+      loadedSig = sig;
       rhythm.config = config(); setValue(v); scheduleLoaded = true;
     });
     loadDays();
@@ -1569,11 +1653,15 @@ import drIcons from '/dayrhythm/icons/index.js';
   rhythm.config = config(); setValue(defaultValue());
   showView(store('mb_welcomed') ? 'home' : 'welcome');
   loadApp(); loadDevices(); refresh(); loadScheduleSummary(); loadAudioSummary();
+  var tick = 0;
   setInterval(function () {
     if (document.hidden) return;
+    tick++;
     if (!pending) refresh();
+    if (tick % 3) return;
     if (view === 'devices') probeAll();
-  }, 10000);
+    if (view === 'schedule' && !saveTimer && !saving && !rhythm.editing) loadScheduleAll();
+  }, 3000);
   document.addEventListener('visibilitychange', function () {
     if (document.hidden) { flushSave(); return; }
     // the app restarts its local server when it comes back: give it a moment

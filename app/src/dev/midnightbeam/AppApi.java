@@ -25,6 +25,8 @@ import java.nio.charset.StandardCharsets;
  *   GET  /api/discovered TVs announced on the network (mDNS, see Discovery) and not saved yet
  *   GET  /api/devices    saved devices [{"id":"host:port","name":..,"host":..,"port":..}] (keys stay in the app)
  *   POST /api/devices    {"op":"add","link":..} | {"op":"edit","id":..,"name":..,"type":..} (either) | {"op":"delete","id":..}
+ *                        | {"op":"pair","host":..,"port":8765,"pin":"1234"}: trades the TV's PIN for its key (POST /api/pair on
+ *                        the TV) and saves it; {"ok":true,"id":..} or {"ok":false,"error":"pin|closed|locked|unreachable"}
  *                        type: projector, tv, tablet, phone, monitor or other (icon only)
  *   ANY  /d/{host:port}/api/...   forwarded to that saved device with its pairing key; if it does not answer it is
  *                        searched on the local network (Finder) and, when found at a new address, the answer carries
@@ -84,6 +86,7 @@ final class AppApi {
             String added = Devices.addLink(p, Uri.parse(j.optString("link").trim()));
             return added == null ? null : "{\"ok\":true,\"id\":" + JSONObject.quote(added) + "}";
         }
+        if (op.equals("pair")) return pair(p, j.optString("host"), j.optInt("port", RemoteServer.PORT), j.optString("pin"));
         JSONObject d = Devices.byId(p, id);
         if (d == null) return null;
         if (op.equals("edit")) {
@@ -101,6 +104,27 @@ final class AppApi {
             return null;
         }
         return "{\"ok\":true}";
+    }
+
+    /** Pairs with a TV by its PIN; the JSON answer says what went wrong (pin, closed, unreachable). */
+    private static String pair(SharedPreferences p, String host, int port, String pin) {
+        if (!Devices.HOST.matcher(host).matches() || !pin.matches("[0-9]{4}") || port < 1 || port > 65535) return null;
+        try {
+            byte[] body = ("{\"pin\":\"" + pin + "\"}").getBytes(StandardCharsets.UTF_8);
+            Object[] r = call(host, port, "", "/api/pair", "POST", body, body.length);
+            int code = (Integer) r[0];
+            if (code == 200) {
+                String k = new JSONObject(text((byte[]) r[1], ((byte[]) r[1]).length)).optString("k");
+                if (!Devices.KEY.matcher(k).matches()) return "{\"ok\":false,\"error\":\"unreachable\"}";
+                String id = Devices.addLink(p, Uri.parse("http://" + host + ":" + port + "/#k=" + k));
+                return id == null ? null : "{\"ok\":true,\"id\":" + JSONObject.quote(id) + "}";
+            }
+            String e = code == 403 ? new JSONObject(text((byte[]) r[1], ((byte[]) r[1]).length)).optString("error") : "";
+            if (!e.equals("closed") && !e.equals("locked")) e = code == 403 ? "pin" : "unreachable";
+            return "{\"ok\":false,\"error\":\"" + e + "\"}";
+        } catch (IOException | JSONException e) {
+            return "{\"ok\":false,\"error\":\"unreachable\"}";
+        }
     }
 
     /** Forwards /d/{host:port}/api/... to the saved device and writes its answer (502 if unreachable). */

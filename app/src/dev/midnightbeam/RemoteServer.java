@@ -32,6 +32,9 @@ import java.util.Locale;
  *   POST /api/schedule   {"enabled":bool,"value":..,"resolved":..}  (older {"enabled","slots":[..]} still accepted)
  *   GET  /api/audio      audio effects: {"supported":bool,"enabled":bool,"volume":{"level","max"},"eq":..,"bass":..,"virt":..,"loud":..} (null = not available)
  *   POST /api/audio      {"enabled":bool,"volume":n,"bands":[mB..],"preset":n,"bass":0-1000,"virt":0-1000,"loud":0-1500,"reset":true}, any subset
+ *   POST /api/pair       {"pin":"1234"} -> {"k":<pairing key>}, no X-Key needed; only while the TV's pairing popup is open;
+ *                        else 403 {"error":"pin"|"closed"|"locked"} (locked: 5 wrong PINs from this address)
+ *                        (403 {"error":"closed"} otherwise, {"error":"pin"} if wrong; 5 wrong in a row change the PIN)
  *   GET  /api/days       saved days: [{"name":..,"slots":[..]}]
  *   POST /api/days       {"name":..,"slots":[..]} saves or replaces a day; {"name":..,"delete":true} deletes it
  *
@@ -176,13 +179,13 @@ final class RemoteServer extends Thread {
         }
 
         try {
-            route(method, path, key, loopback, body, read, out);
+            route(method, path, key, loopback, c.getInetAddress().getHostAddress(), body, read, out);
         } catch (java.io.FileNotFoundException e) { // an asset that is not in the APK
             send(out, 404, "text/plain", "not found");
         }
     }
 
-    private void route(String method, String path, String key, boolean loopback, byte[] body, int read, OutputStream out)
+    private void route(String method, String path, String key, boolean loopback, String client, byte[] body, int read, OutputStream out)
             throws IOException {
         if (method.equals("GET") && (path.equals("/") || path.equals("/index.html"))) {
             send(out, 200, "text/html; charset=utf-8", asset("remote.html"));
@@ -201,6 +204,8 @@ final class RemoteServer extends Thread {
         } else if (loopback && path.startsWith("/d/")) {
             if (!keyMatches(key)) send(out, 403, "application/json", "{\"error\":\"pairing key\"}");
             else AppApi.forward(prefs(), path, method, body, read, out);
+        } else if (method.equals("POST") && path.equals("/api/pair")) {
+            pair(out, body, read, client);
         } else if (path.startsWith("/api/")) {
             if (!keyMatches(key)) {
                 send(out, 403, "application/json", "{\"error\":\"pairing key\"}");
@@ -278,6 +283,62 @@ final class RemoteServer extends Thread {
 
     private android.content.SharedPreferences prefs() {
         return service.getSharedPreferences(DimService.PREFS, android.content.Context.MODE_PRIVATE);
+    }
+
+    private static final Object PIN_LOCK = new Object();
+    /** Wrong PINs per client address since the pairing popup opened, guarded by PIN_LOCK. */
+    private static final java.util.Map<String, Integer> PIN_FAILS = new java.util.HashMap<>();
+    private static int pinFailsTotal; // all wrong PINs since the popup opened, guarded by PIN_LOCK
+    static final int PIN_TRIES = 5; // per client: then that client is locked out until the popup opens again
+    static final int PIN_TRIES_TOTAL = 20; // all clients together: then the PIN changes and pairing closes
+
+    /** Forgets the wrong PINs: called when the pairing popup opens (or New code reopens it). */
+    static void resetPinFails() {
+        synchronized (PIN_LOCK) {
+            PIN_FAILS.clear();
+            pinFailsTotal = 0;
+        }
+    }
+
+    /**
+     * POST /api/pair: trades the TV's PIN for its pairing key, only while the pairing popup is open. A client with
+     * PIN_TRIES wrong PINs is locked out (the others still pair with the PIN on screen, so one device on the network
+     * cannot block pairing); PIN_TRIES_TOTAL wrong PINs from everyone change the PIN and close pairing, which bounds a
+     * guess spread over many addresses to 20 in 10000 per press of New code.
+     */
+    private void pair(OutputStream out, byte[] body, int read, String client) throws IOException {
+        if (!DimService.pairingOpen()) {
+            send(out, 403, "application/json", "{\"error\":\"closed\"}");
+            return;
+        }
+        String pin;
+        try {
+            pin = new JSONObject(AppApi.text(body, read)).optString("pin");
+        } catch (JSONException e) {
+            send(out, 400, "application/json", "{\"error\":\"bad json\"}");
+            return;
+        }
+        String key = null, error = "pin";
+        synchronized (PIN_LOCK) {
+            Integer fails = PIN_FAILS.get(client);
+            if (!DimService.pairingOpen()) {
+                error = "closed";
+            } else if (fails != null && fails >= PIN_TRIES) {
+                error = "locked";
+            } else if (MessageDigest.isEqual(pin.getBytes(StandardCharsets.UTF_8),
+                    DimService.pairingPin(prefs()).getBytes(StandardCharsets.UTF_8))) {
+                PIN_FAILS.remove(client);
+                key = DimService.pairingKey(prefs());
+            } else {
+                PIN_FAILS.put(client, fails == null ? 1 : fails + 1);
+                if (++pinFailsTotal >= PIN_TRIES_TOTAL) {
+                    DimService.newPairingPin(prefs());
+                    DimService.openPairing(false);
+                }
+            }
+        }
+        if (key != null) send(out, 200, "application/json", "{\"k\":" + JSONObject.quote(key) + "}");
+        else send(out, 403, "application/json", "{\"error\":\"" + error + "\"}");
     }
 
     private boolean keyMatches(String key) {

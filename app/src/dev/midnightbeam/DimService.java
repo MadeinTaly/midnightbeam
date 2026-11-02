@@ -24,6 +24,7 @@ import java.io.FileDescriptor;
 import java.io.PrintWriter;
 import java.security.SecureRandom;
 import java.util.Calendar;
+import java.util.Locale;
 
 /**
  * Full-screen, click-through overlay that dims the screen and adds a warm (red) tint.
@@ -533,7 +534,32 @@ public class DimService extends Service implements Runnable {
         StringBuilder sb = new StringBuilder();
         for (byte x : b) sb.append(String.format("%02x", x & 0xff));
         p.edit().putString("key", sb.toString()).commit();
+        newPairingPin(p);
         return sb.toString();
+    }
+
+    /** The 4-digit code for pairing by hand (the TV shows it while its pairing popup is open). */
+    static String pairingPin(SharedPreferences p) {
+        String pin = p.getString("pin", null);
+        return pin != null ? pin : newPairingPin(p);
+    }
+
+    static String newPairingPin(SharedPreferences p) {
+        String pin = String.format(Locale.ROOT, "%04d", new SecureRandom().nextInt(10000));
+        p.edit().putString("pin", pin).commit();
+        return pin;
+    }
+
+    /** POST /api/pair is answered only while this is set: the TV's pairing popup is open. */
+    static volatile boolean pairOpen;
+
+    static void openPairing(boolean open) {
+        if (open) RemoteServer.resetPinFails(); // a fresh popup: every phone gets its tries back
+        pairOpen = open;
+    }
+
+    static boolean pairingOpen() {
+        return pairOpen;
     }
 
     // ---- Schedule tick ----

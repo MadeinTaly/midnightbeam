@@ -13,8 +13,8 @@ import java.util.regex.Pattern;
 /** Saved devices of the phone app: a JSON array [{name, host, port, key, type}] in the shared preferences. */
 final class Devices {
     private static final String PREF = "devices";
-    private static final Pattern HOST = Pattern.compile("[A-Za-z0-9.\\-]{1,253}");
-    private static final Pattern KEY = Pattern.compile("[0-9a-f]{1,128}");
+    static final Pattern HOST = Pattern.compile("[A-Za-z0-9.\\-]{1,253}");
+    static final Pattern KEY = Pattern.compile("[0-9a-f]{1,128}");
     private static final Pattern FRAGMENT_KEY = Pattern.compile("(?:^|&)k=([0-9a-f]+)");
 
     private Devices() {
