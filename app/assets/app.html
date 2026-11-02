@@ -362,6 +362,16 @@
       <span class="grow" style="flex:1;min-width:0"><span class="t" style="font-weight:600" data-t="audioSetting"></span><br><span class="small muted" data-t="audioSettingSub"></span></span>
       <label class="switch"><input id="st-audio" type="checkbox"><span></span></label>
     </div>
+    <div id="st-upd" class="stack hidden">
+      <div class="card sync-card">
+        <span class="grow" style="flex:1;min-width:0"><span class="t" style="font-weight:600" data-t="updCheck"></span></span>
+        <label class="switch"><input id="st-upd-on" type="checkbox"><span></span></label>
+      </div>
+      <div class="card sync-card">
+        <span class="grow" style="flex:1;min-width:0"><span class="t" style="font-weight:600" data-t="updBeta"></span><br><span class="small muted hidden" id="st-upd-info" data-t="updStays"></span></span>
+        <label class="switch"><input id="st-upd-beta" type="checkbox"><span></span></label>
+      </div>
+    </div>
     <button class="card row-link" type="button" data-sub="setup">
       <span class="ic-red" data-icon="phone"></span>
       <span class="grow"><span class="t" data-t="setupTitle"></span><br><span class="small muted" id="st-setup"></span></span>
@@ -495,7 +505,7 @@ import drIcons from '/dayrhythm/icons/index.js';
   var T = {
     en: { tagline1: 'Less blue light. More comfortable movie nights.', useHere: 'Use on this device', useHereSub: 'Warm filter and dimming for this phone',
       connectTv: 'Connect a TV or projector', connectTvSub: 'Control the filter of your TV boxes from here',
-      home: 'Home', devices: 'Devices', scenes: 'Scenes', settings: 'Settings', back: 'Back', power: 'Filter on / off',
+      home: 'Home', devices: 'Devices', scenes: 'Scenes', settings: 'Settings', updCheck: 'Check for updates at start', updBeta: 'Beta updates', updStays: 'Stays on this beta until a newer stable is out', back: 'Back', power: 'Filter on / off',
       red: 'Warm filter', bright: 'Brightness', temp: 'Colour temperature', schedTitle: 'Schedule',
       connected: 'Connected', offline: 'Offline', filterOn: 'filter on', filterOff: 'filter off', pvHold: 'Hold to see without filter', pvOriginal: 'Without filter', pvLocal: 'The real filter is on this screen', checking: 'Connecting…',
       thisDevice: 'This device', local: 'This phone', localTablet: 'This tablet', schedOff: 'Off', schedOn: 'On', schedNext: 'next: {name} at {time}',
@@ -543,7 +553,7 @@ import drIcons from '/dayrhythm/icons/index.js';
       audioPresets: 'Music', audioVideo: 'Video', vp: { dialogue: 'Dialogue', cinema: 'Cinema', night: 'Night', action: 'Action', sport: 'Sport' }, audioReset: 'Reset', audioEq: 'Equalizer', audioBass: 'Bass boost', audioVirt: 'Surround', audioLoud: 'Loudness', audioApply: 'Audio settings' },
     it: { tagline1: 'Meno luce blu. Serate film più rilassanti.', useHere: 'Usa su questo dispositivo', useHereSub: 'Filtro caldo e attenuazione per questo telefono',
       connectTv: 'Collega un TV o proiettore', connectTvSub: 'Controlla da qui il filtro dei tuoi TV box',
-      home: 'Home', devices: 'Dispositivi', scenes: 'Scene', settings: 'Impostazioni', back: 'Indietro', power: 'Filtro acceso / spento',
+      home: 'Home', devices: 'Dispositivi', scenes: 'Scene', settings: 'Impostazioni', updCheck: 'Controlla aggiornamenti all’avvio', updBeta: 'Aggiornamenti beta', updStays: 'Resta su questa beta finché non esce una stabile più nuova', back: 'Indietro', power: 'Filtro acceso / spento',
       red: 'Filtro caldo', bright: 'Luminosità', temp: 'Temperatura colore', schedTitle: 'Programmazione',
       connected: 'Connesso', offline: 'Non raggiungibile', filterOn: 'filtro acceso', filterOff: 'filtro spento', pvHold: 'Tieni premuto per vederla senza filtro', pvOriginal: 'Senza filtro', pvLocal: 'Il filtro vero è già su questo schermo', checking: 'Connessione…',
       thisDevice: 'Questo dispositivo', local: 'Questo telefono', localTablet: 'Questo tablet', schedOff: 'Spenta', schedOn: 'Attiva', schedNext: 'prossima: {name} alle {time}',
@@ -1186,6 +1196,9 @@ import drIcons from '/dayrhythm/icons/index.js';
   function renderSettings() {
     $('st-setup').textContent = !app.overlay ? L.setupMissing : (app.sdk >= 31 && !app.accessibility) ? L.setupA11y : L.setupOk;
     $('st-audio').checked = audioOn();
+    $('st-upd').classList.toggle('hidden', !app.updates);
+    $('st-upd-on').checked = !!app.upd; $('st-upd-beta').checked = !!app.updBeta;
+    $('st-upd-info').classList.toggle('hidden', !app.betaStays);
     $('st-version').textContent = app.version ? fmt(L.version, { v: app.version }) : '';
     var picked = T[store('mb_lang')] ? store('mb_lang') : 'auto';
     Array.prototype.forEach.call(document.querySelectorAll('.lang'), function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-lang') === picked)); });
@@ -1625,6 +1638,9 @@ import drIcons from '/dayrhythm/icons/index.js';
     au.enabled = $('au-on').checked; updateAudio();
     auPost({ enabled: au.enabled });
   });
+  function updPost(body) { api('/api/app', body, '').then(function (a) { app = a; renderSettings(); }).catch(function () { loadApp(); }); }
+  $('st-upd-on').addEventListener('change', function () { updPost({ upd: $('st-upd-on').checked }); });
+  $('st-upd-beta').addEventListener('change', function () { updPost({ updBeta: $('st-upd-beta').checked }); });
   $('st-audio').addEventListener('change', function () {
     store('mb_audio', $('st-audio').checked ? '1' : null);
     renderAudioRow(); loadAudioSummary();
@@ -1636,7 +1652,7 @@ import drIcons from '/dayrhythm/icons/index.js';
     Array.prototype.forEach.call(document.querySelectorAll('[data-t]'), function (e) { var v = L[e.getAttribute('data-t')]; if (typeof v === 'string') e.textContent = v; });
     Array.prototype.forEach.call(document.querySelectorAll('[data-al]'), function (e) { e.setAttribute('aria-label', L[e.getAttribute('data-al')]); });
     $('sched-on').setAttribute('aria-label', L.schedTitle);
-    $('st-audio').setAttribute('aria-label', L.audioSetting); $('au-on').setAttribute('aria-label', L.audioEffects);
+    $('st-audio').setAttribute('aria-label', L.audioSetting); $('st-upd-on').setAttribute('aria-label', L.updCheck); $('st-upd-beta').setAttribute('aria-label', L.updBeta); $('au-on').setAttribute('aria-label', L.audioEffects);
     renderDevice(); renderSceneRow(); summary(); renderAudioRow();
     if (view === 'audio') { auSig = ''; renderAudio(); }
     if (view === 'devices') renderDevices();

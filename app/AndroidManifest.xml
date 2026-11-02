@@ -1,15 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="dev.midnightbeam"
-    android:versionCode="31"
-    android:versionName="1.9.0">
+    android:versionCode="32"
+    android:versionName="1.10.0">
 
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="28" />
 
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <!-- Phone remote: local HTTP server, only when enabled by the user. No outgoing connections. -->
+    <!-- Phone remote: local HTTP server, only when enabled by the user. The only outgoing connection is the update check to
+         api.github.com (and the APK download), which can be turned off in the settings and never runs on F-Droid installs. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Finding the TVs on the local network (mDNS) from the phone app, like the WLED app does. -->
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
@@ -22,6 +23,9 @@
 
     <!-- Optional audio effects (equalizer, bass, virtualizer, loudness) on the output mix, where the device supports them. -->
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+
+    <!-- Update from the GitHub releases: only on non-F-Droid installs, can be turned off in the settings. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <uses-feature android:name="android.software.leanback" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
@@ -89,5 +93,8 @@
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
+
+        <!-- Result of the update install (PackageInstaller). -->
+        <receiver android:name=".Updater$Done" android:exported="false" />
     </application>
 </manifest>

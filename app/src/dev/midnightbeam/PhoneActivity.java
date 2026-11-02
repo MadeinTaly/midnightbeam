@@ -93,6 +93,7 @@ public class PhoneActivity extends Activity implements View.OnClickListener, Run
             Compat.startForegroundService(this, new Intent(this, DimService.class).putExtra("local", true));
         } catch (RuntimeException ignored) {
         }
+        Updater.check(this);
         if (needsLoad) startLoad();
         web.onResume();
         discovery.start(); // TVs on the network (mDNS), while this screen is open

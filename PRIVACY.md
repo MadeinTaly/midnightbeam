@@ -3,7 +3,12 @@
 MidnightBeam does not collect, store or send any personal data.
 
 - **No accounts, no analytics, no ads, no tracking.** The app contains no third-party SDKs.
-- **No internet connections.** The network is used only on your local network:
+- **One internet request: the update check.** At start (at most every 6 hours) the app asks the GitHub API
+  (`api.github.com`, the releases of this project) for the newest version: a normal HTTPS request, nothing about you or
+  your device is sent besides what any HTTP request carries (your IP address). If you accept an update, the APK is
+  downloaded from `github.com`. It can be turned off with *Check for updates at start* in the settings (TV and phone),
+  and it never runs on F-Droid installs.
+- **Otherwise no internet connections.** The network is used only on your local network:
   - on a TV, by the optional *Phone remote* (a small web server on port 8765, protected by a random pairing code
     shown on the TV screen);
   - on a phone, to reach the TVs you paired, and by the app's own screen on `127.0.0.1` (the phone itself).
@@ -17,7 +22,8 @@ MidnightBeam does not collect, store or send any personal data.
   on a phone, the list of paired TVs (name, address, pairing code). Nothing leaves your local network.
 - **Permissions:** *Display over other apps* draws the filter; the optional *Accessibility* service only lends its
   window to the filter, it does not read the screen or your input; *Run at startup* restores the filter after a reboot;
-  *Network* is for the local remote described above.
+  *Network* is for the local remote described above and the update check; *Install unknown apps* lets the app install
+  the update you accept.
 - The **Download the Android app** button and the links in the settings open GitHub pages in your browser only when
   you tap them.
 

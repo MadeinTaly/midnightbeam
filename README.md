@@ -57,6 +57,14 @@ The old name was too close to the existing Red Moon app.
    *Settings → Apps → Special app access → Display over other apps → MidnightBeam*.
 3. Open **MidnightBeam** from the app list once and set it up.
 
+### Updates
+
+At start the app checks the GitHub releases and, when a newer version is out, asks whether to install it (Android
+still shows its own confirmation). *Don't ask again* + *Update* installs future updates without our question; *Don't ask
+again* + *Not now* turns the check off. In the settings (TV screen and phone app) *Check for updates at start* turns it
+on or off and *Beta updates* chooses the channel (on by default when the installed version is a beta). Turning beta off
+on a beta stays on it until a newer stable is out, because Android cannot downgrade. Never active on F-Droid installs.
+
 ## Remote control
 
 Open the app from the launcher:
@@ -330,7 +338,7 @@ SOFTWARE.
 
 ## Privacy
 
-MidnightBeam collects no data and works only on your local network: see [PRIVACY.md](PRIVACY.md).
+MidnightBeam collects no data and works on your local network, apart from the optional update check to GitHub: see [PRIVACY.md](PRIVACY.md).
 
 ## Support
 

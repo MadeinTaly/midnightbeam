@@ -22,6 +22,7 @@ import java.nio.charset.StandardCharsets;
  *
  *   GET  /api/app        {"overlay":bool,"accessibilityHint":bool,"accessibility":bool,"sdk":n,"version":..}
  *                        for the setup and settings screens
+ *   POST /api/app        {"upd":bool} and/or {"updBeta":bool}: the update-check switches of this phone
  *   GET  /api/discovered TVs announced on the network (mDNS, see Discovery) and not saved yet
  *   GET  /api/devices    saved devices [{"id":"host:port","name":..,"host":..,"port":..}] (keys stay in the app)
  *   POST /api/devices    {"op":"add","link":..} | {"op":"edit","id":..,"name":..,"type":..} (either) | {"op":"delete","id":..}
@@ -57,10 +58,22 @@ final class AppApi {
                     .put("accessibility", DimAccessibilityService.instance != null)
                     .put("sdk", android.os.Build.VERSION.SDK_INT)
                     .put("type", Compat.deviceType(context))
-                    .put("version", version).toString();
+                    .put("version", version)
+                    .put("updates", !Compat.fromFdroid(context))
+                    .put("upd", Updater.enabled(context))
+                    .put("updBeta", Updater.beta(context))
+                    .put("betaStays", !Updater.beta(context) && version.contains("-")).toString();
         } catch (JSONException e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    /** POST /api/app {"upd":bool} and/or {"updBeta":bool}: the update switches of this phone (not of a TV). */
+    static boolean setUpdates(Context context, JSONObject j) {
+        if (Compat.fromFdroid(context) || !(j.has("upd") || j.has("updBeta"))) return false;
+        if (j.has("upd")) Updater.setEnabled(context, j.optBoolean("upd"));
+        if (j.has("updBeta")) Updater.setBeta(context, j.optBoolean("updBeta"));
+        return true;
     }
 
     static String devices(SharedPreferences p) {

@@ -1,0 +1,2 @@
+* Update check at start (GitHub installs only): offers the new version and installs it after Android's confirmation; "Don't ask again" remembers your choice
+* Beta channel, on by default when a beta is installed; both switches in the settings on the TV and in the phone app

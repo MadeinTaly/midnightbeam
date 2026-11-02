@@ -57,6 +57,8 @@ public class MainActivity extends Activity
     private Switch enabled;
     private Switch remote;
     private TextView remoteInfo;
+    private Switch updSw, betaSw;
+    private TextView betaInfo;
     private Button pairBtn;
     private Button appBtn;
     // Popup with a big QR code (phone pairing or app download), at most one open
@@ -269,6 +271,15 @@ public class MainActivity extends Activity
         pairBtn = sideButton(side, t("Pair a phone", "Abbina telefono"), dp(6));
         appBtn = sideButton(side, t("Android app", "App per Android"), dp(8));
 
+        if (!Compat.fromFdroid(this)) {
+            updSw = sideSwitch(side, t("Check for updates at start", "Controlla aggiornamenti all'avvio"), Updater.enabled(this));
+            betaSw = sideSwitch(side, t("Beta updates", "Aggiornamenti beta"), Updater.beta(this));
+            betaInfo = text("", 12, NORMAL);
+            betaInfo.setGravity(Gravity.CENTER_HORIZONTAL);
+            side.addView(betaInfo);
+            refreshBetaInfo();
+        }
+
         // the timeline's title and the Advanced button share one row
         LinearLayout tlRow = new LinearLayout(this);
         tlRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -296,6 +307,29 @@ public class MainActivity extends Activity
         refreshRemote();
         enabled.requestFocus();
         ready = true;
+    }
+
+    private Switch sideSwitch(LinearLayout side, String label, boolean checked) {
+        Switch sw = new Switch(this);
+        sw.setText(label);
+        sw.setTextColor(LIGHT);
+        sw.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        sw.setPadding(dp(8), dp(8), dp(8), dp(8));
+        tint(sw);
+        sw.setChecked(checked);
+        sw.setFocusable(true);
+        sw.setOnFocusChangeListener(this);
+        sw.setOnCheckedChangeListener(this);
+        side.addView(sw, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        return sw;
+    }
+
+    private void refreshBetaInfo() {
+        boolean stuck = !Updater.beta(this) && Updater.versionName(this).contains("-");
+        betaInfo.setText(stuck ? t("Stays on this beta until a newer stable is out",
+                "Resta su questa beta finché non esce una stabile più nuova") : "");
+        betaInfo.setVisibility(stuck ? View.VISIBLE : View.GONE);
     }
 
     /** On a TV the hint stays until the service runs: without it the screensaver is drawn above the filter. */
@@ -344,6 +378,7 @@ public class MainActivity extends Activity
     @Override
     protected void onResume() {
         super.onResume();
+        Updater.check(this);
         if (accessibility != null) {
             refreshAccessibility();
         }
@@ -426,6 +461,16 @@ public class MainActivity extends Activity
                 updating = true;
                 remote.setChecked(prefs.getBoolean("remote", Compat.isTv(this)));
                 updating = false;
+                break;
+            case "upd":
+            case "updBeta":
+                if (updSw != null) {
+                    updating = true;
+                    updSw.setChecked(Updater.enabled(this));
+                    betaSw.setChecked(Updater.beta(this));
+                    updating = false;
+                    refreshBetaInfo();
+                }
                 break;
             case "key":
             case "pin":
@@ -947,6 +992,17 @@ public class MainActivity extends Activity
                 Compat.startForegroundService(this, new Intent(this, DimService.class).putExtra("remote", checked));
             }
             refreshRemote();
+        } else if (b == updSw) {
+            if (!updating) {
+                Updater.setEnabled(this, checked);
+                Updater.check(this);
+            }
+        } else if (b == betaSw) {
+            if (!updating) {
+                Updater.setBeta(this, checked);
+                refreshBetaInfo();
+                Updater.check(this);
+            }
         } else if (b == scheduleOn) {
             if (!updating) setScheduleOn(checked);
         } else if (b == fxOn) {

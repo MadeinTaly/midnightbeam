@@ -14,3 +14,13 @@ fi
 java -cp "$OUT" dev.midnightbeam.WindowTest
 java -cp "$OUT" dev.midnightbeam.ScheduleMathTest test/spec-cases.txt | tee "$OUT/result"
 grep -q ' 0 failed' "$OUT/result"
+
+# Updater.compare: needs the Android classes on the classpath (only for compiling; compare() uses none)
+if [ -n "${ANDROID_JAR:-}" ]; then
+    SEP=:
+    case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) SEP=";" ;; esac
+    OUT2=$(mktemp -d)
+    trap 'rm -rf "$OUT" "$OUT2"' EXIT
+    javac -nowarn -Xlint:-options -bootclasspath "$ANDROID_JAR" -source 8 -target 8 -d "$OUT2" $(find app/src -name '*.java') test/UpdaterTest.java
+    java -cp "$OUT2${SEP}$ANDROID_JAR" dev.midnightbeam.UpdaterTest
+fi
