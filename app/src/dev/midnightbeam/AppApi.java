@@ -195,9 +195,12 @@ final class AppApi {
         HttpURLConnection c = (HttpURLConnection) new URL("http://" + host + ":" + port + rest)
                 .openConnection();
         c.setConnectTimeout(2500);
-        c.setReadTimeout(4000);
+        // a state request with X-Since is held by the TV until something changes (RemoteServer.WAIT_MS)
+        String since = RemoteServer.SINCE.get();
+        c.setReadTimeout(since != null && rest.equals("/api/state") ? (int) RemoteServer.WAIT_MS + 10000 : 4000);
         c.setRequestMethod(method);
         c.setRequestProperty("X-Key", key);
+        if (since != null) c.setRequestProperty("X-Since", since);
         if (method.equals("POST")) {
             c.setDoOutput(true);
             c.setRequestProperty("Content-Type", "application/json");

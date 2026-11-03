@@ -512,6 +512,9 @@ import drIcons from '/dayrhythm/icons/index.js';
       connectTv: 'Connect a TV or projector', connectTvSub: 'Control the filter of your TV boxes from here',
       home: 'Home', devices: 'Devices', scenes: 'Scenes', settings: 'Settings', updCheck: 'Check for updates at start', updBeta: 'Beta updates', updStays: 'Stays on this beta until a newer stable is out', back: 'Back', power: 'Filter on / off',
       red: 'Warm filter', bright: 'Brightness', temp: 'Colour temperature', schedTitle: 'Schedule',
+      advTitle: 'Advanced filter', advSub: 'True blacks: the TV filters at system level instead of a veil',
+      advFoundSu: 'This device has root access (su): it can filter the picture at system level, with true blacks.',
+      advFoundAdb: 'This device has local ADB access: it can filter the picture at system level, with true blacks.', advLater: 'Not now',
       tagVeil: 'VEIL', tagAdv: 'ADVANCED', tagFail: 'ADVANCED ✕', modeFail: 'Advanced filter failed: the veil is on',
       advText: 'The TV filters the picture at system level instead of a veil: true blacks. It never goes below 30% brightness and resets when turned off or restarted.',
       advOn: 'Turn on', advTrial: 'Can you see the picture well? Keep it within 15 seconds or it returns to the veil.', advKeep: 'Keep', advBack: 'Go back', advCancel: 'Cancel',
@@ -563,6 +566,9 @@ import drIcons from '/dayrhythm/icons/index.js';
       connectTv: 'Collega un TV o proiettore', connectTvSub: 'Controlla da qui il filtro dei tuoi TV box',
       home: 'Home', devices: 'Dispositivi', scenes: 'Scene', settings: 'Impostazioni', updCheck: 'Controlla aggiornamenti all’avvio', updBeta: 'Aggiornamenti beta', updStays: 'Resta su questa beta finché non esce una stabile più nuova', back: 'Indietro', power: 'Filtro acceso / spento',
       red: 'Filtro caldo', bright: 'Luminosità', temp: 'Temperatura colore', schedTitle: 'Programmazione',
+      advTitle: 'Filtro avanzato', advSub: 'Neri veri: il TV filtra a livello di sistema invece che con un velo',
+      advFoundSu: 'Questo device ha l’accesso root (su): può filtrare l’immagine a livello di sistema, con neri veri.',
+      advFoundAdb: 'Questo device ha l’accesso ADB locale: può filtrare l’immagine a livello di sistema, con neri veri.', advLater: 'Non ora',
       tagVeil: 'VELO', tagAdv: 'AVANZATO', tagFail: 'AVANZATO ✕', modeFail: 'Filtro avanzato non riuscito: è attivo il velo',
       advText: 'Il TV filtra l’immagine a livello di sistema invece che con un velo: neri veri. La luminosità non scende sotto il 30%; spegnendo o riavviando il TV si azzera.',
       advOn: 'Attiva', advTrial: 'L’immagine si vede bene? Conferma entro 15 secondi, altrimenti torna il velo.', advKeep: 'Mantieni', advBack: 'Torna indietro', advCancel: 'Annulla',
@@ -628,13 +634,15 @@ import drIcons from '/dayrhythm/icons/index.js';
   var devices = [], cur = store('mb_cur') || '', app = { overlay: true, accessibilityHint: false, version: '' };
   if (wanted) { cur = wanted; store('mb_cur', cur); store('mb_welcomed', '1'); }
   function base(id) { return id ? '/d/' + id : ''; } // id = host:port, plain path characters
-  function api(path, body, id) {
+  function api(path, body, id, since) {
     var dev = id === undefined ? cur : id;
     // a TV that does not answer is searched on the network by the app, which takes a few seconds
-    var ctl = window.AbortController ? new AbortController() : null, t = ctl && setTimeout(function () { ctl.abort(); }, dev ? 15000 : 7000);
+    var ctl = window.AbortController ? new AbortController() : null, t = ctl && setTimeout(function () { ctl.abort(); }, since ? 40000 : dev ? 15000 : 7000);
+    var h = body ? { 'X-Key': key, 'Content-Type': 'application/json' } : { 'X-Key': key };
+    if (since) h['X-Since'] = since;
     return fetch(base(dev) + path, {
       method: body ? 'POST' : 'GET', signal: ctl && ctl.signal,
-      headers: body ? { 'X-Key': key, 'Content-Type': 'application/json' } : { 'X-Key': key },
+      headers: h,
       body: body ? JSON.stringify(body) : undefined
     }).then(function (r) {
       clearTimeout(t);
@@ -777,8 +785,14 @@ import drIcons from '/dayrhythm/icons/index.js';
   }
   // ---- Filter type badge (veil or true blacks) and the 15 s trial, both mirrored from the device state ----
   var trialShown = false;
-  function setAdvanced(body) {
-    return api('/api/set', body).then(show, function (e) { if (sheetOpen) closeSheet(); toast(e && e.status === 409 ? L.modeFail : L.unreachable); });
+  function setAdvanced(body, id) {
+    if (id === undefined) id = cur;
+    return api('/api/set', body, id).then(function (s) {
+      devState[id] = { ok: true, s: s };
+      if (id !== cur && s.advancedTrial) selectDevice(id); // the trial is answered from the device's home card
+      if (id === cur) show(s); else if (sheetOpen) closeSheet();
+      if (view === 'devices') renderDevices();
+    }, function (e) { if (sheetOpen) closeSheet(); toast(e && e.status === 409 ? L.modeFail : L.unreachable); });
   }
   function renderMode() {
     var s = state;
@@ -804,23 +818,53 @@ import drIcons from '/dayrhythm/icons/index.js';
     var txt = !s.advanced ? L.tagVeil : s.advancedLastOk === false ? L.tagFail : L.tagAdv;
     var can = s.advancedMethod === 'su' || s.advancedMethod === 'adb';
     st.insertAdjacentHTML('beforeend', '<span class="mode-tag' + cls + '"' + (can ? ' id="h-mode" role="button" tabindex="0"' : '') + '>' + txt + '</span>');
-    if (can) $('h-mode').onclick = function (e) { e.stopPropagation(); toggleMode(); };
+    if (can) $('h-mode').onclick = function (e) { e.stopPropagation(); toggleMode(state, cur); };
   }
-  function toggleMode() {
-    var s = state;
+  function advancedAvailable(s) { return !!s && (s.advancedMethod === 'su' || s.advancedMethod === 'adb'); }
+  function toggleMode(s, id) {
     if (!s) return;
-    if (s.advanced) { setAdvanced({ advanced: false }); return; }
-    if (s.advancedOk) { setAdvanced({ advanced: true }); return; }
+    if (s.advanced) { setAdvanced({ advanced: false }, id); return; }
+    if (s.advancedOk) { setAdvanced({ advanced: true }, id); return; }
     openSheet('<p>' + L.advText + '</p><div class="stack"><button class="btn btn-grad" type="button" id="adv-on">' + L.advOn +
       '</button><button class="btn" type="button" id="adv-cancel">' + L.advCancel + '</button></div>');
-    $('adv-on').onclick = function () { setAdvanced({ advanced: true }); }; // the answer opens the trial in this sheet
+    $('adv-on').onclick = function () { setAdvanced({ advanced: true }, id); }; // the answer opens the trial
     $('adv-cancel').onclick = closeSheet;
-  };
+  }
+  // Device menu: the same switch, for any device that offers it
+  function advancedRow(d) {
+    var ds = devState[d.id], s = ds && ds.ok && ds.s;
+    if (!advancedAvailable(s)) return '';
+    return '<div style="display:flex;align-items:center;gap:12px"><span style="flex:1;min-width:0"><span style="font-weight:600">' + L.advTitle +
+      '</span><br><span class="small muted">' + L.advSub + '</span></span><label class="switch"><input id="dv-adv" type="checkbox"' + (s.advanced ? ' checked' : '') + '><span></span></label></div>';
+  }
+  function bindAdvancedRow(d) {
+    if (!$('dv-adv')) return;
+    $('dv-adv').setAttribute('aria-label', L.advTitle);
+    $('dv-adv').onchange = function () { toggleMode(devState[d.id].s, d.id); };
+  }
   function fail(e) {
     reach = e && e.status === 403 ? 'key' : 'down';
     renderDevice();
   }
   function refresh() { var id = cur; return api('/api/state').then(function (s) { if (id === cur) show(s); }, function (e) { if (id === cur) fail(e); }); }
+  // One request always open for the shown device: it answers as soon as its state changes (TV screen, another
+  // phone, the schedule), so every open app shows a change at once. Devices without "rev" (older app versions)
+  // answer at once: those are asked again every 3 s.
+  var watchN = 0;
+  function watch() {
+    var n = ++watchN, id = cur;
+    function again(ms) { setTimeout(function () { if (n === watchN) watch(); }, ms); }
+    if (document.hidden) { again(3000); return; }
+    api('/api/state', null, id, (state && state.rev) || '-').then(function (s) {
+      if (n !== watchN) return;
+      if (id === cur && !pending) show(s);
+      again(s.rev ? 0 : 3000);
+    }, function (e) {
+      if (n !== watchN) return;
+      if (id === cur) fail(e);
+      again(3000);
+    });
+  }
   function setValues(v) {
     broadcast('/api/set', v);
     return api('/api/set', v).then(show, function (e) { fail(e); toast(e && e.status === 403 ? L.keyChanged : L.unreachable); });
@@ -973,7 +1017,7 @@ import drIcons from '/dayrhythm/icons/index.js';
   function selectDevice(id) {
     if (id === cur) return;
     cur = id; store('mb_cur', id); state = null; reach = 'checking';
-    renderDevice(); refresh(); scheduleLoaded = false;
+    renderDevice(); refresh(); watch(); scheduleLoaded = false;
     au = null; auState = 'loading'; renderAudioRow();
     if (view === 'audio') { $('au-dev').textContent = devName(cur); loadAudio(); } else loadAudioSummary();
     if (view === 'schedule') loadScheduleAll();
@@ -1020,7 +1064,22 @@ import drIcons from '/dayrhythm/icons/index.js';
   }
   function added(r) {
     closeSheet(); toast(L.added);
-    return loadDevices().then(function () { selectDevice(r.id); probeAll(); });
+    return loadDevices().then(function () { selectDevice(r.id); probeAll(); offerAdvanced(r.id); });
+  }
+  // Right after a device is added: what privileged access it offers (root first, then local ADB) and whether to
+  // use it. Asked once per device; nothing is shown when the device has neither.
+  function offerAdvanced(id) {
+    if (!id || store('mb_adv_asked_' + id)) return;
+    api('/api/state', null, id).then(function (s) {
+      if (!advancedAvailable(s) || s.advanced) return;
+      store('mb_adv_asked_' + id, '1');
+      setTimeout(function () { // after the pairing sheet has closed
+        openSheet('<h2>' + L.advTitle + '</h2><p>' + (s.advancedMethod === 'su' ? L.advFoundSu : L.advFoundAdb) + '</p><p class="small muted">' + L.advText + '</p>' +
+          '<div class="stack"><button class="btn btn-grad" type="button" id="adv-on">' + L.advOn + '</button><button class="btn" type="button" id="adv-cancel">' + L.advLater + '</button></div>');
+        $('adv-on').onclick = function () { setAdvanced({ advanced: true }, id); }; // the trial follows
+        $('adv-cancel').onclick = closeSheet;
+      }, 400);
+    }, function () {});
   }
   // ---- Copy one device's settings to others ("Apply to…") ----
   function allDevices() { return [{ id: '', name: L.thisDevice }].concat(devices.map(function (d) { return { id: d.id, name: d.name }; })); }
@@ -1124,18 +1183,20 @@ import drIcons from '/dayrhythm/icons/index.js';
   }
   function deviceSheet(d) {
     if (!d.id) { // this phone: nothing to rename or remove
-      openSheet('<h2>' + esc(d.name) + '</h2><div class="stack"><button class="btn btn-grad" type="button" id="dv-apply">' + icon('copy') + L.applyTo + '</button></div>');
+      openSheet('<h2>' + esc(d.name) + '</h2><div class="stack">' + advancedRow(d) + '<button class="btn btn-grad" type="button" id="dv-apply">' + icon('copy') + L.applyTo + '</button></div>');
       $('dv-apply').onclick = function () { applySheet(d); };
+      bindAdvancedRow(d);
       return;
     }
     var type = devType(d.id);
-    openSheet('<h2>' + esc(d.name) + '</h2><div class="stack"><button class="btn btn-soft" type="button" id="dv-apply">' + icon('copy') + L.applyTo + '</button><label class="small muted" for="dv-name">' + L.rename + '</label><input class="field" id="dv-name" maxlength="40">' +
+    openSheet('<h2>' + esc(d.name) + '</h2><div class="stack">' + advancedRow(d) + '<button class="btn btn-soft" type="button" id="dv-apply">' + icon('copy') + L.applyTo + '</button><label class="small muted" for="dv-name">' + L.rename + '</label><input class="field" id="dv-name" maxlength="40">' +
       '<div class="small muted">' + L.type + '</div><div class="types" id="dv-types">' + TYPES.map(function (t) {
         return '<button type="button" class="type-opt" data-type="' + t + '" aria-pressed="' + (t === type) + '">' + icon(t) + '<span>' + L.types[t] + '</span></button>';
       }).join('') + '</div>' +
       '<button class="btn btn-grad" type="button" id="dv-save">' + L.save + '</button><button class="btn btn-danger" type="button" id="dv-del">' + icon('trash') + L.remove + '</button></div>');
     $('dv-name').value = d.name;
     $('dv-apply').onclick = function () { applySheet(d); };
+    bindAdvancedRow(d);
     Array.prototype.forEach.call($('dv-types').children, function (b) {
       b.onclick = function () {
         type = b.getAttribute('data-type');
@@ -1721,12 +1782,12 @@ import drIcons from '/dayrhythm/icons/index.js';
   ['r-red', 'r-bright', 'r-temp'].forEach(function (id) { paintRange($(id)); });
   rhythm.config = config(); setValue(defaultValue());
   showView(store('mb_welcomed') ? 'home' : 'welcome');
-  loadApp(); loadDevices(); refresh(); loadScheduleSummary(); loadAudioSummary();
+  loadApp(); loadDevices(); refresh(); loadScheduleSummary(); loadAudioSummary(); watch();
+  if (wanted) offerAdvanced(wanted); // dev= comes only from a pairing link the app just saved (QR scanned)
   var tick = 0;
   setInterval(function () {
     if (document.hidden) return;
     tick++;
-    if (!pending) refresh();
     if (tick % 3) return;
     if (view === 'devices') probeAll();
     if (view === 'schedule' && !saveTimer && !saving && !rhythm.editing) loadScheduleAll();

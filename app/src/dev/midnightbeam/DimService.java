@@ -278,6 +278,7 @@ public class DimService extends Service implements Runnable {
             scanner.finish();
             scanner = null;
         }
+        stateChanged();
         if (!visible && !remote && !local && !scheduleOn && !audio.enabled()) {
             stopForeground(true);
             stopSelf();
@@ -557,6 +558,43 @@ public class DimService extends Service implements Runnable {
         }
     }
 
+    private final Object stateLock = new Object();
+
+    /** Wakes the remotes waiting in stateJsonAfter: every change goes through render(). */
+    private void stateChanged() {
+        synchronized (stateLock) {
+            stateLock.notifyAll();
+        }
+    }
+
+    /**
+     * The state as soon as its "rev" differs from the one the client has, or after waitMs with no change: the
+     * phone app and the web remote keep one such request open, so a change made anywhere shows at once everywhere.
+     */
+    String stateJsonAfter(String since, long waitMs) {
+        long end = System.currentTimeMillis() + waitMs;
+        synchronized (stateLock) {
+            while (true) {
+                String s = stateJson();
+                long left = end - System.currentTimeMillis();
+                if (left <= 0 || destroyed || !since.equals(revOf(s))) return s;
+                try {
+                    stateLock.wait(left);
+                } catch (InterruptedException e) {
+                    return s;
+                }
+            }
+        }
+    }
+
+    private static String revOf(String json) {
+        try {
+            return new JSONObject(json).optString("rev");
+        } catch (JSONException e) {
+            return "";
+        }
+    }
+
     String stateJson() {
         return state(red, bright, temp, off, advanced, advancedTrial, prefs.getBoolean("advanced_ok", false)).toString();
     }
@@ -590,7 +628,7 @@ public class DimService extends Service implements Runnable {
     private JSONObject state(int r, int b, int t, boolean o, boolean advancedValue, boolean trialValue, boolean advancedOkValue) {
         try {
             Calendar now = Calendar.getInstance();
-            return new JSONObject().put("on", !o).put("red", r).put("bright", b).put("temp", t)
+            JSONObject j = new JSONObject().put("on", !o).put("red", r).put("bright", b).put("temp", t)
                     .put("schedule", scheduleOn)
                     .put("mode", DimAccessibilityService.instance != null ? "accessibility" : "overlay")
                     .put("advanced", advancedValue)
@@ -600,10 +638,12 @@ public class DimService extends Service implements Runnable {
                     .put("advancedOk", advancedOkValue)
                     .put("advancedTrial", trialValue)
                     .put("clamped", clamped)
-                    .put("blocked", blocked)
-                    // device clock, minutes since midnight: the page draws the "now" line with it
-                    .put("minute", now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE)
-                            + now.get(Calendar.SECOND) / 60.0);
+                    .put("blocked", blocked);
+            // revision of everything but the clock, for stateJsonAfter
+            j.put("rev", Integer.toHexString(j.toString().hashCode()));
+            // device clock, minutes since midnight: the page draws the "now" line with it
+            return j.put("minute", now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE)
+                    + now.get(Calendar.SECOND) / 60.0);
         } catch (JSONException e) {
             throw new IllegalStateException(e);
         }

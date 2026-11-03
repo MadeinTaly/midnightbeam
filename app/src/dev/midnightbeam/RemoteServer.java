@@ -70,6 +70,10 @@ final class RemoteServer extends Thread {
 
     /** "METHOD path client" of the request this connection thread is answering, for the dev debug log (send()). */
     private static final ThreadLocal<String> REQ = new ThreadLocal<>();
+    /** X-Since of the request: the state revision the client already has (GET /api/state waits for a newer one). */
+    static final ThreadLocal<String> SINCE = new ThreadLocal<>();
+    /** How long GET /api/state with X-Since waits for a change before answering the same state. */
+    static final long WAIT_MS = 20000;
 
     private final DimService service;
     private final AssetManager assets;
@@ -151,6 +155,7 @@ final class RemoteServer extends Thread {
                 ? method + " " + path + " " + c.getInetAddress().getHostAddress() : null);
 
         String key = null;
+        SINCE.set(null);
         int length = 0;
         String line;
         int headers = 0;
@@ -161,6 +166,7 @@ final class RemoteServer extends Thread {
             String name = line.substring(0, colon).trim().toLowerCase(Locale.ROOT);
             String value = line.substring(colon + 1).trim();
             if (name.equals("x-key")) key = value;
+            if (name.equals("x-since")) SINCE.set(value);
             if (name.equals("content-length")) {
                 try {
                     length = Integer.parseInt(value);
@@ -242,7 +248,8 @@ final class RemoteServer extends Thread {
             } else if (method.equals("GET") && path.equals("/api/info")) {
                 send(out, 200, "application/json", service.infoJson());
             } else if (method.equals("GET") && path.equals("/api/state")) {
-                send(out, 200, "application/json", service.stateJson());
+                String since = SINCE.get();
+                send(out, 200, "application/json", since == null ? service.stateJson() : service.stateJsonAfter(since, WAIT_MS));
             } else if (method.equals("POST") && path.equals("/api/set")) {
                 try {
                     JSONObject j = new JSONObject(new String(body, 0, read, StandardCharsets.UTF_8));

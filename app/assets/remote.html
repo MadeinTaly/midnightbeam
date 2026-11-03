@@ -211,10 +211,12 @@ import * as DR from '/dayrhythm/src/index.js';
   if (m) { try { localStorage.setItem('od_key', m[1]); } catch (e) {} history.replaceState(null, '', location.pathname); }
   var key = m ? m[1] : (function () { try { return localStorage.getItem('od_key'); } catch (e) { return null; } })();
 
-  function api(path, body) {
+  function api(path, body, since) {
+    var h = body ? { 'X-Key': key || '', 'Content-Type': 'application/json' } : { 'X-Key': key || '' };
+    if (since) h['X-Since'] = since;
     return fetch(path, {
       method: body ? 'POST' : 'GET',
-      headers: body ? { 'X-Key': key || '', 'Content-Type': 'application/json' } : { 'X-Key': key || '' },
+      headers: h,
       body: body ? JSON.stringify(body) : undefined
     }).then(function (r) {
       $('pair-error').classList.toggle('hidden', r.status !== 403);
@@ -350,6 +352,13 @@ import * as DR from '/dayrhythm/src/index.js';
     });
   }
   function refresh() { return api('/api/state').then(show).catch(function () {}); }
+  // One request always open: the TV answers as soon as its state changes (its own screen, a phone, the schedule).
+  var rev = '-';
+  function watch() {
+    if (document.hidden) { setTimeout(watch, 3000); return; }
+    api('/api/state', null, rev).then(function (s) { rev = s.rev || '-'; show(s); setTimeout(watch, s.rev ? 0 : 3000); },
+      function () { setTimeout(watch, 3000); });
+  }
 
   // ---- Schedule: <day-rhythm> ----
   var core = DR.core;
@@ -537,7 +546,7 @@ import * as DR from '/dayrhythm/src/index.js';
   rhythm.config = config();
   setValue(defaultValue());
   refresh(); loadSchedule(); loadDays();
-  setInterval(function () { if (!document.hidden) refresh(); }, 3000);
+  watch();
   document.addEventListener('visibilitychange', function () {
     if (document.hidden) return;
     refresh();
