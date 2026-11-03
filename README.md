@@ -64,6 +64,7 @@ still shows its own confirmation). *Don't ask again* + *Update* installs future 
 again* + *Not now* turns the check off. In the settings (TV screen and phone app) *Check for updates at start* turns it
 on or off and *Beta updates* chooses the channel (on by default when the installed version is a beta). Turning beta off
 on a beta stays on it until a newer stable is out, because Android cannot downgrade. Never active on F-Droid installs.
+F-Droid builds (`SIGN=0` or `FDROID=1`) leave the updater and its permission out.
 
 ## Remote control
 
@@ -211,6 +212,41 @@ Replace `media_player.my_tv` with your own entity and copy `status.sh` to the de
 
 ```sh
 adb push homeassistant/status.sh /data/local/tmp/midnightbeam-status.sh
+```
+
+## Advanced filter (optional, privileged)
+
+On devices that offer a privileged shell, the filter can be applied as a SurfaceFlinger colour matrix instead of
+an overlay: blacks stay black, contrast is kept, and the blue channel really reaches zero. It is **off by default**;
+the switch appears in **Advanced** on the TV and in the paired phone remote when one of these is available. The TV app
+executes the privileged command locally:
+
+- `su` that the app itself can execute (Magisk or KernelSU): the system asks the owner once;
+- the device's own ADB on `127.0.0.1`, used only when it needs no authorisation (`ro.adb.secure=0`, common on
+  cheap TV boxes and projectors).
+
+The first activation from the phone has a 15-second trial; the TV app reverts it unless you keep it.
+Nothing else is changed: no files are written, the matrix lives in memory, it is reset when the filter is turned
+off or the app stops, and a restart always clears it. If the app crashes the tint can stay on screen until the
+filter is turned off or the device reboots. On devices with neither source the switch is not shown and the normal
+overlay is used.
+
+For reference, the commands it sends:
+
+```sh
+# red 1, green 0.6, blue 0 (16 floats, row-major 4x4), then back to normal
+adb shell service call SurfaceFlinger 1015 i32 1 f 1 f 0 f 0 f 0 f 0 f 0.6 f 0 f 0 f 0 f 0 f 0 f 0 f 0 f 0 f 0 f 1
+adb shell service call SurfaceFlinger 1015 i32 0
+```
+
+## Debugging (dev builds only)
+
+`DEV=1 ./build.sh` builds a debuggable APK with a debug channel: the full app state (filter, overlay colour, schedule,
+remote server, permissions, device, updater) plus the last 100 events, as JSON. Release builds answer nothing.
+
+```sh
+adb shell dumpsys activity service dev.midnightbeam/.DimService debug
+curl -H "X-Key: <pairing key>" http://<tv-ip>:8765/api/debug
 ```
 
 ## Build

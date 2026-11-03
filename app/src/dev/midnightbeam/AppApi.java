@@ -59,7 +59,7 @@ final class AppApi {
                     .put("sdk", android.os.Build.VERSION.SDK_INT)
                     .put("type", Compat.deviceType(context))
                     .put("version", version)
-                    .put("updates", !Compat.fromFdroid(context))
+                    .put("updates", Updater.available(context))
                     .put("upd", Updater.enabled(context))
                     .put("updBeta", Updater.beta(context))
                     .put("betaStays", !Updater.beta(context) && version.contains("-")).toString();
@@ -70,7 +70,7 @@ final class AppApi {
 
     /** POST /api/app {"upd":bool} and/or {"updBeta":bool}: the update switches of this phone (not of a TV). */
     static boolean setUpdates(Context context, JSONObject j) {
-        if (Compat.fromFdroid(context) || !(j.has("upd") || j.has("updBeta"))) return false;
+        if (!Updater.available(context) || !(j.has("upd") || j.has("updBeta"))) return false;
         if (j.has("upd")) Updater.setEnabled(context, j.optBoolean("upd"));
         if (j.has("updBeta")) Updater.setBeta(context, j.optBoolean("updBeta"));
         return true;

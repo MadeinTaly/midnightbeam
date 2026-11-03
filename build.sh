@@ -13,7 +13,10 @@ tool() { if [ -n "$BUILD_TOOLS" ]; then echo "$BUILD_TOOLS/$1"; else command -v 
 AAPT=$(tool aapt)
 ZIPALIGN=$(tool zipalign)
 KEYSTORE=${KEYSTORE:-debug.keystore}
+DEV=${DEV:-0}     # DEV=1: debuggable build with the debug channel (see README, Debugging); never publish it
 SIGN=${SIGN:-1}   # SIGN=0: stop at the unsigned, aligned APK (build/aligned.apk), e.g. for F-Droid
+FDROID=${FDROID:-}  # FDROID=1: leave the updater out of the manifest; default on when SIGN=0
+[ -n "$FDROID" ] || { [ "$SIGN" = 0 ] && FDROID=1 || FDROID=0; }
 OUT=build
 
 if [ ! -f vendor/dayrhythm/src/index.js ]; then
@@ -39,7 +42,14 @@ else
     "$DX" --dex --output="$OUT/classes.dex" "$OUT/classes"
 fi
 
-"$AAPT" package -f -M app/AndroidManifest.xml -S app/res -A "$OUT/assets" -I "$ANDROID_JAR" -F "$OUT/unsigned.apk"
+MANIFEST=app/AndroidManifest.xml
+if [ "$FDROID" = 1 ]; then
+    echo "F-Droid build: updater excluded"
+    MANIFEST="$OUT/AndroidManifest.xml"
+    sed -e '/Update from the GitHub releases/d' -e '/REQUEST_INSTALL_PACKAGES/d' -e '/Updater\$Done/d' app/AndroidManifest.xml > "$MANIFEST"
+fi
+DEBUG_MODE=(); [ "$DEV" = 1 ] && DEBUG_MODE=(--debug-mode)
+"$AAPT" package -f ${DEBUG_MODE[@]+"${DEBUG_MODE[@]}"} -M "$MANIFEST" -S app/res -A "$OUT/assets" -I "$ANDROID_JAR" -F "$OUT/unsigned.apk"
 (cd "$OUT" && "$AAPT" add unsigned.apk classes.dex >/dev/null)
 "$ZIPALIGN" -f 4 "$OUT/unsigned.apk" "$OUT/aligned.apk"
 if [ "$SIGN" = 0 ]; then

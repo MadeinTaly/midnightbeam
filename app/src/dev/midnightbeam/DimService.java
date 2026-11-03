@@ -70,6 +70,8 @@ public class DimService extends Service implements Runnable {
     private AudioFx audio;
     /** Audio effects of the running service, if any: the TV screen reads them here, a second set would take over. */
     static volatile AudioFx runningAudio;
+    /** The running service, for the dev debug snapshot (Dbg). */
+    static volatile DimService instance;
 
     // Read by the server thread, so volatile.
     private volatile int red;
@@ -81,11 +83,25 @@ public class DimService extends Service implements Runnable {
     private volatile boolean scheduleOn;
     private volatile String scheduleResolved = "[]"; // daily Slot[] or weekly {mon:[..],..}, normalised
     private volatile String scheduleValue = "[]";    // as sent by the page (dayrhythm value), for reloading the editor
+    // Advanced filter: a SurfaceFlinger colour matrix instead of the overlay, when the device offers a privileged shell.
+    private volatile boolean advanced;
+    private volatile boolean advancedApplied;
+    private volatile boolean advancedTrial;
+    private String lastMatrix;
+    private int matrixRetries;
+    private boolean matrixRetryDue;
+    private final Runnable advancedTrialTimeout = new TrialTimeout(this);
 
     @Override
     public void onCreate() {
         super.onCreate();
+        instance = this;
+        Dbg.on(this);
+        Dbg.log("service", "create");
         prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+        if (prefs.getBoolean("advanced_trial", false)) {
+            prefs.edit().putBoolean("advanced", false).putBoolean("advanced_trial", false).apply();
+        }
         audio = new AudioFx(this, prefs);
         runningAudio = audio;
         sessionReceiver = new SessionReceiver(this);
@@ -105,6 +121,23 @@ public class DimService extends Service implements Runnable {
         startForeground(1, buildNotification());
         load();
         if (intent != null) {
+            if (Dbg.on(this) && intent.getExtras() != null) {
+                StringBuilder sb = new StringBuilder();
+                for (String k : intent.getExtras().keySet()) {
+                    String v = String.valueOf(intent.getExtras().get(k));
+                    sb.append(' ').append(k).append('=').append(v.length() > 80 ? v.substring(0, 80) + "..." : v);
+                }
+                Dbg.log("service", "start extras:" + sb);
+            }
+            if (intent.hasExtra("devPriv") && Dbg.on(this)) {
+                prefs.edit().putBoolean("devPriv", intent.getBooleanExtra("devPriv", false)).apply();
+            }
+            if (intent.hasExtra("advanced")) {
+                advanced = intent.getBooleanExtra("advanced", advanced);
+                prefs.edit().putBoolean("advanced", advanced).apply();
+                lastMatrix = null;
+                matrixRetries = 0;
+            }
             boolean newValues = intent.hasExtra("red") || intent.hasExtra("bright") || intent.hasExtra("temp");
             if (newValues || intent.hasExtra("off")) {
                 setValues(intent.getIntExtra("red", red), intent.getIntExtra("bright", bright),
@@ -139,6 +172,9 @@ public class DimService extends Service implements Runnable {
         off = prefs.getBoolean("off", false);
         remote = prefs.getBoolean("remote", Compat.isTv(this)); // on TVs the phone remote is on by default
         scheduleOn = prefs.getBoolean("schedule_on", false);
+        advanced = prefs.getBoolean("advanced", false);
+        // a matrix left by a process that died while it was on: the first render re-applies it or clears it
+        advancedApplied = prefs.getBoolean("matrix_on", false);
         seedSchedule(this, prefs);
         scheduleResolved = prefs.getString("schedule", "[]");
         scheduleValue = prefs.getString("schedule_value", scheduleResolved);
@@ -186,8 +222,41 @@ public class DimService extends Service implements Runnable {
     private int render() {
         if (destroyed) return START_NOT_STICKY; // a task queued on main can run after onDestroy
         boolean visible = !off && !(red == 0 && bright == 100);
-        if (visible) showOverlay(overlayColor(red, bright, temp)); else removeOverlay();
+        boolean wantMatrix = advanced && visible && Priv.available(this);
+        // after a failure the matrix is tried again only when a retry is due, the overlay covers meanwhile
+        boolean useMatrix = wantMatrix && (Priv.lastOk || matrixRetryDue);
+        matrixRetryDue = false;
+        if (useMatrix) {
+            String command = matrixCommand(red, bright, temp);
+            boolean fresh = !command.equals(lastMatrix) || !Priv.lastOk;
+            // the overlay goes once the shell has answered yes. Exception: the very first su call, whose root
+            // prompt ignores taps while an overlay covers it. A retry after a failure keeps the overlay meanwhile.
+            boolean firstSu = !Priv.verified && Priv.lastOk && Priv.SU.equals(Priv.method(this));
+            if ((Priv.verified && Priv.lastOk) || firstSu) removeOverlay();
+            else showOverlay(overlayColor(red, bright, temp));
+            if (fresh) {
+                lastMatrix = command;
+                setMatrixOn(true);
+                Dbg.log("matrix", "apply red=" + red + " bright=" + bright + " temp=" + temp);
+                int before = Priv.results;
+                Priv.exec(this, command);
+                // check the outcome once the shell answered: on failure render() shows the overlay again and
+                // schedules a retry (the owner may take a while to answer a root prompt)
+                main.postDelayed(new MatrixCheck(this, before, 0), 200);
+            } else {
+                matrixRetries = 0;
+            }
+        } else {
+            resetMatrix();
+            if (visible) showOverlay(overlayColor(red, bright, temp)); else removeOverlay();
+            // the privileged shell may be a moment away (the system asking the owner, or a slow bind): try again
+            if (wantMatrix && !Priv.lastOk && matrixRetries < 10) {
+                matrixRetries++;
+                main.postDelayed(new RenderLater(this, true), 5000L * matrixRetries);
+            }
+        }
         if (server != null && (!(remote || local) || server.lan != remote)) {
+            Dbg.log("server", "stop");
             server.shutdown();
             server = null;
             if (advertiser != null) advertiser.stop();
@@ -196,7 +265,10 @@ public class DimService extends Service implements Runnable {
             pairingKey(prefs);
             server = new RemoteServer(this, remote);
             if (!server.bind()) server = null; // port busy: tried again on the next render
-            else server.start();
+            else {
+                server.start();
+                Dbg.log("server", "start port " + RemoteServer.PORT + (remote ? " lan" : " loopback"));
+            }
             if (server != null && remote) { // announced on the network only when it is reachable from it
                 if (advertiser == null) advertiser = new Advertiser(this);
                 advertiser.start(deviceName(), deviceId(prefs), Compat.deviceType(this));
@@ -224,6 +296,20 @@ public class DimService extends Service implements Runnable {
     void applyRemote(RemoteServer.SetTask t) {
         boolean newValues = t.red >= 0 || t.bright >= 0 || t.temp >= 0;
         boolean o = t.on >= 0 ? t.on == 0 : (!newValues && off);
+        if (t.advanced >= 0) {
+            advanced = t.advanced == 1;
+            advancedTrial = advanced && !prefs.getBoolean("advanced_ok", false);
+            prefs.edit().putBoolean("advanced", advanced).putBoolean("advanced_trial", advancedTrial).apply();
+            main.removeCallbacks(advancedTrialTimeout);
+            if (advancedTrial) main.postDelayed(advancedTrialTimeout, 15000L);
+            lastMatrix = null;
+            matrixRetries = 0;
+        }
+        if (t.advancedConfirm && advancedTrial) {
+            advancedTrial = false;
+            prefs.edit().putBoolean("advanced_ok", true).putBoolean("advanced_trial", false).apply();
+            main.removeCallbacks(advancedTrialTimeout);
+        }
         setValues(t.red >= 0 ? t.red : red, t.bright >= 0 ? t.bright : bright, t.temp >= 0 ? t.temp : temp, o);
         holdManual();
         render();
@@ -235,6 +321,7 @@ public class DimService extends Service implements Runnable {
 
     /** Applies audio effect changes (called on the main thread by AudioTask). */
     void applyAudio(JSONObject body) {
+        Dbg.log("audio", "apply " + body.names());
         String before = prefs.getString("audio_bands", "");
         audio.apply(body);
         render();
@@ -464,15 +551,18 @@ public class DimService extends Service implements Runnable {
     }
 
     String stateJson() {
-        return state(red, bright, temp, off).toString();
+        return state(red, bright, temp, off, advanced, advancedTrial, prefs.getBoolean("advanced_ok", false)).toString();
     }
 
     /** State as it will be once a SetTask posted to the main thread has run. */
     String stateJsonWith(RemoteServer.SetTask t) {
         boolean newValues = t.red >= 0 || t.bright >= 0 || t.temp >= 0;
         boolean o = t.on >= 0 ? t.on == 0 : (!newValues && off);
+        boolean a = t.advanced >= 0 ? t.advanced == 1 : advanced;
+        boolean trial = t.advancedConfirm ? false : t.advanced >= 0 ? a && !prefs.getBoolean("advanced_ok", false) : advancedTrial;
+        boolean ok = prefs.getBoolean("advanced_ok", false) || (t.advancedConfirm && advancedTrial);
         return state(t.red >= 0 ? clamp(t.red, 0, 100) : red, t.bright >= 0 ? clamp(t.bright, 5, 100) : bright,
-                t.temp >= 0 ? clamp(t.temp, 1000, 6500) : temp, o).toString();
+                t.temp >= 0 ? clamp(t.temp, 1000, 6500) : temp, o, a, trial, ok).toString();
     }
 
     String scheduleJson() {
@@ -490,12 +580,18 @@ public class DimService extends Service implements Runnable {
         }
     }
 
-    private JSONObject state(int r, int b, int t, boolean o) {
+    private JSONObject state(int r, int b, int t, boolean o, boolean advancedValue, boolean trialValue, boolean advancedOkValue) {
         try {
             Calendar now = Calendar.getInstance();
             return new JSONObject().put("on", !o).put("red", r).put("bright", b).put("temp", t)
                     .put("schedule", scheduleOn)
                     .put("mode", DimAccessibilityService.instance != null ? "accessibility" : "overlay")
+                    .put("advanced", advancedValue)
+                    .put("advancedActive", advancedApplied && Priv.verified && Priv.lastOk)
+                    .put("advancedMethod", Priv.method(this))
+                    .put("advancedLastOk", Priv.lastOk)
+                    .put("advancedOk", advancedOkValue)
+                    .put("advancedTrial", trialValue)
                     .put("clamped", clamped)
                     .put("blocked", blocked)
                     // device clock, minutes since midnight: the page draws the "now" line with it
@@ -554,6 +650,7 @@ public class DimService extends Service implements Runnable {
     static volatile boolean pairOpen;
 
     static void openPairing(boolean open) {
+        if (open != pairOpen) Dbg.log("pair", open ? "window open" : "window closed");
         if (open) RemoteServer.resetPinFails(); // a fresh popup: every phone gets its tries back
         pairOpen = open;
     }
@@ -609,6 +706,7 @@ public class DimService extends Service implements Runnable {
                 JSONObject b = list.get((int) w[1]);
                 String key = String.valueOf(starts[(int) w[0]]);
                 if (!key.equals(prefs.getString("schedule_last", null))) {
+                    Dbg.log("schedule", "slot " + a.optString("time") + " " + a.optString("label") + " (start " + key + ")");
                     prefs.edit().putString("schedule_last", key).remove("manual_key").apply();
                 }
                 if (!key.equals(prefs.getString("manual_key", null))) {
@@ -685,6 +783,128 @@ public class DimService extends Service implements Runnable {
         return (int) Math.round(Math.max(0, Math.min(255, v)));
     }
 
+    // ---- Advanced filter: SurfaceFlinger colour matrix ----
+
+    /** `service call SurfaceFlinger 1015 i32 0`: back to the untouched picture, on every display. */
+    static final String RESET_MATRIX = "service call SurfaceFlinger 1015 i32 0";
+
+    /**
+     * The same warm filter as the overlay, but as a per-channel multiplication (row-major 4x4 matrix):
+     * the channels the black-body curve leaves alone are kept, the others are scaled, so black stays black.
+     * The strongest channel is normalised to 1, otherwise the tint would also dim the picture.
+     */
+    static String matrixCommand(int red, int bright, int temp) {
+        int tint = colorFromTemperature(temp);
+        float r = Color.red(tint) / 255f, g = Color.green(tint) / 255f, b = Color.blue(tint) / 255f;
+        float max = Math.max(r, Math.max(g, b));
+        if (max > 0f) {
+            r /= max;
+            g /= max;
+            b /= max;
+        }
+        float strength = clamp(red, 0, 100) / 100f;
+        r = 1f - strength * (1f - r);
+        g = 1f - strength * (1f - g);
+        b = 1f - strength * (1f - b);
+        // never black the screen: brightness dims the picture, but only down to 30%
+        float dim = 0.3f + 0.7f * clamp(bright, 5, 100) / 100f;
+        // the gains above are on encoded (gamma) values like the overlay; SurfaceFlinger multiplies linear light
+        r = linear(r * dim);
+        g = linear(g * dim);
+        b = linear(b * dim);
+        float[] m = {r, 0, 0, 0, 0, g, 0, 0, 0, 0, b, 0, 0, 0, 0, 1};
+        StringBuilder sb = new StringBuilder("service call SurfaceFlinger 1015 i32 1");
+        for (float v : m) sb.append(" f ").append(String.format(Locale.ROOT, "%.4f", v));
+        return sb.toString();
+    }
+
+    /** A gain on encoded values as a gain on linear light (gamma 2.2, exact for a pure scale). */
+    static float linear(float gain) {
+        return (float) Math.pow(Math.max(0f, Math.min(1f, gain)), 2.2);
+    }
+
+    private void resetMatrix() {
+        if (lastMatrix == null && !advancedApplied) return;
+        lastMatrix = null;
+        if (advancedApplied) {
+            Dbg.log("matrix", "reset");
+            Priv.exec(this, RESET_MATRIX);
+        }
+        setMatrixOn(false);
+    }
+
+    /** Remembered across processes, so a matrix left by a crash is cleared at the next start. */
+    private void setMatrixOn(boolean on) {
+        advancedApplied = on;
+        if (prefs.getBoolean("matrix_on", false) != on) prefs.edit().putBoolean("matrix_on", on).apply();
+    }
+
+    /** Polls every 200 ms for the privileged shell's answer (up to a minute), then renders again. */
+    static final class MatrixCheck implements Runnable {
+        private final DimService service;
+        private final int before, tries;
+
+        MatrixCheck(DimService service, int before, int tries) {
+            this.service = service;
+            this.before = before;
+            this.tries = tries;
+        }
+
+        @Override
+        public void run() {
+            if (service.destroyed) return;
+            if (Priv.results == before && tries < 300) service.main.postDelayed(new MatrixCheck(service, before, tries + 1), 200);
+            else service.render();
+        }
+    }
+
+    /** End of the 15 s trial: without a "Keep" the advanced filter is turned off again (a plain class, see MainActivity). */
+    static final class TrialTimeout implements Runnable {
+        private final DimService service;
+
+        TrialTimeout(DimService service) {
+            this.service = service;
+        }
+
+        @Override
+        public void run() {
+            service.endTrial();
+        }
+    }
+
+    private void endTrial() {
+        if (!advancedTrial) return;
+        advancedTrial = false;
+        if (prefs.getBoolean("advanced_ok", false)) {
+            prefs.edit().putBoolean("advanced_trial", false).apply();
+            return;
+        }
+        Dbg.log("matrix", "trial expired, back to overlay");
+        advanced = false;
+        prefs.edit().putBoolean("advanced", false).putBoolean("advanced_trial", false).apply();
+        lastMatrix = null;
+        matrixRetries = 0;
+        render();
+    }
+
+    /** Retries the matrix after the privileged shell became usable (a plain class, see MainActivity). */
+    static final class RenderLater implements Runnable {
+        private final DimService service;
+        private final boolean retry;
+
+        RenderLater(DimService service, boolean retry) {
+            this.service = service;
+            this.retry = retry;
+        }
+
+        @Override
+        public void run() {
+            if (retry) service.matrixRetryDue = true;
+            service.render();
+        }
+    }
+
+
     private void showOverlay(int color) {
         if (destroyed) return;
         DimAccessibilityService svc = DimAccessibilityService.instance;
@@ -704,6 +924,8 @@ public class DimService extends Service implements Runnable {
                         Color.red(color), Color.green(color), Color.blue(color));
             }
         }
+        Dbg.log("overlay", String.format(Locale.ROOT, "show argb=%08X alpha=%d clamped=%b maxObscuring=%.2f via %s",
+                color, Color.alpha(color), clamped, maxAlpha, acc ? "accessibility" : "app overlay") + (view == null ? " (new)" : ""));
         if (view == null) {
             view = new View(this);
             viewAccessibility = acc;
@@ -737,6 +959,7 @@ public class DimService extends Service implements Runnable {
 
     private void removeOverlay() {
         if (view != null) {
+            Dbg.log("overlay", "removed");
             try {
                 viewWm.removeView(view);
             } catch (IllegalArgumentException e) {
@@ -772,8 +995,11 @@ public class DimService extends Service implements Runnable {
     @Override
     public void onDestroy() {
         destroyed = true;
+        instance = null;
+        Dbg.log("service", "destroy");
         main.removeCallbacks(this);
         removeOverlay();
+        resetMatrix();
         runningAudio = null;
         audio.release();
         if (server != null) {
@@ -796,9 +1022,81 @@ public class DimService extends Service implements Runnable {
 
     @Override
     protected void dump(FileDescriptor fd, PrintWriter pw, String[] args) {
+        if (args.length > 0 && args[0].equals("debug")) {
+            try {
+                pw.println(Dbg.on(this) ? Dbg.state(this).toString(2) : "debug off (release build)");
+            } catch (JSONException e) {
+                pw.println(e);
+            }
+            return;
+        }
         pw.println("red=" + red + " bright=" + bright + " temp=" + temp + " visible=" + (view != null)
                 + " off=" + off + " mode=" + (DimAccessibilityService.instance != null ? "accessibility" : "overlay")
                 + " clamped=" + clamped + " blocked=" + blocked + " remote=" + (server != null) + " schedule=" + scheduleOn);
+    }
+
+    // ---- Dev debug snapshot (Dbg.state; read from a binder or server thread, values may be a moment stale) ----
+
+    JSONObject debugFilter() throws JSONException {
+        int argb = overlayColor(red, bright, temp);
+        return new JSONObject().put("enabled", !off).put("red", red).put("bright", bright).put("temp", temp)
+                .put("overlayArgb", String.format(Locale.ROOT, "%08X", argb)).put("alpha", Color.alpha(argb))
+                .put("clamped", clamped).put("blocked", blocked)
+                .put("advanced", advanced).put("advancedActive", advancedApplied)
+                .put("advancedMethod", Priv.method(this)).put("advancedLastOk", Priv.lastOk)
+                .put("maxObscuringOpacity", Build.VERSION.SDK_INT >= 31 ? (double) Compat.maxObscuringOpacity(this) : JSONObject.NULL)
+                .put("overlayAttached", view != null)
+                .put("type", view == null ? JSONObject.NULL : viewAccessibility ? "accessibility (2032)" : "application (2038)");
+    }
+
+    JSONObject debugSchedule() throws JSONException {
+        JSONObject o = new JSONObject().put("on", scheduleOn).put("transitionMin", prefs.getInt("transition", 30))
+                .put("lastSlotStart", prefs.getString("schedule_last", null)).put("manualHold", prefs.contains("manual_key"));
+        if (!scheduleOn) return o;
+        Calendar now = Calendar.getInstance();
+        double m = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE) + now.get(Calendar.SECOND) / 60.0;
+        java.util.List<JSONObject> list = new java.util.ArrayList<>();
+        java.util.List<Integer> abs = new java.util.ArrayList<>();
+        int period;
+        double t;
+        if (scheduleResolved.trim().startsWith("{")) {
+            JSONObject week = new JSONObject(scheduleResolved);
+            for (int d = 0; d < 7; d++) {
+                JSONArray day = week.optJSONArray(ScheduleMath.WEEKDAYS[d]);
+                for (int i = 0; day != null && i < day.length(); i++) {
+                    list.add(day.getJSONObject(i));
+                    abs.add(d * ScheduleMath.DAY + minutes(day.getJSONObject(i).optString("time")));
+                }
+            }
+            period = ScheduleMath.WEEK;
+            t = ScheduleMath.mondayIndex(now.get(Calendar.DAY_OF_WEEK)) * ScheduleMath.DAY + m;
+        } else {
+            JSONArray day = new JSONArray(scheduleResolved);
+            for (int i = 0; i < day.length(); i++) {
+                list.add(day.getJSONObject(i));
+                abs.add(minutes(day.getJSONObject(i).optString("time")));
+            }
+            period = ScheduleMath.DAY;
+            t = m;
+        }
+        int[] starts = new int[abs.size()];
+        for (int i = 0; i < starts.length; i++) starts[i] = abs.get(i);
+        double[] w = ScheduleMath.window(starts, period, t);
+        if (w != null) {
+            long next = System.currentTimeMillis() + Math.round(w[2] * 60000);
+            o.put("activeSlot", list.get((int) w[0])).put("nextSlot", list.get((int) w[1]))
+                    .put("nextChangeAt", new java.text.SimpleDateFormat("EEE HH:mm", Locale.ROOT).format(new java.util.Date(next)))
+                    .put("minutesToNext", w[2])
+                    .put("transitioning", w[2] <= Math.min(prefs.getInt("transition", 30), w[3] / 2));
+        }
+        return o;
+    }
+
+    JSONObject debugRemote() throws JSONException {
+        return new JSONObject().put("enabled", remote).put("localOnly", local).put("running", server != null)
+                .put("port", RemoteServer.PORT).put("lanIp", RemoteServer.localIp()).put("pairingOpen", pairOpen)
+                .put("pinFails", RemoteServer.pinFails())
+                .put("advertiserRegistered", advertiser != null && advertiser.registered());
     }
 
     private static int clamp(int v, int min, int max) {

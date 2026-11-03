@@ -1,0 +1,2 @@
+* Advanced filter (optional, off by default): on devices with root or an open local ADB, a system colour matrix replaces the veil, for true blacks; the first activation from the phone is a 15-second trial that reverts unless kept, and the normal veil stays on whenever privileged access fails
+* F-Droid builds leave the updater and its permission out

@@ -26,6 +26,9 @@ final class Discovery implements NsdManager.ResolveListener {
     /** Devices seen in this session, by id: {id, name, type, host, port}. */
     private static final Map<String, JSONObject> FOUND = new LinkedHashMap<>();
 
+    /** Discovery is running (dev debug channel). */
+    static volatile boolean active;
+
     private static final java.util.Set<String> PENDING = new java.util.HashSet<>();
 
     private final NsdManager nsd;
@@ -51,6 +54,7 @@ final class Discovery implements NsdManager.ResolveListener {
             listener = new Listener(this);
             nsd.discoverServices(Advertiser.SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, listener);
             running = true;
+            active = true;
         } catch (RuntimeException e) {
             release();
         }
@@ -59,6 +63,7 @@ final class Discovery implements NsdManager.ResolveListener {
     synchronized void stop() {
         if (!running) return;
         running = false;
+        active = false;
         queue.clear();
         try {
             nsd.stopServiceDiscovery(listener);
@@ -107,6 +112,7 @@ final class Discovery implements NsdManager.ResolveListener {
         synchronized (this) {
             if (from != listener) return;
             running = false;
+            active = false;
         }
         release();
     }

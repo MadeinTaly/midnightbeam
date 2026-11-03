@@ -81,6 +81,7 @@ public class MainActivity extends Activity
     private LinearLayout advancedBox;
     private Switch scheduleOn;
     private Slider transition;
+    private Switch advancedSw;
     private Slider volume;
     private Switch fxOn;
     private Button eqPreset;
@@ -271,7 +272,7 @@ public class MainActivity extends Activity
         pairBtn = sideButton(side, t("Pair a phone", "Abbina telefono"), dp(6));
         appBtn = sideButton(side, t("Android app", "App per Android"), dp(8));
 
-        if (!Compat.fromFdroid(this)) {
+        if (Updater.available(this)) {
             updSw = sideSwitch(side, t("Check for updates at start", "Controlla aggiornamenti all'avvio"), Updater.enabled(this));
             betaSw = sideSwitch(side, t("Beta updates", "Aggiornamenti beta"), Updater.beta(this));
             betaInfo = text("", 12, NORMAL);
@@ -462,6 +463,13 @@ public class MainActivity extends Activity
                 remote.setChecked(prefs.getBoolean("remote", Compat.isTv(this)));
                 updating = false;
                 break;
+            case "advanced":
+                if (advancedSw != null) {
+                    updating = true;
+                    advancedSw.setChecked(prefs.getBoolean("advanced", false));
+                    updating = false;
+                }
+                break;
             case "upd":
             case "updBeta":
                 if (updSw != null) {
@@ -608,6 +616,16 @@ public class MainActivity extends Activity
         scheduleOn.setEnabled(!timeline.isEmpty());
         transition = new Slider(this, sched, t("Gradual change at the end of each slot", "Passaggio graduale a fine fascia"),
                 " min", 0, 60, 15, prefs.getInt("transition", 30));
+        advancedSw = null;
+        if (Priv.available(this)) {
+            advancedSw = switchRow(sched, t("Advanced filter (true blacks)",
+                    "Filtro avanzato (neri veri)"));
+            advancedSw.setChecked(prefs.getBoolean("advanced", false));
+            sched.addView(note(t("No veil: the picture is filtered at system level. Needs the device's privileged access, "
+                            + "asks once, and a restart always clears it.",
+                    "Niente velo: l'immagine è filtrata a livello di sistema. Usa l'accesso privilegiato del dispositivo, "
+                            + "lo chiede una volta, e un riavvio lo azzera sempre.")));
+        }
 
         audio.addView(section("Audio"));
         JSONObject a;
@@ -1005,6 +1023,10 @@ public class MainActivity extends Activity
             }
         } else if (b == scheduleOn) {
             if (!updating) setScheduleOn(checked);
+        } else if (b == advancedSw) {
+            if (updating) return;
+            if (checked && !prefs.getBoolean("advanced_ok", false)) askAdvanced();
+            else setAdvanced(checked);
         } else if (b == fxOn) {
             if (updating) return;
             try {
@@ -1187,6 +1209,102 @@ public class MainActivity extends Activity
         public void onStopTrackingTouch(SeekBar seekBar) {
             dragging = false;
             movedAt = android.os.SystemClock.uptimeMillis();
+        }
+    }
+
+    // ---- Advanced filter: explicit opt-in, then a trial the owner must confirm ----
+
+    private android.app.AlertDialog advancedDialog;
+
+    void setAdvanced(boolean on) {
+        prefs.edit().putBoolean("advanced", on).apply();
+        Compat.startForegroundService(this, new Intent(this, DimService.class).putExtra("advanced", on));
+        if (advancedSw != null && advancedSw.isChecked() != on) {
+            updating = true;
+            advancedSw.setChecked(on);
+            updating = false;
+        }
+    }
+
+    /** First time only: what it does and, when the device's debugging is open to the network, says so. */
+    private void askAdvanced() {
+        String msg = t("The picture is filtered by the system instead of a veil: true blacks, no haze. "
+                        + "It uses this device's privileged access; the filter never goes below 30% brightness, "
+                        + "turning it off or restarting the TV always restores the normal picture.",
+                "L'immagine viene filtrata dal sistema invece che da un velo: neri veri, niente foschia. "
+                        + "Usa l'accesso privilegiato del dispositivo; il filtro non scende mai sotto il 30% di luminosità, "
+                        + "spegnerlo o riavviare il TV rimette sempre l'immagine normale.");
+        if (Priv.SU.equals(Priv.method(this))) {
+            msg += t(" The system will ask you once to allow it.", " Il sistema ti chiederà una volta di consentirlo.");
+        }
+        AdvancedAnswer a = new AdvancedAnswer(this, false);
+        advancedDialog = new android.app.AlertDialog.Builder(this)
+                .setTitle(t("Advanced filter", "Filtro avanzato"))
+                .setMessage(msg)
+                .setPositiveButton(t("Turn on", "Attiva"), a)
+                .setNegativeButton(t("Cancel", "Annulla"), a)
+                .setOnCancelListener(a)
+                .show();
+        advancedDialog.getButton(android.content.DialogInterface.BUTTON_NEGATIVE).requestFocus();
+    }
+
+    /** After turning it on: keep it only if the owner confirms within 15 s, otherwise back to the overlay. */
+    private void trialAdvanced() {
+        setAdvanced(true);
+        AdvancedAnswer a = new AdvancedAnswer(this, true);
+        advancedDialog = new android.app.AlertDialog.Builder(this)
+                .setTitle(t("Can you see the picture well?", "Vedi bene l'immagine?"))
+                .setMessage(t("Without an answer it goes back to the normal filter in 15 seconds.",
+                        "Senza risposta torna al filtro normale tra 15 secondi."))
+                .setPositiveButton(t("Keep", "Mantieni"), a)
+                .setNegativeButton(t("Go back", "Torna indietro"), a)
+                .setOnCancelListener(a)
+                .show();
+        advancedDialog.getButton(android.content.DialogInterface.BUTTON_NEGATIVE).requestFocus();
+        main.postDelayed(a, 15000);
+    }
+
+    static final class AdvancedAnswer implements android.content.DialogInterface.OnClickListener,
+            android.content.DialogInterface.OnCancelListener, Runnable {
+        private final MainActivity a;
+        private final boolean trial;
+        private boolean answered;
+
+        AdvancedAnswer(MainActivity a, boolean trial) {
+            this.a = a;
+            this.trial = trial;
+        }
+
+        @Override
+        public void onClick(android.content.DialogInterface d, int which) {
+            answer(which == android.content.DialogInterface.BUTTON_POSITIVE);
+        }
+
+        @Override
+        public void onCancel(android.content.DialogInterface d) {
+            answer(false);
+        }
+
+        /** Trial timeout: no answer means it was not confirmed. */
+        @Override
+        public void run() {
+            if (answered) return;
+            if (a.advancedDialog != null && a.advancedDialog.isShowing()) a.advancedDialog.dismiss();
+            answer(false);
+        }
+
+        private void answer(boolean yes) {
+            if (answered) return;
+            answered = true;
+            a.main.removeCallbacks(this);
+            if (!trial) {
+                if (yes) a.trialAdvanced();
+                else a.setAdvanced(false);
+            } else if (yes) {
+                a.prefs.edit().putBoolean("advanced_ok", true).apply();
+            } else {
+                a.setAdvanced(false);
+            }
         }
     }
 }

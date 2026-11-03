@@ -9,6 +9,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInstaller;
+import android.content.pm.PackageManager;
 import android.util.Log;
 import android.widget.CheckBox;
 import android.widget.Toast;
@@ -21,6 +22,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.Arrays;
 import java.util.Locale;
 
 /**
@@ -41,6 +43,24 @@ final class Updater {
     private static volatile boolean busy;
 
     private Updater() {
+    }
+
+    private static Boolean available;
+
+    /** False on F-Droid installs and in builds packaged without REQUEST_INSTALL_PACKAGES (F-Droid recipe). */
+    static boolean available(Context c) {
+        if (available == null) {
+            boolean ok = false;
+            if (!Compat.fromFdroid(c)) {
+                try {
+                    String[] p = c.getPackageManager().getPackageInfo(c.getPackageName(), PackageManager.GET_PERMISSIONS).requestedPermissions;
+                    ok = p != null && Arrays.asList(p).contains("android.permission.REQUEST_INSTALL_PACKAGES");
+                } catch (Exception e) {
+                }
+            }
+            available = ok;
+        }
+        return available;
     }
 
     static boolean enabled(Context c) {
@@ -76,7 +96,8 @@ final class Updater {
     /** Call from onResume of the start screen: at most one check every 6 hours per process. */
     static void check(Activity a) {
         long now = System.currentTimeMillis();
-        if (busy || now - lastCheck < EVERY_MS || !enabled(a) || Compat.fromFdroid(a)) return;
+        Dbg.on(a);
+        if (busy || now - lastCheck < EVERY_MS || !enabled(a) || !available(a)) return;
         busy = true;
         new Thread(new Check(a), "update-check").start();
     }
@@ -115,9 +136,12 @@ final class Updater {
                         }
                     }
                 }
+                Dbg.log("updater", "check done: mine " + mine + ", beta " + beta + ", newer "
+                        + (bestUrl != null ? best : "none"));
                 if (bestUrl != null) a.runOnUiThread(new Offer(a, best, bestUrl));
             } catch (Exception e) {
                 Log.w(TAG, "check failed: " + e);
+                Dbg.log("updater", "check failed: " + e);
             } finally {
                 busy = false;
             }
@@ -138,6 +162,7 @@ final class Updater {
         @Override
         public void run() {
             if (a.isFinishing() || a.isDestroyed()) return;
+            Dbg.log("updater", "offer " + version);
             if (prefs(a).getBoolean("updAuto", false)) {
                 install(a, url, version);
                 return;
@@ -174,6 +199,7 @@ final class Updater {
     }
 
     static void install(Context c, String url, String version) {
+        Dbg.log("updater", "install " + version);
         Toast.makeText(c, t("Downloading the update…", "Scarico l'aggiornamento…"), Toast.LENGTH_SHORT).show();
         new Thread(new Install(c.getApplicationContext(), url, version), "update-install").start();
     }
@@ -212,6 +238,7 @@ final class Updater {
                 s.close();
             } catch (Exception e) {
                 Log.w(TAG, "install failed: " + e);
+                Dbg.log("updater", "install failed: " + e);
                 new android.os.Handler(android.os.Looper.getMainLooper()).post(new Failed(c));
                 if (id >= 0) {
                     try {
@@ -241,6 +268,7 @@ final class Updater {
         @Override
         public void onReceive(Context c, Intent i) {
             int status = i.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE);
+            Dbg.log("updater", "install status " + status);
             if (status == PackageInstaller.STATUS_PENDING_USER_ACTION) {
                 Intent confirm = i.getParcelableExtra(Intent.EXTRA_INTENT);
                 if (confirm != null) c.startActivity(confirm.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));

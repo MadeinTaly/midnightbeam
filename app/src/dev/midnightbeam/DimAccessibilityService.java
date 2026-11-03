@@ -12,12 +12,15 @@ public class DimAccessibilityService extends AccessibilityService {
     protected void onServiceConnected() {
         super.onServiceConnected();
         instance = this;
+        Dbg.on(this);
+        Dbg.log("accessibility", "connected");
         refresh();
     }
 
     @Override
     public boolean onUnbind(Intent intent) {
         instance = null;
+        Dbg.log("accessibility", "disconnected");
         refresh();
         return super.onUnbind(intent);
     }

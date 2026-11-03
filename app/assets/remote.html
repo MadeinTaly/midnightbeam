@@ -58,6 +58,30 @@
         <div class="sm-group-label" data-t="profiles"></div>
         <div id="quick" class="grid grid-cols-3 gap-2"></div>
       </div>
+      <div id="advanced-row" class="hidden">
+        <div class="flex items-center justify-between gap-3">
+          <div>
+            <span class="font-semibold text-sm" data-t="advanced"></span>
+            <p id="advanced-note" class="text-xs mt-1" style="color: var(--app-muted)"></p>
+          </div>
+          <label class="switch"><input id="advanced" type="checkbox"><span></span></label>
+        </div>
+        <p id="advanced-status" class="text-xs mt-2" style="color: var(--app-muted)" role="status" aria-live="polite"></p>
+        <div id="advanced-consent" class="hidden space-y-4">
+          <p class="text-sm" data-t="advancedConfirmText"></p>
+          <div class="flex gap-2">
+            <button id="advanced-cancel" class="sm-chip" type="button" data-t="cancel"></button>
+            <button id="advanced-continue" class="btn-primary" type="button" data-t="continue"></button>
+          </div>
+        </div>
+        <div id="advanced-trial" class="hidden space-y-4" role="group" aria-labelledby="advanced-trial-text">
+          <p id="advanced-trial-text" class="text-sm" data-t="advancedTrialText"></p>
+          <div class="flex gap-2">
+            <button id="advanced-back" class="sm-chip" type="button" data-t="goBack"></button>
+            <button id="advanced-keep" class="btn-primary" type="button" data-t="keep"></button>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- Schedule: the dayrhythm component -->
@@ -137,7 +161,13 @@ import * as DR from '/dayrhythm/src/index.js';
       models: { off: 'Off', soft: 'Soft', evening: 'Evening', cinema: 'Cinema', night: 'Night', deep: 'Deep night', custom: 'Custom' },
       fields: { red: 'Warm filter', bright: 'Brightness', temp: 'Colour' },
       fasce: { morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening', film: 'Movie', night: 'Night' },
-      presets: { movie: 'Movie night', early: 'Early to bed', late: 'Night owl' } },
+      presets: { movie: 'Movie night', early: 'Early to bed', late: 'Night owl' },
+      advanced: 'Advanced filter (true blacks)', advancedSu: 'The TV app runs this locally. Android may ask to grant root access.',
+      advancedConfirmText: 'The TV applies a system-level filter. It never goes below 30% brightness and resets when turned off or restarted. Continue?',
+      advancedTrialText: 'Can you see the picture well? Keep this filter within 15 seconds or it returns to the normal filter.',
+      cancel: 'Cancel', continue: 'Continue', goBack: 'Go back', keep: 'Keep',
+      advancedActive: 'System filter active.', advancedWaiting: 'It applies while the filter is on.',
+      advancedFallback: 'Privileged access failed. The normal overlay is in use.' },
     it: { subtitle: 'Filtro caldo e luminosità per il TV', pairTitle: 'Non abbinato', pairText: 'Inquadra di nuovo il QR mostrato nell’app MidnightBeam sul TV.', filter: 'Filtro', red: 'Filtro caldo', bright: 'Luminosità', temp: 'Colore (più basso = più rosso)', profiles: 'Profili',
       schedTitle: 'Programmazione', schedSub: 'Il TV cambia impostazione da solo, anche col telefono spento. Le modifiche si salvano automaticamente.', schedActive: 'Programmazione attiva',
       weekMode: 'Giorni', weekDaily: 'Uguale ogni giorno', weekWeekly: 'Per giorno', transition: 'Transizione', trOff: 'Nessuna',
@@ -148,7 +178,13 @@ import * as DR from '/dayrhythm/src/index.js';
       models: { off: 'Spento', soft: 'Tenue', evening: 'Sera', cinema: 'Cinema', night: 'Notte', deep: 'Notte fonda', custom: 'Personalizzato' },
       fields: { red: 'Filtro caldo', bright: 'Luminosità', temp: 'Colore' },
       fasce: { morning: 'Mattina', afternoon: 'Pomeriggio', evening: 'Sera', film: 'Film', night: 'Notte' },
-      presets: { movie: 'Serata film', early: 'A letto presto', late: 'Nottambulo' } }
+      presets: { movie: 'Serata film', early: 'A letto presto', late: 'Nottambulo' },
+      advanced: 'Filtro avanzato (neri veri)', advancedSu: 'L’app sul TV esegue il comando in locale. Android potrebbe chiedere l’accesso root.',
+      advancedConfirmText: 'Il TV applica un filtro di sistema. La luminosità non scende sotto il 30%; spegnendo o riavviando il TV il filtro si azzera. Continuare?',
+      advancedTrialText: 'L’immagine si vede bene? Conferma entro 15 secondi, altrimenti torna il filtro normale.',
+      cancel: 'Annulla', continue: 'Continua', goBack: 'Torna indietro', keep: 'Mantieni',
+      advancedActive: 'Filtro di sistema attivo.', advancedWaiting: 'Si applica quando il filtro è acceso.',
+      advancedFallback: 'Accesso privilegiato non riuscito. È attivo il normale velo.' }
   };
   var saved = null; try { saved = localStorage.getItem('od_lang'); } catch (e) {}
   var phoneLang = (navigator.language || 'en').slice(0, 2);
@@ -167,6 +203,7 @@ import * as DR from '/dayrhythm/src/index.js';
       b.style.borderColor = on ? 'var(--app-accent)' : '';
     });
     $('sched-on').setAttribute('aria-label', L.schedActive);
+    $('advanced').setAttribute('aria-label', L.advanced);
   }
 
   // Pairing key: arrives in the URL fragment from the QR code, then kept on the phone.
@@ -245,6 +282,14 @@ import * as DR from '/dayrhythm/src/index.js';
       labels();
     }
     current = s; renderQuick();
+    var method = s.advancedMethod;
+    $('advanced-row').classList.toggle('hidden', method !== 'su' && method !== 'adb');
+    $('advanced').checked = !!s.advanced;
+    $('advanced-note').textContent = method === 'su' ? L.advancedSu : '';
+    if (s.advanced || s.advancedTrial || s.advancedOk) $('advanced-consent').classList.add('hidden');
+    $('advanced-trial').classList.toggle('hidden', !s.advancedTrial);
+    $('advanced-status').textContent = !s.advanced ? '' : !s.advancedLastOk ? L.advancedFallback
+      : s.advancedActive ? L.advancedActive : L.advancedWaiting;
   }
   var pending = null, lastInput = 0;
   function sliding() { return pending !== null || Date.now() - lastInput < 1500; }
@@ -261,6 +306,35 @@ import * as DR from '/dayrhythm/src/index.js';
     $(id).addEventListener('input', function () { labels(); $('on').checked = true; sendLive(); });
   });
   $('on').addEventListener('change', function () { api('/api/set', { on: $('on').checked }).then(show).catch(function () {}); });
+  $('advanced').addEventListener('change', function () {
+    var sw = this, on = sw.checked;
+    if (on && current && !current.advancedOk) {
+      sw.checked = false;
+      $('advanced-consent').classList.remove('hidden');
+      return;
+    }
+    api('/api/set', { advanced: on }).then(show).catch(function () {
+      sw.checked = !on;
+      $('advanced-status').textContent = L.advancedFallback;
+    });
+  });
+  $('advanced-cancel').addEventListener('click', function () { $('advanced-consent').classList.add('hidden'); });
+  $('advanced-continue').addEventListener('click', function () {
+    $('advanced-consent').classList.add('hidden');
+    api('/api/set', { advanced: true }).then(show).catch(function () {
+      $('advanced-status').textContent = L.advancedFallback;
+    });
+  });
+  $('advanced-keep').addEventListener('click', function () {
+    api('/api/set', { advancedConfirm: true }).then(show).catch(function () {
+      $('advanced-status').textContent = L.advancedFallback;
+    });
+  });
+  $('advanced-back').addEventListener('click', function () {
+    api('/api/set', { advanced: false }).then(show).catch(function () {
+      $('advanced-status').textContent = L.error;
+    });
+  });
   function renderQuick() {
     var box = $('quick'); box.innerHTML = '';
     MODELS.forEach(function (mo) {

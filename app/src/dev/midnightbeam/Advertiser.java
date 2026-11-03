@@ -32,14 +32,20 @@ final class Advertiser {
             listener = new Listener(this);
             nsd.registerService(s, NsdManager.PROTOCOL_DNS_SD, listener);
             registered = true;
+            Dbg.log("advertiser", "register " + name);
         } catch (RuntimeException ignored) {
             // no mDNS on this box: the phone app still finds it with its fallback scan
         }
     }
 
+    boolean registered() {
+        return registered;
+    }
+
     void stop() {
         if (!registered) return;
         registered = false;
+        Dbg.log("advertiser", "unregister");
         try {
             nsd.unregisterService(listener);
         } catch (RuntimeException ignored) {
@@ -48,6 +54,7 @@ final class Advertiser {
 
     private void failed(Listener from) {
         if (from == listener) registered = false;
+        Dbg.log("advertiser", "registration failed");
     }
 
     /** Callbacks of one start() (a plain class, see MainActivity). */

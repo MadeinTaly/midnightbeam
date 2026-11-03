@@ -27,7 +27,7 @@ import java.util.Locale;
  *   GET  /remote.css     its stylesheet (Tailwind, compiled at development time, see web/)
  *   GET  /api/info       {"name":..,"model":..,"type":"projector|tv|tablet|phone","app":<download url>} to label the device in the phone app
  *   GET  /api/state      current values
- *   POST /api/set        {"red":0-100,"bright":5-100,"temp":1000-6500,"on":true|false}, any subset
+ *   POST /api/set        {"red":0-100,"bright":5-100,"temp":1000-6500,"on":true|false,"advanced":bool,"advancedConfirm":bool}, any subset
  *   GET  /api/schedule   {"enabled":bool,"value":<dayrhythm value>,"resolved":<Slot[] or {mon:[..],..}>}
  *   POST /api/schedule   {"enabled":bool,"value":..,"resolved":..}  (older {"enabled","slots":[..]} still accepted)
  *   GET  /api/audio      audio effects: {"supported":bool,"enabled":bool,"volume":{"level","max"},"eq":..,"bass":..,"virt":..,"loud":..} (null = not available)
@@ -67,6 +67,9 @@ final class RemoteServer extends Thread {
         APP.put("/app.html", "text/html; charset=utf-8");
         APP.put("/card.svg", "image/svg+xml");
     }
+
+    /** "METHOD path client" of the request this connection thread is answering, for the dev debug log (send()). */
+    private static final ThreadLocal<String> REQ = new ThreadLocal<>();
 
     private final DimService service;
     private final AssetManager assets;
@@ -143,6 +146,9 @@ final class RemoteServer extends Thread {
         String path = parts[1];
         int q = path.indexOf('?');
         if (q >= 0) path = path.substring(0, q);
+        boolean polled = method.equals("GET") && (path.equals("/api/state") || path.equals("/api/debug"));
+        REQ.set(path.startsWith("/api/") && !polled || path.startsWith("/d/")
+                ? method + " " + path + " " + c.getInetAddress().getHostAddress() : null);
 
         String key = null;
         int length = 0;
@@ -231,6 +237,8 @@ final class RemoteServer extends Thread {
                 }
                 if (r == null) send(out, 400, "application/json", "{\"error\":\"bad request\"}");
                 else send(out, 200, "application/json", r);
+            } else if (method.equals("GET") && path.equals("/api/debug") && Dbg.on(service)) {
+                send(out, 200, "application/json", Dbg.state(service).toString());
             } else if (method.equals("GET") && path.equals("/api/info")) {
                 send(out, 200, "application/json", service.infoJson());
             } else if (method.equals("GET") && path.equals("/api/state")) {
@@ -238,11 +246,18 @@ final class RemoteServer extends Thread {
             } else if (method.equals("POST") && path.equals("/api/set")) {
                 try {
                     JSONObject j = new JSONObject(new String(body, 0, read, StandardCharsets.UTF_8));
+                    int advanced = j.has("advanced") ? (j.getBoolean("advanced") ? 1 : 0) : -1;
+                    boolean advancedConfirm = j.has("advancedConfirm") && j.getBoolean("advancedConfirm");
+                    if (advanced == 1 && !Priv.available(service)) {
+                        send(out, 409, "application/json", "{\"error\":\"no privileged access\"}");
+                        return;
+                    }
                     SetTask task = new SetTask(service,
                             j.has("red") ? j.getInt("red") : -1,
                             j.has("bright") ? j.getInt("bright") : -1,
                             j.has("temp") ? j.getInt("temp") : -1,
-                            j.has("on") ? (j.getBoolean("on") ? 1 : 0) : -1);
+                            j.has("on") ? (j.getBoolean("on") ? 1 : 0) : -1,
+                            advanced, advancedConfirm);
                     main.post(task);
                     send(out, 200, "application/json", service.stateJsonWith(task));
                 } catch (JSONException e) {
@@ -300,6 +315,15 @@ final class RemoteServer extends Thread {
     static final int PIN_TRIES = 5; // per client: then that client is locked out until the popup opens again
     static final int PIN_TRIES_TOTAL = 20; // all clients together: then the PIN changes and pairing closes
 
+    /** Wrong PINs per client address and in total (dev debug channel); never the PIN itself. */
+    static JSONObject pinFails() throws JSONException {
+        synchronized (PIN_LOCK) {
+            JSONObject per = new JSONObject();
+            for (java.util.Map.Entry<String, Integer> e : PIN_FAILS.entrySet()) per.put(e.getKey(), e.getValue());
+            return new JSONObject().put("total", pinFailsTotal).put("perClient", per);
+        }
+    }
+
     /** Forgets the wrong PINs: called when the pairing popup opens (or New code reopens it). */
     static void resetPinFails() {
         synchronized (PIN_LOCK) {
@@ -316,6 +340,7 @@ final class RemoteServer extends Thread {
      */
     private void pair(OutputStream out, byte[] body, int read, String client) throws IOException {
         if (!DimService.pairingOpen()) {
+            Dbg.log("pair", "refused, popup closed (" + client + ")");
             send(out, 403, "application/json", "{\"error\":\"closed\"}");
             return;
         }
@@ -345,6 +370,7 @@ final class RemoteServer extends Thread {
                 }
             }
         }
+        Dbg.log("pair", (key != null ? "success " : "fail (" + error + ") ") + client);
         if (key != null) send(out, 200, "application/json", "{\"k\":" + JSONObject.quote(key) + "}");
         else send(out, 403, "application/json", "{\"error\":\"" + error + "\"}");
     }
@@ -393,6 +419,11 @@ final class RemoteServer extends Thread {
     /** extraHeader: one more "Name: value" header line, or null. */
     static void send(OutputStream out, int code, String type, byte[] b, String extraHeader) throws IOException {
         String status = code == 200 ? "OK" : code == 403 ? "Forbidden" : code == 404 ? "Not Found" : code == 400 ? "Bad Request" : code == 413 ? "Payload Too Large" : code == 502 ? "Bad Gateway" : "Error";
+        String req = REQ.get();
+        if (req != null) {
+            Dbg.log("http", req + " -> " + code);
+            REQ.set(null);
+        }
         String head = "HTTP/1.1 " + code + " " + status + "\r\n"
                 + "Content-Type: " + type + "\r\n"
                 + "Content-Length: " + b.length + "\r\n"
@@ -447,13 +478,17 @@ final class RemoteServer extends Thread {
         final int bright;
         final int temp;
         final int on;
+        final int advanced;
+        final boolean advancedConfirm;
 
-        SetTask(DimService service, int red, int bright, int temp, int on) {
+        SetTask(DimService service, int red, int bright, int temp, int on, int advanced, boolean advancedConfirm) {
             this.service = service;
             this.red = red;
             this.bright = bright;
             this.temp = temp;
             this.on = on;
+            this.advanced = advanced;
+            this.advancedConfirm = advancedConfirm;
         }
 
         @Override
