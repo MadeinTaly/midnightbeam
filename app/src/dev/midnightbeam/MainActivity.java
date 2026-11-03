@@ -380,6 +380,7 @@ public class MainActivity extends Activity
     protected void onResume() {
         super.onResume();
         Updater.check(this);
+        syncTrialDialog();
         if (accessibility != null) {
             refreshAccessibility();
         }
@@ -462,6 +463,9 @@ public class MainActivity extends Activity
                 updating = true;
                 remote.setChecked(prefs.getBoolean("remote", Compat.isTv(this)));
                 updating = false;
+                break;
+            case "advanced_trial":
+                syncTrialDialog();
                 break;
             case "advanced":
                 if (advancedSw != null) {
@@ -1248,11 +1252,22 @@ public class MainActivity extends Activity
         advancedDialog.getButton(android.content.DialogInterface.BUTTON_NEGATIVE).requestFocus();
     }
 
-    /** After turning it on: keep it only if the owner confirms within 15 s, otherwise back to the overlay. */
-    private void trialAdvanced() {
-        setAdvanced(true);
+    private android.app.AlertDialog trialDialog;
+
+    /**
+     * The 15 s trial runs in DimService, whoever started it (this screen or the phone): this dialog only mirrors
+     * "advanced_trial", so Keep on the phone closes it here and the timeout closes it everywhere.
+     */
+    void syncTrialDialog() {
+        boolean on = prefs.getBoolean("advanced_trial", false);
+        boolean showing = trialDialog != null && trialDialog.isShowing();
+        if (!on) {
+            if (showing) trialDialog.dismiss();
+            return;
+        }
+        if (showing || isFinishing()) return;
         AdvancedAnswer a = new AdvancedAnswer(this, true);
-        advancedDialog = new android.app.AlertDialog.Builder(this)
+        trialDialog = new android.app.AlertDialog.Builder(this)
                 .setTitle(t("Can you see the picture well?", "Vedi bene l'immagine?"))
                 .setMessage(t("Without an answer it goes back to the normal filter in 15 seconds.",
                         "Senza risposta torna al filtro normale tra 15 secondi."))
@@ -1260,12 +1275,11 @@ public class MainActivity extends Activity
                 .setNegativeButton(t("Go back", "Torna indietro"), a)
                 .setOnCancelListener(a)
                 .show();
-        advancedDialog.getButton(android.content.DialogInterface.BUTTON_NEGATIVE).requestFocus();
-        main.postDelayed(a, 15000);
+        trialDialog.getButton(android.content.DialogInterface.BUTTON_NEGATIVE).requestFocus();
     }
 
     static final class AdvancedAnswer implements android.content.DialogInterface.OnClickListener,
-            android.content.DialogInterface.OnCancelListener, Runnable {
+            android.content.DialogInterface.OnCancelListener {
         private final MainActivity a;
         private final boolean trial;
         private boolean answered;
@@ -1285,23 +1299,13 @@ public class MainActivity extends Activity
             answer(false);
         }
 
-        /** Trial timeout: no answer means it was not confirmed. */
-        @Override
-        public void run() {
-            if (answered) return;
-            if (a.advancedDialog != null && a.advancedDialog.isShowing()) a.advancedDialog.dismiss();
-            answer(false);
-        }
-
         private void answer(boolean yes) {
             if (answered) return;
             answered = true;
-            a.main.removeCallbacks(this);
-            if (!trial) {
-                if (yes) a.trialAdvanced();
-                else a.setAdvanced(false);
+            if (yes && !trial) {
+                a.setAdvanced(true); // the service starts the trial, syncTrialDialog shows it
             } else if (yes) {
-                a.prefs.edit().putBoolean("advanced_ok", true).apply();
+                Compat.startForegroundService(a, new Intent(a, DimService.class).putExtra("advancedConfirm", true));
             } else {
                 a.setAdvanced(false);
             }

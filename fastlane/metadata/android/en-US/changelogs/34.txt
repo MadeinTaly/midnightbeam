@@ -1,0 +1,3 @@
+* Phone app: a small label under the device name shows the filter type (veil or advanced) and switches it on devices with root or open ADB
+* The advanced filter trial is one shared state: started on the TV or on the phone, both show Keep / Go back, and an answer on one closes it on the other
+* Shorter status line under the device name, no more wrapping

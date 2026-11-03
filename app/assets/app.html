@@ -78,6 +78,11 @@
     .preview img { display: block; width: 100%; height: 100%; object-fit: cover; }
     .preview .tint { position: absolute; inset: 0; transition: background-color .25s; pointer-events: none; }
     .pv-chip { margin: 8px 2px 0; font-size: .8rem; color: var(--muted); text-align: center; }
+    #h-dev-status { display: flex; align-items: center; white-space: nowrap; font-size: .8rem; }
+    #h-dev-status .st-txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+    .mode-tag { flex: none; margin-left: 5px; padding: 0 4px; font-family: "Silkscreen", monospace; font-size: .5rem; letter-spacing: 0; line-height: 1.7; vertical-align: 1px; background: var(--paper-3); color: var(--ink-2); }
+    .mode-tag.adv { background: var(--accent); color: var(--accent-ink); }
+    .mode-tag.fail { background: var(--accent-2); color: #fff; }
     .preview { touch-action: manipulation; user-select: none; -webkit-user-select: none; }
 
     /* scenes row: square keys, the chosen one lit like a cursor */
@@ -303,7 +308,7 @@
         <button id="h-dev" class="device" type="button" style="flex:1;min-width:0">
           <span class="device-ic" id="h-dev-ic"></span>
           <span class="device-txt">
-            <span class="device-name" id="h-dev-name"></span><br>
+            <span class="device-name" id="h-dev-name"></span>
             <span class="small" id="h-dev-status"></span>
           </span>
         </button>
@@ -507,6 +512,9 @@ import drIcons from '/dayrhythm/icons/index.js';
       connectTv: 'Connect a TV or projector', connectTvSub: 'Control the filter of your TV boxes from here',
       home: 'Home', devices: 'Devices', scenes: 'Scenes', settings: 'Settings', updCheck: 'Check for updates at start', updBeta: 'Beta updates', updStays: 'Stays on this beta until a newer stable is out', back: 'Back', power: 'Filter on / off',
       red: 'Warm filter', bright: 'Brightness', temp: 'Colour temperature', schedTitle: 'Schedule',
+      tagVeil: 'VEIL', tagAdv: 'ADVANCED', tagFail: 'ADVANCED ✕', modeFail: 'Advanced filter failed: the veil is on',
+      advText: 'The TV filters the picture at system level instead of a veil: true blacks. It never goes below 30% brightness and resets when turned off or restarted.',
+      advOn: 'Turn on', advTrial: 'Can you see the picture well? Keep it within 15 seconds or it returns to the veil.', advKeep: 'Keep', advBack: 'Go back', advCancel: 'Cancel',
       connected: 'Connected', offline: 'Offline', filterOn: 'filter on', filterOff: 'filter off', pvHold: 'Hold to see without filter', pvOriginal: 'Without filter', pvLocal: 'The real filter is on this screen', checking: 'Connecting…',
       thisDevice: 'This device', local: 'This phone', localTablet: 'This tablet', schedOff: 'Off', schedOn: 'On', schedNext: 'next: {name} at {time}',
       permBanner: 'Allow “Display over other apps” so the filter can be drawn on this phone. Tap here.',
@@ -555,6 +563,9 @@ import drIcons from '/dayrhythm/icons/index.js';
       connectTv: 'Collega un TV o proiettore', connectTvSub: 'Controlla da qui il filtro dei tuoi TV box',
       home: 'Home', devices: 'Dispositivi', scenes: 'Scene', settings: 'Impostazioni', updCheck: 'Controlla aggiornamenti all’avvio', updBeta: 'Aggiornamenti beta', updStays: 'Resta su questa beta finché non esce una stabile più nuova', back: 'Indietro', power: 'Filtro acceso / spento',
       red: 'Filtro caldo', bright: 'Luminosità', temp: 'Temperatura colore', schedTitle: 'Programmazione',
+      tagVeil: 'VELO', tagAdv: 'AVANZATO', tagFail: 'AVANZATO ✕', modeFail: 'Filtro avanzato non riuscito: è attivo il velo',
+      advText: 'Il TV filtra l’immagine a livello di sistema invece che con un velo: neri veri. La luminosità non scende sotto il 30%; spegnendo o riavviando il TV si azzera.',
+      advOn: 'Attiva', advTrial: 'L’immagine si vede bene? Conferma entro 15 secondi, altrimenti torna il velo.', advKeep: 'Mantieni', advBack: 'Torna indietro', advCancel: 'Annulla',
       connected: 'Connesso', offline: 'Non raggiungibile', filterOn: 'filtro acceso', filterOff: 'filtro spento', pvHold: 'Tieni premuto per vederla senza filtro', pvOriginal: 'Senza filtro', pvLocal: 'Il filtro vero è già su questo schermo', checking: 'Connessione…',
       thisDevice: 'Questo dispositivo', local: 'Questo telefono', localTablet: 'Questo tablet', schedOff: 'Spenta', schedOn: 'Attiva', schedNext: 'prossima: {name} alle {time}',
       permBanner: 'Consenti “Mostra sopra altre app” per disegnare il filtro su questo telefono. Tocca qui.',
@@ -742,11 +753,12 @@ import drIcons from '/dayrhythm/icons/index.js';
     $('h-dev-name').textContent = devName(cur);
     var st = $('h-dev-status');
     if (!cur) st.innerHTML = '<span class="muted">' + localLabel() + (state ? ' · ' + (state.on ? L.filterOn : L.filterOff) : '') + '</span>';
-    else if (reach === 'ok') st.innerHTML = '<span class="dot on"></span><span class="status-on">' + L.connected + '</span><span class="muted"> · ' + (state && state.on ? L.filterOn : L.filterOff) + '</span>';
+    else if (reach === 'ok') st.innerHTML = '<span class="dot on"></span>' + (state && state.on ? '<span class="status-on">' + L.filterOn + '</span>' : '<span class="muted">' + L.filterOff + '</span>');
     else if (reach === 'key') st.innerHTML = '<span class="dot"></span><span class="muted">' + L.keyChanged + '</span>';
     else if (reach === 'down') st.innerHTML = '<span class="dot"></span><span class="muted">' + L.offline + '</span>';
     else st.innerHTML = '<span class="muted">' + L.checking + '</span>';
     if (syncOn() && devices.length) st.innerHTML += '<span class="muted"> · ' + L.syncOn + '</span>';
+    modeTag(st);
     $('h-power').classList.toggle('on', !!(state && state.on && reach === 'ok'));
     $('h-power').setAttribute('aria-pressed', String(!!(state && state.on)));
     $('perm-banner').classList.toggle('hidden', !!cur || app.overlay);
@@ -761,8 +773,49 @@ import drIcons from '/dayrhythm/icons/index.js';
       try { rhythm.clockOffset = Math.round(off * 10) / 10; } catch (e) {}
     }
     if (!pending) { setRange('r-red', s.red); setRange('r-bright', s.bright); setRange('r-temp', s.temp); labels(); }
-    renderDevice(); renderSceneRow(); preview(); if (view === 'scenes') renderScenes();
+    renderDevice(); renderSceneRow(); preview(); renderMode(); if (view === 'scenes') renderScenes();
   }
+  // ---- Filter type badge (veil or true blacks) and the 15 s trial, both mirrored from the device state ----
+  var trialShown = false;
+  function setAdvanced(body) {
+    return api('/api/set', body).then(show, function (e) { if (sheetOpen) closeSheet(); toast(e && e.status === 409 ? L.modeFail : L.unreachable); });
+  }
+  function renderMode() {
+    var s = state;
+    if (!s) return;
+    // the trial runs on the device, whoever started it: TV screen or this phone
+    if (s.advancedTrial && !trialShown) {
+      trialShown = true;
+      openSheet('<p>' + L.advTrial + '</p><div class="stack"><button class="btn btn-grad" type="button" id="adv-keep">' + L.advKeep +
+        '</button><button class="btn" type="button" id="adv-back">' + L.advBack + '</button></div>');
+      $('adv-keep').onclick = function () { setAdvanced({ advancedConfirm: true }); };
+      $('adv-back').onclick = function () { setAdvanced({ advanced: false }); };
+    } else if (!s.advancedTrial && trialShown) {
+      trialShown = false;
+      if ($('adv-keep')) closeSheet();
+    }
+  }
+  // Small label after the status: which filter the device applies. With root/ADB it switches between the two.
+  function modeTag(st) {
+    var s = state;
+    st.innerHTML = '<span class="st-txt">' + st.innerHTML + '</span>';
+    if (!s || (cur && reach !== 'ok')) return;
+    var cls = !s.advanced ? '' : s.advancedLastOk === false ? ' fail' : ' adv';
+    var txt = !s.advanced ? L.tagVeil : s.advancedLastOk === false ? L.tagFail : L.tagAdv;
+    var can = s.advancedMethod === 'su' || s.advancedMethod === 'adb';
+    st.insertAdjacentHTML('beforeend', '<span class="mode-tag' + cls + '"' + (can ? ' id="h-mode" role="button" tabindex="0"' : '') + '>' + txt + '</span>');
+    if (can) $('h-mode').onclick = function (e) { e.stopPropagation(); toggleMode(); };
+  }
+  function toggleMode() {
+    var s = state;
+    if (!s) return;
+    if (s.advanced) { setAdvanced({ advanced: false }); return; }
+    if (s.advancedOk) { setAdvanced({ advanced: true }); return; }
+    openSheet('<p>' + L.advText + '</p><div class="stack"><button class="btn btn-grad" type="button" id="adv-on">' + L.advOn +
+      '</button><button class="btn" type="button" id="adv-cancel">' + L.advCancel + '</button></div>');
+    $('adv-on').onclick = function () { setAdvanced({ advanced: true }); }; // the answer opens the trial in this sheet
+    $('adv-cancel').onclick = closeSheet;
+  };
   function fail(e) {
     reach = e && e.status === 403 ? 'key' : 'down';
     renderDevice();

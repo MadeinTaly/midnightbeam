@@ -132,12 +132,8 @@ public class DimService extends Service implements Runnable {
             if (intent.hasExtra("devPriv") && Dbg.on(this)) {
                 prefs.edit().putBoolean("devPriv", intent.getBooleanExtra("devPriv", false)).apply();
             }
-            if (intent.hasExtra("advanced")) {
-                advanced = intent.getBooleanExtra("advanced", advanced);
-                prefs.edit().putBoolean("advanced", advanced).apply();
-                lastMatrix = null;
-                matrixRetries = 0;
-            }
+            if (intent.hasExtra("advanced")) setAdvanced(intent.getBooleanExtra("advanced", advanced));
+            if (intent.getBooleanExtra("advancedConfirm", false)) confirmAdvanced();
             boolean newValues = intent.hasExtra("red") || intent.hasExtra("bright") || intent.hasExtra("temp");
             if (newValues || intent.hasExtra("off")) {
                 setValues(intent.getIntExtra("red", red), intent.getIntExtra("bright", bright),
@@ -293,23 +289,34 @@ public class DimService extends Service implements Runnable {
 
     // ---- Phone remote (called on the main thread by RemoteServer tasks) ----
 
+    /**
+     * The one place the advanced filter is switched (TV screen and phone alike): turning it on before the owner
+     * ever kept it starts the 15 s trial, which every screen shows from "advanced_trial" and the state JSON.
+     */
+    private void setAdvanced(boolean on) {
+        // already on (trial running or kept): nothing to restart. Off always goes through, it also ends a trial.
+        if (on && advanced && (advancedTrial || prefs.getBoolean("advanced_ok", false))) return;
+        advanced = on;
+        advancedTrial = on && !prefs.getBoolean("advanced_ok", false);
+        prefs.edit().putBoolean("advanced", advanced).putBoolean("advanced_trial", advancedTrial).apply();
+        main.removeCallbacks(advancedTrialTimeout);
+        if (advancedTrial) main.postDelayed(advancedTrialTimeout, 15000L);
+        lastMatrix = null;
+        matrixRetries = 0;
+    }
+
+    private void confirmAdvanced() {
+        if (!advancedTrial) return;
+        advancedTrial = false;
+        prefs.edit().putBoolean("advanced_ok", true).putBoolean("advanced_trial", false).apply();
+        main.removeCallbacks(advancedTrialTimeout);
+    }
+
     void applyRemote(RemoteServer.SetTask t) {
         boolean newValues = t.red >= 0 || t.bright >= 0 || t.temp >= 0;
         boolean o = t.on >= 0 ? t.on == 0 : (!newValues && off);
-        if (t.advanced >= 0) {
-            advanced = t.advanced == 1;
-            advancedTrial = advanced && !prefs.getBoolean("advanced_ok", false);
-            prefs.edit().putBoolean("advanced", advanced).putBoolean("advanced_trial", advancedTrial).apply();
-            main.removeCallbacks(advancedTrialTimeout);
-            if (advancedTrial) main.postDelayed(advancedTrialTimeout, 15000L);
-            lastMatrix = null;
-            matrixRetries = 0;
-        }
-        if (t.advancedConfirm && advancedTrial) {
-            advancedTrial = false;
-            prefs.edit().putBoolean("advanced_ok", true).putBoolean("advanced_trial", false).apply();
-            main.removeCallbacks(advancedTrialTimeout);
-        }
+        if (t.advanced >= 0) setAdvanced(t.advanced == 1);
+        if (t.advancedConfirm) confirmAdvanced();
         setValues(t.red >= 0 ? t.red : red, t.bright >= 0 ? t.bright : bright, t.temp >= 0 ? t.temp : temp, o);
         holdManual();
         render();
