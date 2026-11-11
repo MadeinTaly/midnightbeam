@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
-# Builds midnightbeam.apk without Gradle. Two toolchains:
-#  - Debian/Ubuntu packages (default):
-#      apt install openjdk-17-jdk-headless dalvik-exchange aapt zipalign apksigner android-sdk-platform-23
-#  - Android SDK: BUILD_TOOLS=<sdk>/build-tools/<ver> ANDROID_JAR=<sdk>/platforms/android-<n>/android.jar ./build.sh
+# Builds midnightbeam.apk without Gradle. Needs an Android SDK platform 35 (the manifest uses API 34/35 attributes):
+#    BUILD_TOOLS=<sdk>/build-tools/<ver> ANDROID_JAR=<sdk>/platforms/android-35/android.jar ./build.sh
 #    (uses d8, aapt and zipalign from build-tools)
 set -euo pipefail
 cd "$(dirname "$0")"
 
-ANDROID_JAR=${ANDROID_JAR:-/usr/lib/android-sdk/platforms/android-23/android.jar}
+ANDROID_JAR=${ANDROID_JAR:-/usr/lib/android-sdk/platforms/android-35/android.jar}
+if [ ! -f "$ANDROID_JAR" ]; then
+    echo "ANDROID_JAR not found: $ANDROID_JAR (an Android SDK platform 35 is required, set ANDROID_JAR)" >&2
+    exit 1
+fi
 BUILD_TOOLS=${BUILD_TOOLS:-}
 tool() { if [ -n "$BUILD_TOOLS" ]; then echo "$BUILD_TOOLS/$1"; else command -v "$1"; fi; }
 AAPT=$(tool aapt)

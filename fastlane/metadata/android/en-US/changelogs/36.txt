@@ -1,0 +1,2 @@
+* Targets Android 15: Google Play Protect no longer warns that the app was built for an older version of Android when installing on recent devices
+* The filter service is declared as a special-use foreground service, as Android 14 and later require

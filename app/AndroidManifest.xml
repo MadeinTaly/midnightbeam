@@ -1,13 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="dev.midnightbeam"
-    android:versionCode="35"
-    android:versionName="1.12.0">
+    android:versionCode="36"
+    android:versionName="1.12.1">
 
-    <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="28" />
+    <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="35" />
 
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <!-- Android 14+: DimService is a foreground service of type specialUse (overlay and remote server). -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- Phone remote: local HTTP server, only when enabled by the user. The only outgoing connection is the update check to
          api.github.com (and the APK download), which can be turned off in the settings and never runs on F-Droid installs. -->
@@ -30,6 +32,11 @@
     <uses-feature android:name="android.software.leanback" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
 
+    <!-- Package visibility (Android 11+): PhoneActivity checks whether a QR scanner app is installed. -->
+    <queries>
+        <intent><action android:name="com.google.zxing.client.android.SCAN" /></intent>
+    </queries>
+
     <application
         android:label="MidnightBeam"
         android:icon="@drawable/ic_launcher"
@@ -38,7 +45,7 @@
         android:usesCleartextTraffic="true">
 
         <activity android:name=".MainActivity" android:exported="true"
-            android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
+            android:theme="@style/Phone">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -52,7 +59,7 @@
             android:exported="true"
             android:launchMode="singleTask"
             android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout"
-            android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
+            android:theme="@style/Phone">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -71,7 +78,12 @@
         <service
             android:name=".DimService"
             android:exported="true"
-            android:permission="android.permission.DUMP" />
+            android:foregroundServiceType="specialUse"
+            android:permission="android.permission.DUMP">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Screen dimming overlay and local remote-control server, kept running while the filter is on" />
+        </service>
 
         <!-- Optional: lets the overlay be drawn as an accessibility overlay (full darkness, no touch blocking). -->
         <service

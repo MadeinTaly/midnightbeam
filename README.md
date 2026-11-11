@@ -57,6 +57,9 @@ The old name was too close to the existing Red Moon app.
    *Settings → Apps → Special app access → Display over other apps → MidnightBeam*.
 3. Open **MidnightBeam** from the app list once and set it up.
 
+Versions up to 1.12.0 targeted Android 9, so Google Play Protect could show an "unsafe app" / "built for an older version of
+Android" warning on Android 12 and later. From 1.12.1 the app targets Android 15 and the warning should not appear.
+
 ### Updates
 
 At start the app checks the GitHub releases and, when a newer version is out, asks whether to install it (Android
@@ -251,17 +254,10 @@ curl -H "X-Key: <pairing key>" http://<tv-ip>:8765/api/debug
 
 ## Build
 
-No Gradle and no Android SDK manager. On Debian / Ubuntu:
+No Gradle. A JDK 17 and the Android SDK with build-tools and platform 35 are required:
 
 ```sh
-sudo apt install openjdk-17-jdk-headless dalvik-exchange aapt zipalign apksigner android-sdk-platform-23
-./build.sh
-```
-
-With the Android SDK instead of the Debian packages:
-
-```sh
-BUILD_TOOLS=$ANDROID_HOME/build-tools/34.0.0 ANDROID_JAR=$ANDROID_HOME/platforms/android-28/android.jar ./build.sh
+BUILD_TOOLS=$ANDROID_HOME/build-tools/35.0.1 ANDROID_JAR=$ANDROID_HOME/platforms/android-35/android.jar ./build.sh
 ```
 
 The first build creates a local `debug.keystore` to sign the APK.

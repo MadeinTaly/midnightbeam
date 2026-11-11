@@ -108,7 +108,7 @@ public class DimService extends Service implements Runnable {
         android.content.IntentFilter f = new android.content.IntentFilter();
         f.addAction(android.media.audiofx.AudioEffect.ACTION_OPEN_AUDIO_EFFECT_CONTROL_SESSION);
         f.addAction(android.media.audiofx.AudioEffect.ACTION_CLOSE_AUDIO_EFFECT_CONTROL_SESSION);
-        registerReceiver(sessionReceiver, f);
+        registerReceiver(sessionReceiver, f, 2 /* Context.RECEIVER_EXPORTED, API 33: broadcasts come from player apps */);
     }
 
     /** A player opened or closed its audio session (SessionReceiver). */
