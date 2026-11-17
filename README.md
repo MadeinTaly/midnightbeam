@@ -2,6 +2,8 @@
 
 # MidnightBeam
 
+[![Release](https://img.shields.io/github/v/release/MadeinTaly/midnightbeam)](https://github.com/MadeinTaly/midnightbeam/releases/latest) [![License: MIT](https://img.shields.io/github/license/MadeinTaly/midnightbeam)](LICENSE) [![Downloads](https://img.shields.io/github/downloads/MadeinTaly/midnightbeam/total)](https://github.com/MadeinTaly/midnightbeam/releases) [![F-Droid](https://img.shields.io/f-droid/v/dev.midnightbeam)](https://f-droid.org/packages/dev.midnightbeam/)
+
 A tiny screen dimmer and warm (red) filter for **Android TV boxes, projectors and TVs** that can be controlled
 **live from ADB or Home Assistant**, as well as with the TV remote.
 
