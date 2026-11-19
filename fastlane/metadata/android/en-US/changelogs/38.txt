@@ -1,0 +1,1 @@
+* Sleep timer: the volume comes back before the box goes to sleep, so it is restored on the HDMI output and not on the speaker the box switches to

@@ -99,6 +99,7 @@ public class DimService extends Service implements Runnable {
     private long sleepStart;
     private boolean sleepSlot; // started by a "sleep" slot of the schedule: that one owns the filter values afterwards
     private final Runnable sleepTick = new SleepTick(this);
+    private boolean powerDue;
     private static final String[] SLEEP_POWER = {"none", "box", "tv", "both"};
 
     @Override
@@ -875,6 +876,14 @@ public class DimService extends Service implements Runnable {
     void sleepStep() {
         if (destroyed) return;
         if (sleepEnd == 0) {
+            if (powerDue) {
+                // volume back while the output is still the same (asleep it may switch from HDMI to the speaker)
+                powerDue = false;
+                restoreVolume();
+                powerAction();
+                main.postDelayed(sleepTick, 2000);
+                return;
+            }
             restoreSleep(!sleepSlot);
             return;
         }
@@ -943,7 +952,7 @@ public class DimService extends Service implements Runnable {
         stopSleepTimer();
         if (act) {
             pausePlayback();
-            powerAction();
+            powerDue = !sleepPower().equals("none");
         }
         main.postDelayed(sleepTick, 2000); // the player needs a moment to stop before the volume comes back
         render();
@@ -981,6 +990,17 @@ public class DimService extends Service implements Runnable {
                 Dbg.log("sleep", "power: box skipped, no privileged access or accessibility");
             }
         }
+    }
+
+    /** Puts back only the volume taken when the fade began, and forgets it. */
+    private void restoreVolume() {
+        String f = prefs.getString("sleep_from", "");
+        if (f.isEmpty()) return;
+        int[] q = sleepFrom(f);
+        AudioManager am = getSystemService(AudioManager.class);
+        if (q[4] >= 0 && am != null) setMusicVolume(am, q[4]);
+        Dbg.log("sleep", "restore volume " + q[4]);
+        prefs.edit().putString("sleep_from", q[0] + "," + q[1] + "," + q[2] + "," + q[3] + ",-1").apply();
     }
 
     /** Puts back the volume and, unless a schedule slot owns them now, the filter values taken when the fade began. */
