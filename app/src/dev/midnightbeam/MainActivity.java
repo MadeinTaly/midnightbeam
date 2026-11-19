@@ -96,6 +96,7 @@ public class MainActivity extends Activity
     private final Button[] sleepMins = new Button[4];
     private Slider sleepFade;
     private Button sleepPower;
+    private TextView sleepHook;
     private static final int[] SLEEP_MINUTES = {15, 30, 60, 90};
     private static final String[] SLEEP_POWER = {"none", "box", "tv", "both"};
     private boolean updating; // switches set by code, not by the user
@@ -478,6 +479,9 @@ public class MainActivity extends Activity
             case "sleep_power":
                 if (sleepPower != null) refreshSleepPower();
                 break;
+            case "sleep_webhook":
+                if (sleepHook != null) refreshSleepHook();
+                break;
             case "remote":
                 updating = true;
                 remote.setChecked(prefs.getBoolean("remote", Compat.isTv(this)));
@@ -624,6 +628,11 @@ public class MainActivity extends Activity
         sleepPower.setText(t("At the end: ", "Alla fine: ") + names[i] + t("  (OK: next)", "  (OK: successivo)"));
     }
 
+    private void refreshSleepHook() {
+        boolean on = !prefs.getString("sleep_webhook", "").isEmpty();
+        sleepHook.setText("Webhook: " + (on ? t("on", "attivo") : t("off", "spento")));
+    }
+
     private final Runnable sleepTick = new SleepTick(this);
 
     /** Counts the time left once a second while a sleep timer runs (a plain class, see the note on inner classes above). */
@@ -709,6 +718,9 @@ public class MainActivity extends Activity
                 prefs.getInt("sleep_fade", 10));
         sleepPower = button(sleep);
         refreshSleepPower();
+        sleepHook = note("");
+        sleep.addView(sleepHook);
+        refreshSleepHook();
         sleep.addView(note(t("Then the box or the TV is switched off: needs root or local ADB (the box can also use the "
                         + "accessibility service). Whether the TV follows the box depends on the box's HDMI-CEC setting.",
                 "Poi si spegne il box o il TV: serve root o ADB locale (il box può usare anche il servizio di "

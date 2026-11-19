@@ -100,6 +100,9 @@ public class DimService extends Service implements Runnable {
     private boolean sleepSlot; // started by a "sleep" slot of the schedule: that one owns the filter values afterwards
     private final Runnable sleepTick = new SleepTick(this);
     private boolean powerDue;
+    private boolean powerWaiting; // the webhook runs first; the power action follows when it is done or after WEBHOOK_MS
+    private final Runnable powerRun = new PowerRun(this);
+    private static final int WEBHOOK_MS = 5000;
     private static final String[] SLEEP_POWER = {"none", "box", "tv", "both"};
 
     @Override
@@ -659,7 +662,8 @@ public class DimService extends Service implements Runnable {
                     .put("blocked", blocked)
                     .put("sleepEnd", sleepEnd)
                     .put("sleepFade", sleepFadeMin())
-                    .put("sleepPower", sleepPower());
+                    .put("sleepPower", sleepPower())
+                    .put("sleepWebhook", prefs.getString("sleep_webhook", ""));
             // revision of everything but the clock, for stateJsonAfter
             j.put("rev", Integer.toHexString(j.toString().hashCode()));
             j.put("sleepLeft", sleepEnd > 0 ? Math.max(0, (sleepEnd - System.currentTimeMillis()) / 1000) : 0);
@@ -830,11 +834,15 @@ public class DimService extends Service implements Runnable {
         return prefs.getString("sleep_power", "none");
     }
 
-    /** Body: any subset of {"minutes":1-720 | "cancel":true, "fade":1-30, "power":"none|box|tv|both"}; dev builds also "sec". */
+    /** Body: any subset of {"minutes":1-720 | "cancel":true, "fade":1-30, "power":"none|box|tv|both", "webhook":"http(s)://.." or ""}; dev builds also "sec". */
     void applySleep(JSONObject body) {
         if (body.has("fade")) prefs.edit().putInt("sleep_fade", clamp(body.optInt("fade"), 1, 30)).apply();
         String power = body.optString("power");
         for (String p : SLEEP_POWER) if (p.equals(power)) prefs.edit().putString("sleep_power", p).apply();
+        String hook = body.optString("webhook", null);
+        if (hook != null && (hook.isEmpty() || hook.length() <= 500 && hook.matches("(?i)https?://\\S+"))) {
+            prefs.edit().putString("sleep_webhook", hook).apply();
+        }
         if (body.optBoolean("cancel")) cancelSleep();
         else if (body.has("minutes")) {
             if (body.optInt("minutes") > 0) startSleep(clamp(body.optInt("minutes"), 1, 720) * 60000L, false);
@@ -880,7 +888,14 @@ public class DimService extends Service implements Runnable {
                 // volume back while the output is still the same (asleep it may switch from HDMI to the speaker)
                 powerDue = false;
                 restoreVolume();
-                powerAction();
+                String hook = prefs.getString("sleep_webhook", "");
+                if (hook.isEmpty()) {
+                    powerAction();
+                } else {
+                    powerWaiting = true;
+                    new Thread(new SleepWebhook(main, powerRun, hook, deviceName()), "sleep-webhook").start();
+                    main.postDelayed(powerRun, WEBHOOK_MS);
+                }
                 main.postDelayed(sleepTick, 2000);
                 return;
             }
@@ -952,7 +967,7 @@ public class DimService extends Service implements Runnable {
         stopSleepTimer();
         if (act) {
             pausePlayback();
-            powerDue = !sleepPower().equals("none");
+            powerDue = !sleepPower().equals("none") || !prefs.getString("sleep_webhook", "").isEmpty();
         }
         main.postDelayed(sleepTick, 2000); // the player needs a moment to stop before the volume comes back
         render();
@@ -965,6 +980,13 @@ public class DimService extends Service implements Runnable {
         am.dispatchMediaKeyEvent(new KeyEvent(t, t, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PAUSE, 0));
         am.dispatchMediaKeyEvent(new KeyEvent(t, t, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PAUSE, 0));
         Dbg.log("sleep", "pause playback");
+    }
+
+    void powerWebhookDone() {
+        if (!powerWaiting) return;
+        powerWaiting = false;
+        main.removeCallbacks(powerRun);
+        if (!destroyed) powerAction();
     }
 
     /** "both" is one command: TV first, a pause, then the box, so the box sleeping cannot cut the CEC command short. */
@@ -1015,6 +1037,58 @@ public class DimService extends Service implements Runnable {
         if (filter) {
             setValues(q[0], q[1], q[2], q[3] == 1);
             render();
+        }
+    }
+
+    /** Runs the power action once the webhook is done or has timed out (a plain class, see MainActivity). */
+    static final class PowerRun implements Runnable {
+        private final DimService service;
+
+        PowerRun(DimService service) {
+            this.service = service;
+        }
+
+        @Override
+        public void run() {
+            service.powerWebhookDone();
+        }
+    }
+
+    /** POSTs the end of the timer to the user's URL; answers are ignored. */
+    static final class SleepWebhook implements Runnable {
+        private final Handler main;
+        private final Runnable done;
+        private final String url;
+        private final String device;
+
+        SleepWebhook(Handler main, Runnable done, String url, String device) {
+            this.main = main;
+            this.done = done;
+            this.url = url;
+            this.device = device;
+        }
+
+        @Override
+        public void run() {
+            java.net.HttpURLConnection c = null;
+            try {
+                c = (java.net.HttpURLConnection) new java.net.URL(url).openConnection();
+                c.setConnectTimeout(WEBHOOK_MS);
+                c.setReadTimeout(WEBHOOK_MS);
+                c.setInstanceFollowRedirects(false);
+                c.setRequestMethod("POST");
+                c.setRequestProperty("Content-Type", "application/json");
+                c.setDoOutput(true);
+                byte[] body = new JSONObject().put("event", "sleep_end").put("device", device).toString()
+                        .getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                c.getOutputStream().write(body);
+                Dbg.log("sleep", "webhook: HTTP " + c.getResponseCode());
+            } catch (java.io.IOException | JSONException e) {
+                Dbg.log("sleep", "webhook failed: " + e.getClass().getSimpleName());
+            } finally {
+                if (c != null) c.disconnect();
+                main.post(done);
+            }
         }
     }
 
@@ -1285,6 +1359,7 @@ public class DimService extends Service implements Runnable {
         Dbg.log("service", "destroy");
         main.removeCallbacks(this);
         main.removeCallbacks(sleepTick);
+        main.removeCallbacks(powerRun);
         removeOverlay();
         resetMatrix();
         runningAudio = null;

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="dev.midnightbeam"
-    android:versionCode="38"
-    android:versionName="1.13.1">
+    android:versionCode="39"
+    android:versionName="1.14.0">
 
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="35" />
 
@@ -11,8 +11,9 @@
     <!-- Android 14+: DimService is a foreground service of type specialUse (overlay and remote server). -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <!-- Phone remote: local HTTP server, only when enabled by the user. The only outgoing connection is the update check to
-         api.github.com (and the APK download), which can be turned off in the settings and never runs on F-Droid installs. -->
+    <!-- Phone remote: local HTTP server, only when enabled by the user. The only outgoing connections are the update check to
+         api.github.com (and the APK download), which can be turned off in the settings and never runs on F-Droid installs, and
+         the optional sleep timer webhook: a POST to a URL the user typed in, only when that timer ends. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Finding the TVs on the local network (mDNS) from the phone app, like the WLED app does. -->
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />

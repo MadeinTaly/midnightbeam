@@ -1,0 +1,1 @@
+* Sleep timer: optional webhook called with a POST when the timer ends, before the box goes to sleep, e.g. a Home Assistant webhook that turns off the TV where HDMI-CEC cannot (Fire TV)

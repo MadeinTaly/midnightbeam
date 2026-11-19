@@ -115,6 +115,11 @@
           </select>
         </div>
       </div>
+      <div>
+        <label class="label" for="sleep-hook" data-t="sleepWebhook"></label>
+        <input id="sleep-hook" class="input" type="url" maxlength="500" autocomplete="off" spellcheck="false" placeholder="http://homeassistant.local:8123/api/webhook/...">
+        <p class="text-xs mt-1" style="color: var(--app-muted)" data-t="sleepWebhookHint"></p>
+      </div>
       <p class="text-xs" style="color: var(--app-muted)" data-t="sleepNote"></p>
     </section>
 
@@ -203,7 +208,7 @@ import * as DR from '/dayrhythm/src/index.js';
       advancedActive: 'System filter active.', advancedWaiting: 'It applies while the filter is on.',
       advancedFallback: 'Privileged access failed. The normal overlay is in use.',
       sleepTitle: 'Sleep timer', experimental: 'Experimental', sleepSub: 'Fades the filter and the volume, pauses playback, then switches off. A “Sleep” slot in the schedule does the same, ending at its time.',
-      sleepLeft: 'Time left', sleepFade: 'Fade at the end (min)', sleepPower: 'At the end', pwNone: 'Do nothing', pwBox: 'Put the box to sleep', pwTv: 'Turn off the TV', pwBoth: 'TV and box',
+      sleepLeft: 'Time left', sleepFade: 'Fade at the end (min)', sleepWebhook: 'Webhook at the end (optional)', sleepWebhookHint: 'Called with a POST when the timer ends, e.g. a Home Assistant webhook to turn off the TV.', sleepPower: 'At the end', pwNone: 'Do nothing', pwBox: 'Put the box to sleep', pwTv: 'Turn off the TV', pwBoth: 'TV and box',
       sleepNote: 'Switching off needs root or local ADB on the box (the box can also use the accessibility service). Whether the TV follows the box depends on the box’s HDMI-CEC setting.' },
     it: { subtitle: 'Filtro caldo e luminosità per il TV', pairTitle: 'Non abbinato', pairText: 'Inquadra di nuovo il QR mostrato nell’app MidnightBeam sul TV.', filter: 'Filtro', red: 'Filtro caldo', bright: 'Luminosità', temp: 'Colore (più basso = più rosso)', profiles: 'Profili',
       schedTitle: 'Programmazione', schedSub: 'Il TV cambia impostazione da solo, anche col telefono spento. Le modifiche si salvano automaticamente.', schedActive: 'Programmazione attiva',
@@ -223,7 +228,7 @@ import * as DR from '/dayrhythm/src/index.js';
       advancedActive: 'Filtro di sistema attivo.', advancedWaiting: 'Si applica quando il filtro è acceso.',
       advancedFallback: 'Accesso privilegiato non riuscito. È attivo il normale velo.',
       sleepTitle: 'Timer spegnimento', experimental: 'Sperimentale', sleepSub: 'Abbassa filtro e volume, mette in pausa la riproduzione, poi spegne. Una fascia “Spegnimento” nella programmazione fa lo stesso, e finisce alla sua ora.',
-      sleepLeft: 'Tempo rimasto', sleepFade: 'Dissolvenza finale (min)', sleepPower: 'Alla fine', pwNone: 'Niente', pwBox: 'Box in standby', pwTv: 'Spegni il TV', pwBoth: 'TV e box',
+      sleepLeft: 'Tempo rimasto', sleepFade: 'Dissolvenza finale (min)', sleepWebhook: 'Webhook alla fine (facoltativo)', sleepWebhookHint: 'Chiamato con una POST alla fine del timer, ad es. un webhook di Home Assistant per spegnere il TV.', sleepPower: 'Alla fine', pwNone: 'Niente', pwBox: 'Box in standby', pwTv: 'Spegni il TV', pwBoth: 'TV e box',
       sleepNote: 'Lo spegnimento richiede root o ADB locale sul box (il box può usare anche il servizio di accessibilità). Se il TV segue il box dipende dall’impostazione HDMI-CEC del box.' }
   };
   var saved = null; try { saved = localStorage.getItem('od_lang'); } catch (e) {}
@@ -341,6 +346,7 @@ import * as DR from '/dayrhythm/src/index.js';
     sleepEnd = s.sleepLeft > 0 ? Date.now() + s.sleepLeft * 1000 : 0;
     if (document.activeElement !== $('sleep-fade') && s.sleepFade) $('sleep-fade').value = s.sleepFade;
     if (document.activeElement !== $('sleep-power') && s.sleepPower) $('sleep-power').value = s.sleepPower;
+    if (document.activeElement !== $('sleep-hook') && 'sleepWebhook' in s) $('sleep-hook').value = s.sleepWebhook;
     tickSleep();
   }
   function tickSleep() {
@@ -356,6 +362,7 @@ import * as DR from '/dayrhythm/src/index.js';
   $('sleep-cancel').addEventListener('click', function () { sendSleep({ cancel: true }); });
   $('sleep-fade').addEventListener('change', function () { sendSleep({ fade: +this.value }); });
   $('sleep-power').addEventListener('change', function () { sendSleep({ power: this.value }); });
+  $('sleep-hook').addEventListener('change', function () { sendSleep({ webhook: this.value.trim() }); });
   var pending = null, lastInput = 0;
   function sliding() { return pending !== null || Date.now() - lastInput < 1500; }
   function sendLive() {

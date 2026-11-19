@@ -8,6 +8,9 @@ MidnightBeam does not collect, store or send any personal data.
   your device is sent besides what any HTTP request carries (your IP address). If you accept an update, the APK is
   downloaded from `github.com`. It can be turned off with *Check for updates at start* in the settings (TV and phone),
   and it never runs on F-Droid installs.
+- **Sleep timer webhook (optional, off by default).** If you type a URL in the sleep timer settings, the app sends
+  one HTTP POST to it when the timer ends, with the event name and the device name (e.g. to tell a Home Assistant
+  on your network to turn off the TV). Nothing is sent without that URL, and only to the address you chose.
 - **Otherwise no internet connections.** The network is used only on your local network:
   - on a TV, by the optional *Phone remote* (a small web server on port 8765, protected by a random pairing code
     shown on the TV screen);
@@ -22,11 +25,11 @@ MidnightBeam does not collect, store or send any personal data.
   on a phone, the list of paired TVs (name, address, pairing code). Nothing leaves your local network.
 - **Permissions:** *Display over other apps* draws the filter; the optional *Accessibility* service only lends its
   window to the filter, it does not read the screen or your input; *Run at startup* restores the filter after a reboot;
-  *Network* is for the local remote described above and the update check; *Install unknown apps* lets the app install
+  *Network* is for the local remote described above, the update check and the optional webhook; *Install unknown apps* lets the app install
   the update you accept.
 - The **Download the Android app** button and the links in the settings open GitHub pages in your browser only when
   you tap them.
 
 Questions: open an issue on https://github.com/MadeinTaly/midnightbeam/issues
 
-Last updated: 2026-10-06
+Last updated: 2026-11-19
