@@ -41,7 +41,7 @@ final class AppApi {
         MOVED.put(oldId, newId);
     }
     private static final String[] TYPES = {"projector", "tv", "tablet", "phone", "monitor", "other"};
-    private static final String[] FORWARDED = {"/api/info", "/api/state", "/api/set", "/api/schedule", "/api/days", "/api/audio"};
+    private static final String[] FORWARDED = {"/api/info", "/api/state", "/api/set", "/api/schedule", "/api/days", "/api/audio", "/api/sleep"};
 
     private AppApi() {
     }

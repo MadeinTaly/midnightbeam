@@ -164,6 +164,12 @@ adb shell pm grant dev.midnightbeam android.permission.DUMP
 
 Changing an audio setting from the phone shows a short on-screen display on the TV (e.g. "Volume 45%").
 
+### Sleep timer (experimental)
+
+Start it with 15, 30, 60 or 90 minutes from the TV screen (Advanced), the phone app or the web remote; `POST /api/sleep` takes `{"minutes":n}` to start, `{"cancel":true}`, and the settings `{"fade":1-30,"power":"none|box|tv|both"}`. In the last minutes (10 by default, all of it if the countdown is shorter) the filter fades towards the darkest and reddest and the media volume steps down to 0 (not on devices with fixed volume). At the end playback is paused and the chosen power action runs: `box` sends KEYCODE_SLEEP through root or local ADB (or locks the screen with the accessibility service), `tv` sends KEYCODE_TV_POWER (HDMI-CEC) and needs root or local ADB, `both` does TV then box. Whether the TV follows the box depends on the box's HDMI-CEC setting. Afterwards the volume and the filter come back as they were (so with `none`, a player that ignores the pause plays on at its old volume). The state (`GET /api/state`) carries `sleepEnd`, `sleepLeft` (seconds), `sleepFade` and `sleepPower`.
+
+A schedule slot with the model **Sleep** does the same: the countdown starts by itself in the fade window before the slot and ends at the slot's time.
+
 ## Android 12 and later
 
 Android 12 blocks touches through an overlay of another app unless the overlay is at most 80% opaque (the system limit, `InputManager.getMaximumObscuringOpacityForTouch()`). MidnightBeam therefore caps the filter at that opacity, so the phone stays usable; `/api/state` and `dumpsys` report `clamped` when the requested darkness was limited.

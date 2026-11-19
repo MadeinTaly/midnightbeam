@@ -33,6 +33,15 @@ public class WindowTest {
         eq("tight week not back", ScheduleMath.moveEdge(new int[] {600, 905, 910}, 1, 1, 10, 10, false), 905);
         eq("tight day stays", ScheduleMath.moveEdge(new int[] {600, 605, 900}, 1, -1, 10, 10, true), 605);
         eq("tight day not back", ScheduleMath.moveEdge(new int[] {600, 905, 910}, 1, 1, 10, 10, true), 905);
+        long min = 60000;
+        eq("fade before", ScheduleMath.sleepFade(0, 0, 60 * min, 10 * min), 0);
+        eq("fade starts", ScheduleMath.sleepFade(50 * min, 0, 60 * min, 10 * min), 0);
+        eq("fade mid", ScheduleMath.sleepFade(55 * min, 0, 60 * min, 10 * min), 0.5);
+        eq("fade end", ScheduleMath.sleepFade(60 * min, 0, 60 * min, 10 * min), 1);
+        eq("fade past end", ScheduleMath.sleepFade(70 * min, 0, 60 * min, 10 * min), 1);
+        eq("short countdown start", ScheduleMath.sleepFade(0, 0, 5 * min, 10 * min), 0);
+        eq("short countdown mid", ScheduleMath.sleepFade(min * 5 / 2, 0, 5 * min, 10 * min), 0.5);
+        eq("zero length", ScheduleMath.sleepFade(5, 5, 5, 10 * min), 1);
         System.out.println(f == 0 ? "window: all ok" : f + " failed");
         if (f > 0) System.exit(1);
     }

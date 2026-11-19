@@ -93,6 +93,13 @@ final class ScheduleMath {
         return 1 - toNext / w;
     }
 
+    /** Progress (0..1) of the sleep timer's fade, which covers the last {@code fadeMs} of the countdown (all of it if shorter). */
+    static double sleepFade(long now, long start, long end, long fadeMs) {
+        long f = Math.min(fadeMs, end - start);
+        if (f <= 0) return now >= end ? 1 : 0;
+        return Math.max(0, Math.min(1, (now - (end - f)) / (double) f));
+    }
+
     /**
      * New start of slot {@code i} when its edge is moved one {@code step} in direction {@code dir} (+1/-1) with the
      * remote: to the next multiple of {@code step}, staying at least {@code gap} minutes from the neighbours.

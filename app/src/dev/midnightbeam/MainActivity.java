@@ -92,6 +92,12 @@ public class MainActivity extends Activity
     private Slider virt;
     private Slider loud;
     private Button fxReset;
+    private Button sleepStop; // on the main screen while a sleep timer runs: the time left, OK cancels
+    private final Button[] sleepMins = new Button[4];
+    private Slider sleepFade;
+    private Button sleepPower;
+    private static final int[] SLEEP_MINUTES = {15, 30, 60, 90};
+    private static final String[] SLEEP_POWER = {"none", "box", "tv", "both"};
     private boolean updating; // switches set by code, not by the user
 
     /** UI language: Italian on Italian devices, English otherwise. */
@@ -220,6 +226,8 @@ public class MainActivity extends Activity
         red.paint(SPECTRUM_RED);
         bright.paint(SPECTRUM_BRIGHT);
         temp.paint(SPECTRUM_TEMP);
+        sleepStop = button(root);
+        sleepStop.setVisibility(View.GONE);
 
         // test card: the real filter covers it, so the sliders' effect on whites, blues, skin and shadows shows here
         LinearLayout mid = new LinearLayout(this);
@@ -385,6 +393,7 @@ public class MainActivity extends Activity
             refreshAccessibility();
         }
         if (timeline != null) run();
+        refreshSleep();
         prefs.registerOnSharedPreferenceChangeListener(prefsSync);
         // the phone remote is on by default on TVs: make sure its server runs while the QR code is shown
         if (remote != null && remote.isChecked()) {
@@ -396,6 +405,7 @@ public class MainActivity extends Activity
     protected void onPause() {
         super.onPause();
         main.removeCallbacks(this);
+        main.removeCallbacks(sleepTick);
         prefs.unregisterOnSharedPreferenceChangeListener(prefsSync);
         if (popup != null) popup.dismiss();
         DimService.openPairing(false);
@@ -458,6 +468,15 @@ public class MainActivity extends Activity
             case "schedule_value":
                 main.removeCallbacks(this);
                 run();
+                break;
+            case "sleep_end":
+                refreshSleep();
+                break;
+            case "sleep_fade":
+                if (sleepFade != null) follow(sleepFade, prefs.getInt("sleep_fade", 10));
+                break;
+            case "sleep_power":
+                if (sleepPower != null) refreshSleepPower();
                 break;
             case "remote":
                 updating = true;
@@ -589,6 +608,49 @@ public class MainActivity extends Activity
         main.postDelayed(this, 500); // the service has saved it by then: redraw from the stored schedule
     }
 
+    private void sendSleep(String key, Object value) {
+        try {
+            Compat.startForegroundService(this, new Intent(this, DimService.class)
+                    .putExtra("sleep", new JSONObject().put(key, value).toString()));
+        } catch (JSONException ignored) {
+        }
+    }
+
+    private void refreshSleepPower() {
+        String p = prefs.getString("sleep_power", "none");
+        String[] names = {t("nothing", "niente"), t("put the box to sleep", "box in standby"),
+                t("turn off the TV", "spegni il TV"), t("TV and box", "TV e box")};
+        int i = Math.max(0, java.util.Arrays.asList(SLEEP_POWER).indexOf(p));
+        sleepPower.setText(t("At the end: ", "Alla fine: ") + names[i] + t("  (OK: next)", "  (OK: successivo)"));
+    }
+
+    private final Runnable sleepTick = new SleepTick(this);
+
+    /** Counts the time left once a second while a sleep timer runs (a plain class, see the note on inner classes above). */
+    static final class SleepTick implements Runnable {
+        private final MainActivity activity;
+
+        SleepTick(MainActivity activity) {
+            this.activity = activity;
+        }
+
+        @Override
+        public void run() {
+            activity.refreshSleep();
+        }
+    }
+
+    void refreshSleep() {
+        main.removeCallbacks(sleepTick);
+        long left = (prefs.getLong("sleep_end", 0) - System.currentTimeMillis() + 999) / 1000;
+        sleepStop.setVisibility(left > 0 ? View.VISIBLE : View.GONE);
+        if (left <= 0) return;
+        sleepStop.setText(t("Sleep timer (experimental) ", "Timer spegnimento (sperimentale) ")
+                + (left >= 3600 ? String.format(Locale.ROOT, "%d:%02d:%02d", left / 3600, left / 60 % 60, left % 60)
+                : String.format(Locale.ROOT, "%d:%02d", left / 60, left % 60)) + t("  (OK: cancel)", "  (OK: annulla)"));
+        main.postDelayed(sleepTick, 1000);
+    }
+
     private void sendAudio(JSONObject body) {
         Compat.startForegroundService(this, new Intent(this, DimService.class).putExtra("audio", body.toString()));
     }
@@ -611,7 +673,7 @@ public class MainActivity extends Activity
         eqPresetIndex = -1; // not stored on the device: the phone may have changed the bands since
         fxOn = null;
         fxReset = null;
-        LinearLayout sched = column(0), audio = column(dp(28)), eqCol = column(dp(28));
+        LinearLayout sched = column(0), sleep = column(dp(28)), audio = column(dp(28)), eqCol = column(dp(28));
 
         sched.addView(section(t("Schedule", "Programmazione")));
         updating = true;
@@ -630,6 +692,27 @@ public class MainActivity extends Activity
                     "Niente velo: l'immagine è filtrata a livello di sistema. Usa l'accesso privilegiato del dispositivo, "
                             + "lo chiede una volta, e un riavvio lo azzera sempre.")));
         }
+
+        sleep.addView(section(t("Sleep timer", "Timer spegnimento")));
+        sleep.addView(note(t("Experimental", "Sperimentale")));
+        LinearLayout mins = null; // two buttons a row: the column is narrow
+        for (int i = 0; i < sleepMins.length; i++) {
+            if (i % 2 == 0) {
+                mins = new LinearLayout(this);
+                mins.setOrientation(LinearLayout.HORIZONTAL);
+                sleep.addView(mins);
+            }
+            sleepMins[i] = button(mins);
+            sleepMins[i].setText(SLEEP_MINUTES[i] + " min");
+        }
+        sleepFade = new Slider(this, sleep, t("Final fade", "Dissolvenza"), " min", 1, 30, 1,
+                prefs.getInt("sleep_fade", 10));
+        sleepPower = button(sleep);
+        refreshSleepPower();
+        sleep.addView(note(t("Then the box or the TV is switched off: needs root or local ADB (the box can also use the "
+                        + "accessibility service). Whether the TV follows the box depends on the box's HDMI-CEC setting.",
+                "Poi si spegne il box o il TV: serve root o ADB locale (il box può usare anche il servizio di "
+                        + "accessibilità). Se il TV segue il box dipende dall'impostazione HDMI-CEC del box.")));
 
         audio.addView(section("Audio"));
         JSONObject a;
@@ -943,6 +1026,15 @@ public class MainActivity extends Activity
             advancedBox.setVisibility(open ? View.VISIBLE : View.GONE);
             refreshAdvanced();
             advancedBox.post(new ShowAdvanced(this, open));
+        } else if (v == sleepStop) {
+            sendSleep("cancel", true);
+        } else if (v == sleepPower) {
+            int i = (java.util.Arrays.asList(SLEEP_POWER).indexOf(prefs.getString("sleep_power", "none")) + 1) % SLEEP_POWER.length;
+            prefs.edit().putString("sleep_power", SLEEP_POWER[i]).apply();
+            refreshSleepPower();
+            sendSleep("power", SLEEP_POWER[i]);
+        } else if (java.util.Arrays.asList(sleepMins).contains(v)) {
+            sendSleep("minutes", SLEEP_MINUTES[java.util.Arrays.asList(sleepMins).indexOf(v)]);
         } else if (v == eqPreset) {
             eqPresetIndex = (eqPresetIndex + 1) % eqPresets.length();
             refreshPreset();
@@ -1047,6 +1139,8 @@ public class MainActivity extends Activity
         try {
             if (s == transition) {
                 prefs.edit().putInt("transition", s.value()).apply(); // read by the service at every schedule tick
+            } else if (s == sleepFade) {
+                sendSleep("fade", s.value());
             } else if (s == volume) {
                 sendAudio(new JSONObject().put("volume", s.value()));
             } else if (bands.contains(s)) {

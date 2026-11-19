@@ -32,6 +32,8 @@ import java.util.Locale;
  *   POST /api/schedule   {"enabled":bool,"value":..,"resolved":..}  (older {"enabled","slots":[..]} still accepted)
  *   GET  /api/audio      audio effects: {"supported":bool,"enabled":bool,"volume":{"level","max"},"eq":..,"bass":..,"virt":..,"loud":..} (null = not available)
  *   POST /api/audio      {"enabled":bool,"volume":n,"bands":[mB..],"preset":n,"bass":0-1000,"virt":0-1000,"loud":0-1500,"reset":true}, any subset
+ *   POST /api/sleep      sleep timer (experimental): {"minutes":1-720} starts, {"cancel":true} stops, {"fade":1-30,"power":"none|box|tv|both"} settings,
+ *                        any subset; answers like GET /api/state, which carries sleepEnd (ms), sleepLeft (s), sleepFade, sleepPower
  *   POST /api/pair       {"pin":"1234"} -> {"k":<pairing key>}, no X-Key needed; only while the TV's pairing popup is open;
  *                        else 403 {"error":"pin"|"closed"|"locked"} (locked: 5 wrong PINs from this address)
  *                        (403 {"error":"closed"} otherwise, {"error":"pin"} if wrong; 5 wrong in a row change the PIN)
@@ -291,6 +293,15 @@ final class RemoteServer extends Thread {
                 } catch (JSONException e) {
                     send(out, 400, "application/json", "{\"error\":\"bad json\"}");
                 }
+            } else if (method.equals("POST") && path.equals("/api/sleep")) {
+                try {
+                    SleepTask task = new SleepTask(service, new JSONObject(new String(body, 0, read, StandardCharsets.UTF_8)));
+                    main.post(task);
+                    task.await();
+                    send(out, 200, "application/json", service.stateJson());
+                } catch (JSONException e) {
+                    send(out, 400, "application/json", "{\"error\":\"bad json\"}");
+                }
             } else if (method.equals("GET") && path.equals("/api/days")) {
                 send(out, 200, "application/json", service.daysJson());
             } else if (method.equals("POST") && path.equals("/api/days")) {
@@ -537,6 +548,35 @@ final class RemoteServer extends Thread {
         public void run() {
             try {
                 service.applyAudio(body);
+            } finally {
+                done.countDown();
+            }
+        }
+
+        void await() {
+            try {
+                done.await(3, java.util.concurrent.TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+    }
+
+    /** Applies sleep timer changes on the main thread; the server thread can wait for it. */
+    static final class SleepTask implements Runnable {
+        private final DimService service;
+        private final JSONObject body;
+        private final java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+
+        SleepTask(DimService service, JSONObject body) {
+            this.service = service;
+            this.body = body;
+        }
+
+        @Override
+        public void run() {
+            try {
+                service.applySleep(body);
             } finally {
                 done.countDown();
             }

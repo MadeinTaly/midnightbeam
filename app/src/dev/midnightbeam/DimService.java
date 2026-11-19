@@ -9,10 +9,13 @@ import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.graphics.drawable.Icon;
+import android.media.AudioManager;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.os.SystemClock;
+import android.view.KeyEvent;
 import android.view.View;
 import android.view.WindowManager;
 
@@ -91,6 +94,12 @@ public class DimService extends Service implements Runnable {
     private int matrixRetries;
     private boolean matrixRetryDue;
     private final Runnable advancedTrialTimeout = new TrialTimeout(this);
+    // Sleep timer (experimental): the end time survives a restart, see sleepStep.
+    private volatile long sleepEnd; // ms since epoch, 0 = no timer
+    private long sleepStart;
+    private boolean sleepSlot; // started by a "sleep" slot of the schedule: that one owns the filter values afterwards
+    private final Runnable sleepTick = new SleepTick(this);
+    private static final String[] SLEEP_POWER = {"none", "box", "tv", "both"};
 
     @Override
     public void onCreate() {
@@ -153,11 +162,16 @@ public class DimService extends Service implements Runnable {
                     applySchedule(j.optBoolean("enabled", false), j);
                 }
                 if (intent.hasExtra("audio")) applyAudio(new JSONObject(intent.getStringExtra("audio")));
+                if (intent.hasExtra("sleep")) applySleep(new JSONObject(intent.getStringExtra("sleep")));
             } catch (JSONException ignored) {
             }
         }
         main.removeCallbacks(this);
         run(); // schedule tick now, then every minute
+        if (sleepEnd > 0 || !prefs.getString("sleep_from", "").isEmpty()) {
+            main.removeCallbacks(sleepTick);
+            sleepTick.run();
+        }
         return render();
     }
 
@@ -169,6 +183,9 @@ public class DimService extends Service implements Runnable {
         remote = prefs.getBoolean("remote", Compat.isTv(this)); // on TVs the phone remote is on by default
         scheduleOn = prefs.getBoolean("schedule_on", false);
         advanced = prefs.getBoolean("advanced", false);
+        sleepEnd = prefs.getLong("sleep_end", 0);
+        sleepStart = prefs.getLong("sleep_start", 0);
+        sleepSlot = prefs.getBoolean("sleep_slot", false);
         // a matrix left by a process that died while it was on: the first render re-applies it or clears it
         advancedApplied = prefs.getBoolean("matrix_on", false);
         seedSchedule(this, prefs);
@@ -279,7 +296,7 @@ public class DimService extends Service implements Runnable {
             scanner = null;
         }
         stateChanged();
-        if (!visible && !remote && !local && !scheduleOn && !audio.enabled()) {
+        if (!visible && !remote && !local && !scheduleOn && !audio.enabled() && sleepEnd == 0) {
             stopForeground(true);
             stopSelf();
             return START_NOT_STICKY;
@@ -638,9 +655,13 @@ public class DimService extends Service implements Runnable {
                     .put("advancedOk", advancedOkValue)
                     .put("advancedTrial", trialValue)
                     .put("clamped", clamped)
-                    .put("blocked", blocked);
+                    .put("blocked", blocked)
+                    .put("sleepEnd", sleepEnd)
+                    .put("sleepFade", sleepFadeMin())
+                    .put("sleepPower", sleepPower());
             // revision of everything but the clock, for stateJsonAfter
             j.put("rev", Integer.toHexString(j.toString().hashCode()));
+            j.put("sleepLeft", sleepEnd > 0 ? Math.max(0, (sleepEnd - System.currentTimeMillis()) / 1000) : 0);
             // device clock, minutes since midnight: the page draws the "now" line with it
             return j.put("minute", now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE)
                     + now.get(Calendar.SECOND) / 60.0);
@@ -754,9 +775,13 @@ public class DimService extends Service implements Runnable {
                 String key = String.valueOf(starts[(int) w[0]]);
                 if (!key.equals(prefs.getString("schedule_last", null))) {
                     Dbg.log("schedule", "slot " + a.optString("time") + " " + a.optString("label") + " (start " + key + ")");
-                    prefs.edit().putString("schedule_last", key).remove("manual_key").apply();
+                    prefs.edit().putString("schedule_last", key).remove("manual_key").remove("sleep_skip").apply();
                 }
-                if (!key.equals(prefs.getString("manual_key", null))) {
+                if (w[0] != w[1] && b.optString("model").equals("sleep") && sleepEnd == 0 && w[2] > 0.1
+                        && w[2] * 60000 <= sleepFadeMin() * 60000L && !key.equals(prefs.getString("sleep_skip", null))) {
+                    startSleep(Math.round(w[2] * 60000), true);
+                }
+                if (prefs.getString("sleep_from", "").isEmpty() && !key.equals(prefs.getString("manual_key", null))) {
                     double f = ScheduleMath.rampFraction(w[2], w[3], prefs.getInt("transition", 30));
                     boolean aOn = a.optBoolean("on", true), bOn = b.optBoolean("on", true);
                     // an "off" slot blends as a neutral picture (no filter, full brightness)
@@ -792,6 +817,199 @@ public class DimService extends Service implements Runnable {
 
     private static int minutes(String hhmm) {
         return ScheduleMath.minutes(hhmm);
+    }
+
+    // ---- Sleep timer (experimental) ----
+
+    private int sleepFadeMin() {
+        return prefs.getInt("sleep_fade", 10);
+    }
+
+    private String sleepPower() {
+        return prefs.getString("sleep_power", "none");
+    }
+
+    /** Body: any subset of {"minutes":1-720 | "cancel":true, "fade":1-30, "power":"none|box|tv|both"}; dev builds also "sec". */
+    void applySleep(JSONObject body) {
+        if (body.has("fade")) prefs.edit().putInt("sleep_fade", clamp(body.optInt("fade"), 1, 30)).apply();
+        String power = body.optString("power");
+        for (String p : SLEEP_POWER) if (p.equals(power)) prefs.edit().putString("sleep_power", p).apply();
+        if (body.optBoolean("cancel")) cancelSleep();
+        else if (body.has("minutes")) {
+            if (body.optInt("minutes") > 0) startSleep(clamp(body.optInt("minutes"), 1, 720) * 60000L, false);
+        } else if (body.has("sec") && Dbg.on(this)) {
+            if (body.optInt("sec") > 0) startSleep(clamp(body.optInt("sec"), 1, 3600) * 1000L, false);
+        }
+        render();
+    }
+
+    private void startSleep(long ms, boolean slot) {
+        restoreSleep(true); // a countdown restarted mid-fade begins from the original picture and volume
+        long now = System.currentTimeMillis();
+        sleepStart = now;
+        sleepEnd = now + ms;
+        sleepSlot = slot;
+        prefs.edit().putLong("sleep_start", sleepStart).putLong("sleep_end", sleepEnd).putBoolean("sleep_slot", slot).apply();
+        Dbg.log("sleep", "start " + ms / 1000 + " s, fade " + sleepFadeMin() + " min, power " + sleepPower() + (slot ? " (schedule slot)" : ""));
+        main.removeCallbacks(sleepTick);
+        sleepTick.run();
+        render();
+    }
+
+    private void cancelSleep() {
+        if (sleepEnd == 0) return;
+        Dbg.log("sleep", "cancel");
+        stopSleepTimer();
+        restoreSleep(true);
+    }
+
+    /** Ends the countdown; a slot-started one is not started again by the same slot. */
+    private void stopSleepTimer() {
+        main.removeCallbacks(sleepTick);
+        if (sleepSlot) prefs.edit().putString("sleep_skip", prefs.getString("schedule_last", "")).apply();
+        sleepEnd = 0;
+        prefs.edit().remove("sleep_end").apply();
+    }
+
+    /** Every few seconds during the fade, else when it begins. Also restores what the fade changed, once the timer is over. */
+    void sleepStep() {
+        if (destroyed) return;
+        if (sleepEnd == 0) {
+            restoreSleep(!sleepSlot);
+            return;
+        }
+        long now = System.currentTimeMillis();
+        if (now >= sleepEnd) {
+            endSleep(now - sleepEnd < 120000);
+            return;
+        }
+        long fadeMs = sleepFadeMin() * 60000L;
+        double p = ScheduleMath.sleepFade(now, sleepStart, sleepEnd, fadeMs);
+        long delay = 30000;
+        if (p > 0) {
+            fade(p);
+            delay = 5000;
+        } else {
+            delay = Math.min(delay, sleepEnd - Math.min(fadeMs, sleepEnd - sleepStart) - now);
+        }
+        main.postDelayed(sleepTick, Math.max(200, Math.min(delay, sleepEnd - now)));
+    }
+
+    /** Progress p (0..1): filter towards the darkest and reddest, music volume towards 0, both from where they were. */
+    private void fade(double p) {
+        AudioManager am = getSystemService(AudioManager.class);
+        String f = prefs.getString("sleep_from", "");
+        if (f.isEmpty()) {
+            int vol = am == null || am.isVolumeFixed() ? -1 : am.getStreamVolume(AudioManager.STREAM_MUSIC);
+            f = red + "," + bright + "," + temp + "," + (off ? 1 : 0) + "," + vol;
+            prefs.edit().putString("sleep_from", f).apply();
+            Dbg.log("sleep", "fade start from " + f + " (red,bright,temp,off,volume)");
+        }
+        int[] q = sleepFrom(f);
+        boolean wasOff = q[3] == 1; // an off filter fades in from a neutral picture
+        int r = (int) Math.round(lerp(wasOff ? 0 : q[0], 100, p));
+        int b = (int) Math.round(lerp(wasOff ? 100 : q[1], 5, p));
+        int t = (int) Math.round(lerp(wasOff ? DEFAULT_TEMP : q[2], 1000, p));
+        if (r != red || b != bright || t != temp || off) {
+            setValues(r, b, t, false);
+            render();
+        }
+        if (q[4] > 0 && am != null) {
+            int v = (int) Math.round(q[4] * (1 - p));
+            if (v != am.getStreamVolume(AudioManager.STREAM_MUSIC)) {
+                Dbg.log("sleep", "volume " + v + " (p=" + String.format(Locale.ROOT, "%.2f", p) + ")");
+                setMusicVolume(am, v);
+            }
+        }
+    }
+
+    private static int[] sleepFrom(String f) {
+        String[] s = f.split(",");
+        int[] q = new int[5];
+        for (int i = 0; i < 5; i++) q[i] = Integer.parseInt(s[i]);
+        return q;
+    }
+
+    private void setMusicVolume(AudioManager am, int v) {
+        try {
+            am.setStreamVolume(AudioManager.STREAM_MUSIC, v, 0);
+        } catch (RuntimeException e) { // e.g. Do Not Disturb restrictions
+            Dbg.log("sleep", "volume failed: " + e);
+        }
+    }
+
+    private void endSleep(boolean act) {
+        Dbg.log("sleep", act ? "end" : "end, too late for the power action");
+        stopSleepTimer();
+        if (act) {
+            pausePlayback();
+            powerAction();
+        }
+        main.postDelayed(sleepTick, 2000); // the player needs a moment to stop before the volume comes back
+        render();
+    }
+
+    private void pausePlayback() {
+        AudioManager am = getSystemService(AudioManager.class);
+        if (am == null) return;
+        long t = SystemClock.uptimeMillis();
+        am.dispatchMediaKeyEvent(new KeyEvent(t, t, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PAUSE, 0));
+        am.dispatchMediaKeyEvent(new KeyEvent(t, t, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PAUSE, 0));
+        Dbg.log("sleep", "pause playback");
+    }
+
+    /** "both" is one command: TV first, a pause, then the box, so the box sleeping cannot cut the CEC command short. */
+    private void powerAction() {
+        String p = sleepPower();
+        boolean priv = Priv.available(this);
+        boolean both = p.equals("both");
+        if (p.equals("tv") || both) {
+            Dbg.log("sleep", priv ? "power: TV (keyevent 177)" : "power: TV skipped, no privileged access");
+            if (priv) Priv.run(this, both ? "input keyevent 177; sleep 2; input keyevent 223" : "input keyevent 177");
+        }
+        if (p.equals("box") || both) {
+            DimAccessibilityService acc = DimAccessibilityService.instance;
+            if (priv) {
+                if (!both) {
+                    Dbg.log("sleep", "power: box (keyevent 223)");
+                    Priv.run(this, "input keyevent 223");
+                }
+            } else if (acc != null && Build.VERSION.SDK_INT >= 28) {
+                Dbg.log("sleep", "power: box (lock screen via accessibility)");
+                acc.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_LOCK_SCREEN);
+            } else {
+                Dbg.log("sleep", "power: box skipped, no privileged access or accessibility");
+            }
+        }
+    }
+
+    /** Puts back the volume and, unless a schedule slot owns them now, the filter values taken when the fade began. */
+    private void restoreSleep(boolean filter) {
+        String f = prefs.getString("sleep_from", "");
+        if (f.isEmpty()) return;
+        prefs.edit().remove("sleep_from").apply();
+        int[] q = sleepFrom(f);
+        Dbg.log("sleep", "restore " + f + (filter ? "" : " (volume only)"));
+        AudioManager am = getSystemService(AudioManager.class);
+        if (q[4] >= 0 && am != null) setMusicVolume(am, q[4]);
+        if (filter) {
+            setValues(q[0], q[1], q[2], q[3] == 1);
+            render();
+        }
+    }
+
+    /** Steps the sleep timer (a plain class, see MainActivity). */
+    static final class SleepTick implements Runnable {
+        private final DimService service;
+
+        SleepTick(DimService service) {
+            this.service = service;
+        }
+
+        @Override
+        public void run() {
+            service.sleepStep();
+        }
     }
 
     // ---- Overlay ----
@@ -1030,6 +1248,7 @@ public class DimService extends Service implements Runnable {
             if (remote) text += " · phone remote on";
             if (scheduleOn) text += " · schedule on";
             if (audio.enabled()) text += " · audio effects on";
+            if (sleepEnd > 0) text += " · sleep timer";
             return b.setSmallIcon(Icon.createWithResource("android", android.R.drawable.ic_menu_view))
                     .setContentTitle("MidnightBeam")
                     .setContentText(text)
@@ -1045,6 +1264,7 @@ public class DimService extends Service implements Runnable {
         instance = null;
         Dbg.log("service", "destroy");
         main.removeCallbacks(this);
+        main.removeCallbacks(sleepTick);
         removeOverlay();
         resetMatrix();
         runningAudio = null;
@@ -1092,6 +1312,7 @@ public class DimService extends Service implements Runnable {
                 .put("advanced", advanced).put("advancedActive", advancedApplied)
                 .put("advancedMethod", Priv.method(this)).put("advancedLastOk", Priv.lastOk)
                 .put("maxObscuringOpacity", Build.VERSION.SDK_INT >= 31 ? (double) Compat.maxObscuringOpacity(this) : JSONObject.NULL)
+                .put("sleepEnd", sleepEnd).put("sleepFrom", prefs.getString("sleep_from", ""))
                 .put("overlayAttached", view != null)
                 .put("type", view == null ? JSONObject.NULL : viewAccessibility ? "accessibility (2032)" : "application (2038)");
     }

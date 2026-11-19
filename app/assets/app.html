@@ -334,6 +334,11 @@
       <span class="grow"><span class="t" data-t="schedTitle"></span><br><span class="small muted" id="h-sched"></span></span>
       <span class="chev" data-icon="chev"></span>
     </button>
+    <button class="card row-link hidden" type="button" id="h-sleep-row">
+      <span class="ic-red" data-icon="moon"></span>
+      <span class="grow"><span class="t" data-t="sleepTitle"></span><span class="mode-tag" data-t="experimental"></span><br><span class="small muted" id="h-sleep"></span></span>
+      <span class="chev" data-icon="chev"></span>
+    </button>
     <button class="card row-link hidden" type="button" id="h-audio-row" data-go="audio">
       <span class="ic-red" data-icon="audio"></span>
       <span class="grow"><span class="t" data-t="audioTitle"></span><br><span class="small muted" id="h-audio"></span></span>
@@ -553,11 +558,14 @@ import drIcons from '/dayrhythm/icons/index.js';
       weekMode: 'Days', weekDaily: 'Same every day', weekWeekly: 'Per weekday', transition: 'Transition', trOff: 'Off',
       transitionHelp: 'Values glide gradually into the next slot. A manual change lasts until the next slot.',
       saving: 'Saving…', saved: 'Saved', error: 'Error, not saved',
-      models: { off: 'Off', soft: 'Soft', evening: 'Relax', cinema: 'Movie', night: 'Night', deep: 'Deep night', custom: 'Custom' },
+      models: { off: 'Off', soft: 'Soft', evening: 'Relax', cinema: 'Movie', night: 'Night', deep: 'Deep night', custom: 'Custom', sleep: 'Sleep (experimental)' },
       desc: { soft: 'A light touch of warmth.', evening: 'Warm and calm, for the evening.', cinema: 'Reduced blue light, still bright enough for films.', night: 'Very warm and dim.', deep: 'Darkest and reddest.' },
       fields: { red: 'Warm filter', bright: 'Brightness', temp: 'Colour' },
       fasce: { morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening', film: 'Movie', night: 'Night' },
       presets: { movie: 'Movie night', early: 'Early to bed', late: 'Night owl' },
+      sleepTitle: 'Sleep timer', experimental: 'EXPERIMENTAL', sleepSub: 'Fades the filter and the volume, pauses playback, then switches off. A “Sleep” slot in the schedule does the same, ending at its time.', sleepOff: 'Off', sleepLeft: '{t} left', sleepRemain: 'Time left',
+      sleepFade: 'Fade at the end', sleepPower: 'At the end', pwNone: 'Do nothing', pwBox: 'Put the box to sleep', pwTv: 'Turn off the TV', pwBoth: 'TV and box',
+      sleepNote: 'Switching off needs root or local ADB on the box (the box can also use the accessibility service). Whether the TV follows the box depends on the box’s HDMI-CEC setting.',
       audioTitle: 'Audio', audioSetting: 'Audio controls', audioSettingSub: 'Equalizer, bass and sound effects of the device, if its audio supports them',
       audioOff: 'Off', audioOn: 'On', audioCustom: 'Custom', audioFlat: 'Flat', audioNo: 'Not supported on this device',
       audioEffects: 'Audio effects on this device', audioNoText: 'This device’s audio does not support global effects.', audioVolume: 'Volume', audioPause: 'Equalizer and effects pause while the playing app uses audio effects of its own (for example a video player’s volume boost). To apply them to that app anyway, allow it once from a computer:', audioFollow: 'The effects follow the app that is playing.', audioNeedOn: 'Turn on audio effects to use them',
@@ -607,11 +615,14 @@ import drIcons from '/dayrhythm/icons/index.js';
       weekMode: 'Giorni', weekDaily: 'Uguale ogni giorno', weekWeekly: 'Per giorno', transition: 'Transizione', trOff: 'Nessuna',
       transitionHelp: 'I valori scivolano gradualmente verso la fascia successiva. Una modifica manuale dura fino alla fascia successiva.',
       saving: 'Salvataggio…', saved: 'Salvato', error: 'Errore, non salvato',
-      models: { off: 'Spento', soft: 'Tenue', evening: 'Relax', cinema: 'Film', night: 'Notte', deep: 'Notte fonda', custom: 'Personalizzato' },
+      models: { off: 'Spento', soft: 'Tenue', evening: 'Relax', cinema: 'Film', night: 'Notte', deep: 'Notte fonda', custom: 'Personalizzato', sleep: 'Spegnimento (sperimentale)' },
       desc: { soft: 'Un tocco di calore.', evening: 'Caldo e rilassante, per la sera.', cinema: 'Meno luce blu, ma luminoso abbastanza per i film.', night: 'Molto caldo e attenuato.', deep: 'Il più scuro e rosso.' },
       fields: { red: 'Filtro caldo', bright: 'Luminosità', temp: 'Colore' },
       fasce: { morning: 'Mattina', afternoon: 'Pomeriggio', evening: 'Sera', film: 'Film', night: 'Notte' },
       presets: { movie: 'Serata film', early: 'A letto presto', late: 'Nottambulo' },
+      sleepTitle: 'Timer spegnimento', experimental: 'SPERIMENTALE', sleepSub: 'Abbassa filtro e volume, mette in pausa la riproduzione, poi spegne. Una fascia “Spegnimento” nella programmazione fa lo stesso, e finisce alla sua ora.', sleepOff: 'Spento', sleepLeft: 'ancora {t}', sleepRemain: 'Tempo rimasto',
+      sleepFade: 'Dissolvenza finale', sleepPower: 'Alla fine', pwNone: 'Niente', pwBox: 'Box in standby', pwTv: 'Spegni il TV', pwBoth: 'TV e box',
+      sleepNote: 'Lo spegnimento richiede root o ADB locale sul box (il box può usare anche il servizio di accessibilità). Se il TV segue il box dipende dall’impostazione HDMI-CEC del box.',
       audioTitle: 'Audio', audioSetting: 'Controlli audio', audioSettingSub: 'Equalizzatore, bassi ed effetti sonori del dispositivo, se il suo audio li supporta',
       audioOff: 'Spento', audioOn: 'Attivo', audioCustom: 'Personalizzato', audioFlat: 'Piatto', audioNo: 'Non supportato su questo dispositivo',
       audioEffects: 'Effetti audio su questo dispositivo', audioNoText: 'L’audio di questo dispositivo non supporta gli effetti globali.', audioVolume: 'Volume', audioPause: 'Equalizzatore ed effetti si fermano mentre l’app in riproduzione usa effetti audio propri (per esempio il “volume boost” di un lettore video). Per applicarli comunque a quell’app, consentilo una volta da un computer:', audioFollow: 'Gli effetti seguono l’app in riproduzione.', audioNeedOn: 'Attiva gli effetti audio per usarli',
@@ -682,7 +693,8 @@ import drIcons from '/dayrhythm/icons/index.js';
     { id: 'cinema',  on: true,  red: 15, bright: 55,  temp: 1500, icon: 'film' },
     { id: 'night',   on: true,  red: 20, bright: 10,  temp: 1100, icon: 'moon' },
     { id: 'deep',    on: true,  red: 40, bright: 5,   temp: 1000, icon: 'deep' },
-    { id: 'custom',  on: true,  red: 20, bright: 40,  temp: 1100 }
+    { id: 'custom',  on: true,  red: 20, bright: 40,  temp: 1100 },
+    { id: 'sleep',   on: true,  red: 100, bright: 5,  temp: 1000 } // the sleep timer ends here, fading in the minutes before
   ];
   var BUILTIN = ['cinema', 'evening', 'soft', 'night', 'deep'];
   function custom() { try { var a = JSON.parse(store('mb_scenes') || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
@@ -781,7 +793,7 @@ import drIcons from '/dayrhythm/icons/index.js';
       try { rhythm.clockOffset = Math.round(off * 10) / 10; } catch (e) {}
     }
     if (!pending) { setRange('r-red', s.red); setRange('r-bright', s.bright); setRange('r-temp', s.temp); labels(); }
-    renderDevice(); renderSceneRow(); preview(); renderMode(); if (view === 'scenes') renderScenes();
+    renderDevice(); renderSceneRow(); preview(); renderMode(); renderSleep(); if (view === 'scenes') renderScenes();
   }
   // ---- Filter type badge (veil or true blacks) and the 15 s trial, both mirrored from the device state ----
   var trialShown = false;
@@ -842,6 +854,50 @@ import drIcons from '/dayrhythm/icons/index.js';
     $('dv-adv').setAttribute('aria-label', L.advTitle);
     $('dv-adv').onchange = function () { toggleMode(devState[d.id].s, d.id); };
   }
+  // ---- Sleep timer (experimental): the device sends the seconds left, the countdown runs here between updates ----
+  var sleepEnd = 0;
+  function sleepClock() {
+    var left = Math.max(0, Math.round((sleepEnd - Date.now()) / 1000));
+    return (left >= 3600 ? Math.floor(left / 3600) + ':' + ('0' + Math.floor(left / 60) % 60).slice(-2) : Math.floor(left / 60)) + ':' + ('0' + left % 60).slice(-2);
+  }
+  function renderSleep() {
+    $('h-sleep-row').classList.toggle('hidden', !(state && 'sleepEnd' in state)); // a device on an older app version has no timer
+    sleepEnd = state && state.sleepLeft > 0 ? Date.now() + state.sleepLeft * 1000 : 0;
+    tickSleep();
+    var sel = $('sl-fade');
+    if (!sel || !state) return;
+    if (document.activeElement !== sel) {
+      var opts = [5, 10, 15, 20, 30]; if (opts.indexOf(state.sleepFade) < 0) opts.push(state.sleepFade);
+      sel.innerHTML = opts.sort(function (a, b) { return a - b; }).map(function (m) { return '<option value="' + m + '">' + m + ' min</option>'; }).join('');
+      sel.value = state.sleepFade;
+    }
+    if (document.activeElement !== $('sl-power')) $('sl-power').value = state.sleepPower;
+  }
+  function tickSleep() {
+    $('h-sleep').textContent = sleepEnd ? fmt(L.sleepLeft, { t: sleepClock() }) : L.sleepOff;
+    if ($('sl-left')) { $('sl-left').textContent = sleepClock(); $('sl-run').style.display = sleepEnd ? 'flex' : 'none'; }
+  }
+  setInterval(tickSleep, 1000);
+  function sleepPost(body) {
+    return api('/api/sleep', body).then(show, function (e) { fail(e); toast(e && e.status === 403 ? L.keyChanged : L.unreachable); });
+  }
+  $('h-sleep-row').addEventListener('click', function () {
+    if (guard()) return;
+    openSheet('<h2>' + L.sleepTitle + '<span class="mode-tag">' + L.experimental + '</span></h2><div class="stack"><p class="small muted" style="margin:0">' + L.sleepSub + '</p>' +
+      '<div class="seg" role="group">' + [15, 30, 60, 90].map(function (m) { return '<button type="button" data-m="' + m + '">' + m + ' min</button>'; }).join('') + '</div>' +
+      '<div id="sl-run" style="display:none;align-items:center;gap:12px"><span style="flex:1;font-weight:600">' + L.sleepRemain + ' <span id="sl-left"></span></span><button class="btn btn-soft" style="width:auto" type="button" id="sl-cancel">' + L.cancel + '</button></div>' +
+      '<label class="small muted" for="sl-fade">' + L.sleepFade + '</label><select class="field" id="sl-fade"></select>' +
+      '<label class="small muted" for="sl-power">' + L.sleepPower + '</label><select class="field" id="sl-power">' +
+      ['none', 'box', 'tv', 'both'].map(function (p) { return '<option value="' + p + '">' + L['pw' + p.charAt(0).toUpperCase() + p.slice(1)] + '</option>'; }).join('') + '</select>' +
+      '<p class="small muted" style="margin:0">' + L.sleepNote + '</p></div>');
+    Array.prototype.forEach.call($('sheet').querySelectorAll('[data-m]'), function (b) {
+      b.onclick = function () { sleepPost({ minutes: +b.getAttribute('data-m') }); };
+    });
+    $('sl-cancel').onclick = function () { sleepPost({ cancel: true }); };
+    $('sl-fade').onchange = function () { sleepPost({ fade: +this.value }); };
+    $('sl-power').onchange = function () { sleepPost({ power: this.value }); };
+    renderSleep();
+  });
   function fail(e) {
     reach = e && e.status === 403 ? 'key' : 'down';
     renderDevice();
@@ -1406,7 +1462,7 @@ import drIcons from '/dayrhythm/icons/index.js';
   })();
   var DRTHEME = store('mb_drtheme');
   if (!DRTHEME || DRTHEME === 'glow') DRTHEME = 'mbarcade';
-  var DRICON = { off: 'power', soft: 'sun-dim', evening: 'coffee', cinema: 'clapperboard', night: 'moon-star', deep: 'moon', custom: 'sliders-horizontal' };
+  var DRICON = { off: 'power', soft: 'sun-dim', evening: 'coffee', cinema: 'clapperboard', night: 'moon-star', deep: 'moon', sleep: 'moon', custom: 'sliders-horizontal' };
   var FASCE = [{ key: 'morning', time: '07:00' }, { key: 'afternoon', time: '14:00' }, { key: 'evening', time: '19:30' }, { key: 'film', time: '21:00' }, { key: 'night', time: '23:00' }];
   var PRESETS = [
     { id: 'movie', icon: '🎬', slots: [['07:00', 'off', 'morning'], ['14:00', 'off', 'afternoon'], ['19:30', 'evening', 'evening'], ['21:00', 'cinema', 'film'], ['23:30', 'night', 'night']] },
@@ -1767,7 +1823,7 @@ import drIcons from '/dayrhythm/icons/index.js';
     Array.prototype.forEach.call(document.querySelectorAll('[data-al]'), function (e) { e.setAttribute('aria-label', L[e.getAttribute('data-al')]); });
     $('sched-on').setAttribute('aria-label', L.schedTitle);
     $('st-audio').setAttribute('aria-label', L.audioSetting); $('st-upd-on').setAttribute('aria-label', L.updCheck); $('st-upd-beta').setAttribute('aria-label', L.updBeta); $('au-on').setAttribute('aria-label', L.audioEffects);
-    renderDevice(); renderSceneRow(); summary(); renderAudioRow();
+    renderDevice(); renderSceneRow(); summary(); renderAudioRow(); tickSleep();
     if (view === 'audio') { auSig = ''; renderAudio(); }
     if (view === 'devices') renderDevices();
     if (view === 'scenes') renderScenes();

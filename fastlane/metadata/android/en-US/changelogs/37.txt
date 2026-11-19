@@ -1,0 +1,2 @@
+* Sleep timer (experimental): 15, 30, 60 or 90 minutes from the TV, the phone app or the web remote, or a Sleep slot in the schedule; in the last minutes the screen fades darker and warmer and the volume goes down, then playback pauses and, if chosen, the box and/or the TV turn off (root or local ADB; HDMI-CEC for the TV)
+* Advanced filter reacts faster to changes over local ADB (one connection kept open, su skipped when it does not work)

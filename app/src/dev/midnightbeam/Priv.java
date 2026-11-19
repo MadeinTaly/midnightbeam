@@ -7,14 +7,15 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayDeque;
 import java.util.Locale;
 
 /**
  * Privileged shell for the optional advanced filter. Two sources, detected without prompting:
  *  - a su binary the app can execute (Magisk / KernelSU): the app runs `su -c`, the system asks the owner once;
  *  - the device's own ADB on 127.0.0.1, used only when it needs no authorisation (ro.adb.secure=0).
- * Commands are serialised on one background thread and only the newest is kept, so dragging a slider does not
- * queue up a burst of shell calls.
+ * Commands are serialised on one background thread. exec() keeps only the newest, so dragging a slider does not
+ * queue up a burst of shell calls; run() commands are all kept, in order, and go first.
  */
 final class Priv {
     static final String SU = "su";
@@ -25,6 +26,7 @@ final class Priv {
 
     private static final Object LOCK = new Object();
     private static String pending;
+    private static final ArrayDeque<String> QUEUE = new ArrayDeque<>();
     private static Thread worker;
     /** False after a command failed all its tries: DimService falls back to the overlay and retries later. */
     static volatile boolean lastOk = true;
@@ -32,6 +34,8 @@ final class Priv {
     static volatile int results;
     /** True once a command succeeded in this process: the shell works, so the overlay can go before each answer. */
     static volatile boolean verified;
+    /** su exists but failed where ADB worked: later commands go straight to ADB. */
+    private static volatile boolean adbOnly;
 
     private Priv() {
     }
@@ -45,6 +49,8 @@ final class Priv {
     static String method(Context c) {
         // dev builds only: pretend ADB is there, to exercise the UI and the fallback on emulators
         if (Dbg.on(c) && c.getSharedPreferences(DimService.PREFS, Context.MODE_PRIVATE).getBoolean("devPriv", false)) return ADB;
+        if (adbOnly && adbPort(c) > 0 && !adbAuthRequired()) return ADB;
+        adbOnly = false; // ADB gone: detect again
         if (suPath() != null) return SU;
         if (adbPort(c) > 0 && !adbAuthRequired()) return ADB;
         return null;
@@ -55,16 +61,29 @@ final class Priv {
         if (command == null || command.isEmpty()) return;
         synchronized (LOCK) {
             pending = command;
-            if (worker == null) {
-                worker = new Thread(new Worker(c.getApplicationContext()), "priv");
-                worker.setDaemon(true);
-                worker.start();
-            }
-            LOCK.notifyAll();
+            wake(c);
         }
     }
 
-    private static boolean attempt(Context c, String command) {
+    /** Queues a one-shot command: never replaced or dropped, runs in order before the pending exec() command. */
+    static void run(Context c, String command) {
+        if (command == null || command.isEmpty()) return;
+        synchronized (LOCK) {
+            QUEUE.add(command);
+            wake(c);
+        }
+    }
+
+    private static void wake(Context c) {
+        if (worker == null) {
+            worker = new Thread(new Worker(c.getApplicationContext()), "priv");
+            worker.setDaemon(true);
+            worker.start();
+        }
+        LOCK.notifyAll();
+    }
+
+    private static boolean attempt(Context c, String command, boolean oneShot) {
         for (int i = 0; i < 3; i++) {
             try {
                 String out = runOnce(c, command);
@@ -74,7 +93,7 @@ final class Priv {
                 Dbg.log("priv", "failed: " + e);
             }
             synchronized (LOCK) {
-                if (pending != null) return false; // a newer command arrived: run that one instead
+                if (!oneShot && pending != null) return false; // a newer command arrived: run that one instead
             }
             try {
                 Thread.sleep(1500);
@@ -87,14 +106,35 @@ final class Priv {
     }
 
     private static String runOnce(Context c, String command) throws IOException {
-        String su = suPath();
+        if (adbOnly && (adbPort(c) <= 0 || adbAuthRequired())) adbOnly = false;
+        String su = adbOnly ? null : suPath();
+        String suOut = null;
+        IOException suError = null;
         if (su != null) {
-            String out = runProcess(su, command);
-            if (!failed(command, out) || adbPort(c) <= 0 || adbAuthRequired()) return out;
+            long t = System.nanoTime();
+            try {
+                suOut = runProcess(su, command);
+            } catch (IOException e) {
+                suError = e;
+            }
+            Dbg.log("priv", "su " + ms(t) + " ms");
+            if (suError == null && !failed(command, suOut)) return suOut;
         }
         int port = adbPort(c);
-        if (port > 0 && !adbAuthRequired()) return AdbClient.shell(port, command);
-        throw new IOException("no privileged access");
+        if (port <= 0 || adbAuthRequired()) {
+            if (suError != null) throw suError;
+            if (su != null) return suOut;
+            throw new IOException("no privileged access");
+        }
+        long t = System.nanoTime();
+        String out = AdbClient.shell(port, command);
+        Dbg.log("priv", "adb " + ms(t) + " ms");
+        if (su != null && !failed(command, out)) adbOnly = true;
+        return out;
+    }
+
+    private static long ms(long since) {
+        return (System.nanoTime() - since) / 1000000;
     }
 
     /** Runs `su -c command` and returns stdout+stderr. Blocks while the system asks the owner to allow it. */
@@ -205,18 +245,28 @@ final class Priv {
         public void run() {
             while (true) {
                 String command;
+                boolean oneShot;
                 synchronized (LOCK) {
-                    while (pending == null) {
+                    while (pending == null && QUEUE.isEmpty()) {
                         try {
                             LOCK.wait();
                         } catch (InterruptedException e) {
                             return;
                         }
                     }
-                    command = pending;
-                    pending = null;
+                    oneShot = !QUEUE.isEmpty();
+                    if (oneShot) {
+                        command = QUEUE.poll();
+                    } else {
+                        command = pending;
+                        pending = null;
+                    }
                 }
-                lastOk = attempt(c, command);
+                if (oneShot) {
+                    Dbg.log("priv", (attempt(c, command, true) ? "ok: " : "failed: ") + command);
+                    continue;
+                }
+                lastOk = attempt(c, command, false);
                 if (lastOk) verified = true;
                 results++;
                 Dbg.log("priv", (lastOk ? "ok: " : "failed: ") + command);

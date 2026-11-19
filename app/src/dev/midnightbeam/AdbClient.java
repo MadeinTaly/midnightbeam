@@ -3,7 +3,6 @@ package dev.midnightbeam;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.io.EOFException;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -24,52 +23,80 @@ final class AdbClient {
     private static final int VERSION = 0x01000000;
     private static final int MAX_DATA = 256 * 1024;
 
+    // One connection for all commands, reused until it breaks. Only the Priv worker thread calls this class.
+    private static Socket socket;
+    private static DataInputStream in;
+    private static DataOutputStream out;
+    private static int connectedPort;
+    private static int nextId = 1;
+
     private AdbClient() {
     }
 
     static String shell(int port, String command) throws IOException {
-        return shell("127.0.0.1", port, command);
+        boolean reused = socket != null && connectedPort == port;
+        try {
+            return stream(port, command);
+        } catch (IOException e) {
+            close();
+            if (!reused) throw e;
+            return stream(port, command);
+        }
     }
 
-    static String shell(String host, int port, String command) throws IOException {
+    private static String stream(int port, String command) throws IOException {
+        if (socket != null && connectedPort != port) close();
+        if (socket == null) connect(port);
+        int id = nextId++;
+        send(out, A_OPEN, id, 0, bytes("shell:" + command + "\u0000"));
+        ByteArrayOutputStream result = new ByteArrayOutputStream();
+        while (true) {
+            Packet p = read(in);
+            if (p.arg1 != id) continue; // a late packet of an earlier stream
+            if (p.command == A_WRTE) {
+                result.write(p.data);
+                send(out, A_OKAY, id, p.arg0, new byte[0]);
+            } else if (p.command == A_CLSE) {
+                break;
+            }
+        }
+        return new String(result.toByteArray(), "UTF-8");
+    }
+
+    private static void connect(int port) throws IOException {
         Socket s = new Socket();
         try {
-            s.connect(new InetSocketAddress(InetAddress.getByName(host), port), 3000);
+            s.connect(new InetSocketAddress(InetAddress.getByName("127.0.0.1"), port), 3000);
             s.setSoTimeout(15000);
-            DataOutputStream out = new DataOutputStream(s.getOutputStream());
-            DataInputStream in = new DataInputStream(s.getInputStream());
-            send(out, A_CNXN, VERSION, MAX_DATA, bytes("host::\u0000"));
+            s.setTcpNoDelay(true);
+            DataOutputStream o = new DataOutputStream(s.getOutputStream());
+            DataInputStream i = new DataInputStream(s.getInputStream());
+            send(o, A_CNXN, VERSION, MAX_DATA, bytes("host::\u0000"));
             while (true) {
-                Packet p = read(in);
+                Packet p = read(i);
                 if (p.command == A_CNXN) break;
                 if (p.command == A_AUTH) throw new IOException("adb authorisation required");
                 if (p.command == A_CLSE) throw new IOException("adb refused the connection");
             }
-            send(out, A_OPEN, 1, 0, bytes("shell:" + command + "\u0000"));
-            ByteArrayOutputStream result = new ByteArrayOutputStream();
-            while (true) {
-                Packet p;
-                try {
-                    p = read(in);
-                } catch (EOFException e) {
-                    break;
-                }
-                if (p.command == A_OKAY) {
-                    // the device opened our stream: nothing to do until output arrives
-                } else if (p.command == A_WRTE) {
-                    result.write(p.data);
-                    send(out, A_OKAY, 1, p.arg0, new byte[0]);
-                } else if (p.command == A_CLSE) {
-                    break;
-                }
-            }
-            return new String(result.toByteArray(), "UTF-8");
-        } finally {
+            socket = s;
+            in = i;
+            out = o;
+            connectedPort = port;
+        } catch (IOException e) {
             try {
                 s.close();
             } catch (IOException ignored) {
             }
+            throw e;
         }
+    }
+
+    private static void close() {
+        try {
+            if (socket != null) socket.close();
+        } catch (IOException ignored) {
+        }
+        socket = null;
     }
 
     private static void send(DataOutputStream out, int command, int arg0, int arg1, byte[] data) throws IOException {
